@@ -6,10 +6,10 @@ A 2D action platformer for 1 to 4 local players, written in plain JavaScript for
 Open `index.html` in a browser. Keyboard: arrows or WASD to move, Z or Space to jump, X or J to slash, C, K or Shift to dash, V or L to use a token, Q or E to switch token, F to mend, Up at doors and props, Tab for the map, Esc to pause. Controllers work too; players 2 to 4 join with a controller.
 
 ## State of this snapshot (14 November 2026)
-This is the working copy, mid-fix. It is ahead of the published build but not fully passing:
-- 23 of 31 automated checks pass. The 8 failing checks and the reasons are listed at the end of `docs/STATUS.md`.
-- It includes the QA and balance pass, the original item art, and about half of the fixes for the independent tester's findings.
-- No person has play-tested it yet.
+- All 31 automated checks pass, including a scripted full run from the hub to the last boss, a room validator, boss fairness bots, co-op and performance checks.
+- It includes the QA and balance pass, the original item art, and the fixes for an independent tester's findings.
+- No person has play-tested it yet. Difficulty and feel are tuned by bots only.
+- Known weak spots are listed in `docs/STATUS.md`.
 
 ## Where things are
 - `index.html`, `css/`, `js/`: the game. `js/core` and `js/game` are the engine, `js/content` is bosses, enemies, tokens, rooms and regions, `js/ui` is the HUD and screens, `js/art` loads sprites.

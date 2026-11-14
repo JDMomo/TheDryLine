@@ -76,7 +76,9 @@ export default async ({ page, shots }) => {
   const punched = [];
   for (const c of cuts) {
     const r = await page.evaluate(c => {
-      const D = G.debug, tap = n => { D.setInput(0, { item: true }); D.step(1); D.setInput(0, { item: false }); D.step(n); };
+      const D = G.debug, clr = { up: false, left: false, right: false, down: false };
+      let aim = {};                                   // the arc lob is aimed by what is held (none, Up, the facing way, Down)
+      const tap = n => { D.setInput(0, aim); D.step(1); D.setInput(0, { item: true }); D.step(1); D.setInput(0, Object.assign({ item: false }, clr)); D.step(n); };
       const b = T.setup([], [c.token]), spot = () => b.spots.find(s => s.cls === c.cls), out = {};
       const hold = (state, vent = true) => D.holdBoss({ x: b.x, y: b.floor, face: 1, state, t: 99, ventOpen: vent, ventSide: 1 });
       out.open = spot().open; D.step(130);                                                         // let the intro end
@@ -86,7 +88,8 @@ export default async ({ page, shots }) => {
       if (c.cls === 'pierce') { D.holdBoss({ x: b.x, y: b.floor, face: 1, state: 'handsTell', t: 99, ventOpen: true, ventSide: -1 }); D.place(0, ...c.at); D.step(2); tap(c.cd); out.wrongSideHp = spot().hp; D.holdBoss({ x: b.x, y: b.floor, face: 1, state: 'handsTell', t: 99, ventOpen: true, ventSide: 1 }); }
       else hold(c.state);
       const hp0 = b.hp, hits = [];
-      for (let k = 0; k < 3; k++) { D.place(0, ...c.at); D.step(2); tap(c.cd); hits.push(spot().hp); }
+      if (c.cls === 'arc') for (const a of [{}, { up: true }, { left: true }, { down: true }]) { aim = a; D.place(0, ...c.at); D.step(2); const h0 = spot().hp; tap(c.cd); if (spot().hp < h0) { hits.push(spot().hp); break; } }
+      for (let k = hits.length; k < 3; k++) { D.place(0, ...c.at); D.step(2); tap(c.cd); hits.push(spot().hp); }
       const p = G.players[0];
       return Object.assign(out, { hits, broken: spot().broken, lost: hp0 - b.hp, max: b.maxHp, void: G.run.spent.includes(c.token) && !p.items.includes(c.token), flags: Object.assign({}, b.flags) });
     }, c);

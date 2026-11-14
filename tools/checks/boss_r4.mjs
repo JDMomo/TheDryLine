@@ -80,6 +80,7 @@ export default async ({ page, shots }) => {
       D.step(1);
       maxCrabs = Math.max(maxCrabs, G.rooms.current.enemies.length); maxCrates = Math.max(maxCrates, b.crates.length);
     }
+    D.step(3);                                      // the crabs it kills on dying are swept from the room a step later
     const s = D.state();
     return { dead: s.room.boss.state === 'dead', beaten: !!s.run.beaten.r4, fight: s.room.fight, locked: s.room.locked, pip: s.players[0].maxHp - hp0, scrip: s.run.shards,
       time: s.time, maxCrabs, maxCrates, left: s.room.enemies.length, errors: s.errors };

@@ -35,23 +35,24 @@ export default async ({ page, shots }) => {
   // [x, y, face] candidates, scanned until one punches: ledge shots at the lens, a lob onto the crown, the bell near the seam, a slab at the foot
   const spots = {
     pierce: Array.from({ length: 18 }, (_, i) => [270 + i * 10, 384, 1]),
-    arc: Array.from({ length: 30 }, (_, i) => [720 - 60 - i * 6, 480, 1]),
+    arc: [{}, { up: true }, { right: true }].flatMap(h => Array.from({ length: 36 }, (_, i) => [720 - 60 - i * 6, 480, 1, h])),   // a lob: neutral, high (Up) or far (facing)
     burst: Array.from({ length: 30 }, (_, i) => [720 - 40 - i * 6, 480, 1]),
     ground: Array.from({ length: 30 }, (_, i) => [720 - 60 - i * 8, 480, 1])
   };
   for (const cut of Object.keys(TOKENS)) {
     const r = await page.evaluate(([cut, token, hold, cands, id]) => {
       const D = G.debug, run = n => D.step(n), tap = (a, n = 1) => { D.setInput(0, { [a]: true }); run(n); D.setInput(0, { [a]: false }); run(1); };
+      const shoot = h => { D.setInput(0, h || {}); run(1); tap('item'); D.setInput(0, { up: false, right: false }); };
       const fresh = () => { D.newRun(9); D.god(true); D.give(token); D.startBoss(id); D.holdBoss(Object.assign({ x: 720, y: D.state().room.boss.floor, face: -1, sig: false, lie: 0 }, hold)); run(2); };
       fresh();
       const items = D.state().players[0].items.slice(), open = D.state().room.boss.spots.find(s => s.cls === cut).open, hp0 = D.state().room.boss.hp;
       let hits = null, at = null;
-      for (const [x, y, face] of cands) {
-        fresh(); D.place(0, x, y, face); run(1); tap('item'); run(150);
+      for (const [x, y, face, h] of cands) {
+        fresh(); D.place(0, x, y, face); run(1); shoot(h); run(150);
         const sp = D.state().room.boss.spots.find(s => s.cls === cut);
         if (sp.hp < 3) {
           at = x; hits = [sp.hp];
-          for (let k = 0; k < 2; k++) { D.place(0, x, y, face); run(1); tap('item'); run(150); hits.push(D.state().room.boss.spots.find(s => s.cls === cut).hp); }
+          for (let k = 0; k < 2; k++) { D.place(0, x, y, face); run(1); shoot(h); run(150); hits.push(D.state().room.boss.spots.find(s => s.cls === cut).hp); }
           break;
         }
       }
@@ -70,7 +71,7 @@ export default async ({ page, shots }) => {
     for (const [cut, token, hold, cands] of [['pierce', 'cobalt_awl', { sig: false, lie: 0 }, spots.pierce], ['burst', 'cinder_bell', { lie: 0 }, spots.burst], ['ground', 'basalt_roller', { lie: 1 }, spots.ground]]) {
       D.newRun(9); D.god(true); D.give(token); D.startBoss(id);
       D.holdBoss(Object.assign({ x: 720, y: D.state().room.boss.floor, face: -1 }, hold));
-      for (const [x, y, face] of cands) { D.place(0, x, y, face); run(1); D.setInput(0, { item: true }); run(2); D.setInput(0, { item: false }); run(110); }
+      for (const [x, y, face, h] of cands) { D.place(0, x, y, face); run(1); D.setInput(0, { item: true }); run(2); D.setInput(0, { item: false }); run(110); }
       out[cut] = D.state().room.boss.spots.find(s => s.cls === cut).hp;
     }
     return out;

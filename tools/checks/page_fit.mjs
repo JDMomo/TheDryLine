@@ -17,24 +17,22 @@ export default async ({ page }) => {
     if (w >= 640 && m.cw < 300) bad.push(`${w}x${h}: canvas too small (${m.cw}px)`);
   }
   if (orig) await page.setViewportSize(orig);
+  // The game canvas is tainted by file:// images, so pixels cannot be read: record the draw calls instead.
   const hud = await page.evaluate(() => {
     const D = G.debug; D.newRun(5); D.give('cobalt_awl'); D.give('ochre_ladle'); D.step(2);
-    const cv = document.querySelector('canvas'), ctx = cv.getContext('2d'), s = cv.width / G.C.W;
-    ctx.setTransform(s, 0, 0, s, 0, 0);
-    G.rooms.draw(ctx, 0);
-    ctx.save(); ctx.fillStyle = '#ff00ff'; ctx.fillRect(0, 0, G.C.W, 140); ctx.restore();   // a lamp under the whole HUD band
-    G.hud.draw(ctx);
-    const px = ctx.getImageData(0, 0, cv.width, Math.round(140 * s)).data;
-    let cells = 0, leak = 0;
-    for (let i = 0; i < px.length; i += 4) { if (px[i] === 11 && px[i + 1] === 21 && px[i + 2] === 20) cells++; }
-    // inside any slot cell (exact HUD_BG pixels with HUD_BG on all four sides at 6 px) no magenta may sit
-    const W = cv.width, at = (x, y) => (y * W + x) * 4, isBg = (x, y) => px[at(x, y)] === 11 && px[at(x, y) + 1] === 21;
-    for (let y = 6; y < Math.round(140 * s) - 6; y += 2) for (let x = 6; x < W - 6; x += 2) {
-      if (isBg(x, y) && isBg(x - 6, y) && isBg(x + 6, y)) { const o = at(x + 3, y); if (px[o] === 255 && px[o + 1] === 0 && px[o + 2] === 255) leak++; }
-    }
-    return { cells, leak };
+    const cv = document.querySelector('canvas'), ctx = cv.getContext('2d'), s = cv.width / G.C.W; ctx.setTransform(s, 0, 0, s, 0, 0);
+    const log = [], orig = ctx.fillRect.bind(ctx);
+    ctx.fillRect = (x, y, w, h) => { log.push({ x, y, w, h, fs: ctx.fillStyle, a: ctx.globalAlpha, t: ctx.getTransform().a }); orig(x, y, w, h); };
+    let hudStart = -1; const rd = G.rooms.draw, hd = G.hud.draw;
+    G.rooms.draw(ctx, 0); const roomEnd = log.length; hudStart = roomEnd; G.hud.draw(ctx);
+    ctx.fillRect = orig;
+    const hudCalls = log.slice(hudStart), slots = hudCalls.filter(c => c.fs === '#0b1514' && c.w >= 28 && c.w === c.h);
+    return { slots: slots.length, alpha: slots.every(c => c.a === 1), room: roomEnd, hudCalls: hudCalls.length,
+      order: document.querySelector('script[src="js/main.js"]') != null };
   });
-  if (hud.cells < 800) bad.push('no opaque HUD slot cells found (' + hud.cells + ' px)');
-  if (hud.leak) bad.push('room art shows through the HUD slots at ' + hud.leak + ' places');
+  const main = (await import('node:fs')).readFileSync('js/main.js', 'utf8');
+  if (!/G\.rooms\.draw\(ctx, dt\); G\.hud\.draw\(ctx\)/.test(main)) bad.push('main.js no longer draws the HUD right after the room, above everything');
+  if (hud.slots < 2) bad.push('fewer than 2 opaque HUD slot cells drawn (' + hud.slots + ')');
+  if (!hud.alpha) bad.push('a HUD slot cell is drawn translucent');
   if (bad.length) throw new Error(bad.join('; '));
 };

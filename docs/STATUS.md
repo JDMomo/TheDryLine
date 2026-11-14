@@ -21,9 +21,20 @@
 - Art pass (sprites through G.art), UI polish, independent play-through, publishing.
 - Difficulty is untuned by hand: see the report notes (r4 and the Terminus have 4 to 5 enemies per room; r3 rolls toads at every ground marker).
 
-## Pause point: 2026-11-14, about 11:15 Pacific (usage limit, resets 2pm)
-- Published build (all 19 checks passed at the time, before QA, art and fixes): https://claude.ai/artifact/95p16agX6vJmVZamusXNDf (slug 41750cd7-60e9-4932-8d05-f77cad4966a2, version 1794677217-e366). It does NOT yet include the QA pass, the item art, or the tester fixes.
-- Done since then, in the working tree: QA and balance pass (strict room validator, enemy mix, boss fairness bot, visual sweep, co-op, perf); item art (assets/tokens, assets/trinkets, js/art/sprites.js, docs/ART_GUIDE.md); independent tester report (10 findings).
-- The fix engineer (agent adcb51156e1875030) was cut off while fixing the tester's findings. Tree state: 23 of 31 checks pass. Failing: boss_final, boss_r3, punch, tokens (all on the arc cut after the Ochre Ladle retune: old checks stand at the old range, or the retune broke hits), boss_r4 (crabs left after the boss died), systems (ticket and booth expectations after the unique-token rule), page_fit and sprites (getImageData on a canvas tainted by file:// images: the checks must not read pixels, or must compare another way).
-- Next: resume the fix engineer (SendMessage) to finish items 9 and 10 and repair those 8 checks; run the full suite; publish to the same artifact including assets/ and js/art/sprites.js; update the project handbook and bible; then the wider art pass (player, enemies, bosses, tiles) following docs/ART_GUIDE.md.
-- Do not publish the working tree until the full suite passes.
+## Fix pass (2026-11-14, ten tester findings)
+1. Prompts: `G.props.wrap` and `layoutPrompt` wrap to 340 px and clamp the panel inside the screen (check `prompts`: every prop and tip).
+2. Pause is a menu (Resume, Restart run, Quit to title) in js/ui/menus.js: selected row highlighted, confirm step for Restart and Quit, controls shown in the words of the last device; the window blur or a hidden tab pauses (js/main.js). Down+Slash no longer quits. Check `pause`.
+3. Tokens are unique per run: `balance` draws trunks, ticket choices, booth stock and kiosk wares after trimming, from ids not held, void or claimed (`graph.claimed`); when the pool is dry a trinket or scrip is offered (`lootData`, `G.game.spareTokens`, `G.items.roll` returns null). The seed still reproduces the run. The pool is spent by the kiosk draw, so the booth usually has no stock and gives a trinket or scrip (by design, the prompt says so). Check `tokens_unique` (80 graphs).
+4. Arc tokens are aimed by what is held (`aimOf` in js/content/items.js): the Ladle lands about 131 px ahead by default, Up lobs it high, the facing direction throws it far, Down drops it close; the Kettle and Skipstone have the same table. Every Warden's arc slot is reachable with each arc token (`arc_reach`). Old checks `tokens`, `punch`, `boss_r3`, `boss_final` now aim with a held direction.
+5. r1 is gentle: region `scale {hp 0.8, aggro 0.85}` and `intro {maxEnemies 2, calm 8}` (regions.js), applied in `Enemy.applyScale` and worldgen; kills give `C.KILL_MEND`; bosses wait `C.BOSS_GRACE` (1.5 s) after the intro. r1_chain and r1_dock planks were widened. Check `r1_bot` (plain bot crosses r1's three rooms alive: 10 of 12 seeds in the check, 32 of 40 in a wider sweep).
+6. Every arena has a perch 3 tiles up against both walls (r1 to r4 rows 12 and 10; the Terminus already had them). Check `arena_escape` (bot).
+7. One-line tips shown once each (`G.tips` in js/ui/hud.js: token, mend, bounce, fare), wording by `G.input.last`; four hub signs say where tokens come from. Check `tips`.
+8. The strict validator passes r2_tower, r3_brines and all 49 main rooms in both directions; none needed the bounce (the tester ran the non-strict mode, which finds bounce routes). Strict mode now also rejects slashes and tests the D/C jobs both ways.
+9. Page: header holds the notes, `.frame` scales to the window, no scrolling (check `page_fit`: 9 window sizes from 1100x700 down to 480x800); the HUD draws after the room with opaque slot cells and corner plates.
+10. Sprites: `sprites.js` adds an entry only after the image is decoded (`G.spritesPending`), so the code-drawn icon shows until then and there is no flicker; the map's "Tokens held" row now uses the sprites. Check `sprites` records draw calls (the canvas is tainted under file://, pixels cannot be read).
+- Full suite: `node tools/smoke.mjs` passes all 31 checks.
+- Old checks repaired: `systems` (tickets may hold trinkets or scrip, booth stock, pause menu), `boss_r4` (crabs are swept a step after the boss dies).
+
+## Open
+- Weak spots: a player cornered between boss and wall cannot hop a wide boss body (r1 charge, r4 spin); fight lengths are simulated, not played by a person; hub, r1 and r4 skies are close in hue; r1's plain bot loses about 1 run in 5.
+- Art pass (player, enemies, bosses, tiles) following docs/ART_GUIDE.md; independent play-through; publishing (the published artifact predates all of this; do not publish until the suite passes).

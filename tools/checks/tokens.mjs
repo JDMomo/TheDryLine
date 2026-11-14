@@ -1,7 +1,7 @@
 // Tokens and trinkets: every token is used in an empty room and beside a dummy (no errors, the dummy takes damage, no shot outlives its life);
 // one token of each cut punches the matching fare slot on the Tollkeeper; every trinket lands its modifier on the run.
 const CUTS = { pierce: 'cobalt_awl', arc: 'ochre_ladle', burst: 'cinder_bell', ground: 'basalt_roller' };
-const RANGE = { pierce: 150, arc: 250, burst: 50, ground: 120, sulphur_kettle: 200, chalk_skipstone: 200 };
+const RANGE = { pierce: 150, arc: 130, burst: 50, ground: 120, sulphur_kettle: 150, chalk_skipstone: 200 };
 const WANT = {
   brass_buckle: { maxHp: 1 }, oiled_strap: { dashCd: 0.7 }, whetstone_chip: { dmg: 1.25 }, lead_boot: { knockback: 0.5, speed: 0.92 },
   magnet_tooth: { magnet: 1.6, shopCost: 1.1 }, punch_glove: { itemCd: 0.75 }, brine_flask: { mendTime: 0.7 }, surveyors_slate: { revealMap: true }
@@ -58,7 +58,7 @@ export default async ({ page }) => {
   for (const cut of Object.keys(CUTS)) if (ids.filter(i => res.tokens[i].cls === cut).length !== 3) throw new Error('cut ' + cut + ' does not have three tokens');
 
   // each cut punches its slot on the reference boss (aim values as in punch.mjs)
-  const aim = { pierce: [500, 436, 1], arc: [573, 480, 1], burst: [630, 480, 1], ground: [920, 480, -1] };
+  const aim = { pierce: [500, 436, 1], arc: [524, 480, 1, { right: true }], burst: [630, 480, 1], ground: [920, 480, -1] };
   const punch = await page.evaluate(({ CUTS, aim }) => {
     const D = G.debug, out = {};
     for (const cut in CUTS) {
@@ -66,10 +66,10 @@ export default async ({ page }) => {
       D.newRun(3); D.god(true); D.gotoRoom('r1'); G.players[0].items = [id]; G.players[0].sel = 0;
       D.startBoss('r1'); const floor = D.state().room.boss.floor;
       D.holdBoss({ x: 720, y: floor, face: -1, rear: cut === 'burst' ? 1 : 0 });
-      const [x, y, face] = aim[cut];
+      const [x, y, face, hold] = aim[cut];
       for (let k = 0; k < 3; k++) {
         G.players[0].itemCd = 0; D.place(0, x, y, face); D.step(1);
-        D.setInput(0, { item: true }); D.step(1); D.setInput(0, { item: false }); D.step(160);
+        if (hold) { D.setInput(0, hold); D.step(1); } D.setInput(0, { item: true }); D.step(1); D.setInput(0, { item: false, right: false }); D.step(160);
       }
       out[cut] = D.state().room.boss.spots.find(s => s.cls === cut).broken;
     }

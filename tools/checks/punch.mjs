@@ -5,7 +5,7 @@ export default async ({ page }) => {
     const D = G.debug, out = {}, run = n => D.step(n);
     const tap = (action, n = 1) => { D.setInput(0, { [action]: true }); run(n); D.setInput(0, { [action]: false }); run(1); };
     // Where to stand and which way to face for each cut, with the boss held at x 720 facing left (feet at y 480).
-    const aim = { pierce: [500, 436, 1], arc: [573, 480, 1], burst: [630, 480, 1], ground: [920, 480, -1] };
+    const aim = { pierce: [500, 436, 1], arc: [524, 480, 1, { right: true }], burst: [630, 480, 1], ground: [920, 480, -1] };   // arc: the Ladle is thrown far by holding the way you face
     const base = { pierce: 'cobalt_awl', arc: 'ochre_ladle', burst: 'cinder_bell', ground: 'basalt_roller' };
     // Picking up: clear the guards of r1's guarded plinth room with slashes, then take what the plinth holds.
     D.newRun(1); D.god(true); D.gotoRoom('r1_hold');
@@ -24,9 +24,9 @@ export default async ({ page }) => {
       D.startBoss('r1');
       const floor = D.state().room.boss.floor;
       D.holdBoss({ x: 720, y: floor, face: -1, rear: cls === 'burst' ? 1 : 0 });
-      const hp0 = D.state().room.boss.hp, [x, y, face] = aim[cls], hits = [];
+      const hp0 = D.state().room.boss.hp, [x, y, face, hold] = aim[cls], hits = [];
       for (let k = 0; k < 3; k++) {
-        D.place(0, x, y, face); run(1); tap('item'); run(160);
+        D.place(0, x, y, face); run(1); if (hold) D.setInput(0, hold); run(1); D.setInput(0, { item: true }); run(1); D.setInput(0, { item: false, right: false, left: false, up: false, down: false }); run(160);
         hits.push(D.state().room.boss.spots.find(sp => sp.cls === cls).hp);
       }
       const b = D.state().room.boss, p = D.state().players[0];

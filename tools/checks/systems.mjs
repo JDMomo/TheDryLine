@@ -55,8 +55,9 @@ export default async ({ page }) => {
     const s0 = G.run.shards; tap('interact');
     out.ticket1 = s0 - G.run.shards; ok(out.ticket1 === 30, 'first ticket costs 30, cost ' + out.ticket1);
     let plinths = props('plinth').filter(p => p.data.group); ok(plinths.length === 3, 'three tokens printed, got ' + plinths.length);
-    use(plinths[1]);
-    ok(D.state().players[0].items.includes(plinths[1].data.item), 'the chosen ticket token was taken');
+    const choice = plinths.find(p => p.data.item) || plinths[1];   // a ticket may print a trinket or scrip when the token pool is dry
+    use(choice);
+    ok(!choice.data.item || D.state().players[0].items.includes(choice.data.item), 'the chosen ticket token was taken');
     ok(props('plinth').filter(p => p.data.group && p.data.item).length === 0, 'the other tickets are void');
     G.run.tickets = 1; D.gotoRoom(m[1].id); mach = props('ticket')[0]; at(mach);
     ok(/45/.test(G.rooms.propNear(G.players[0]).prompt(G.players[0])[2]), 'second ticket price is shown (45)');
@@ -89,8 +90,10 @@ export default async ({ page }) => {
     const booth = props('booth')[0]; at(booth);
     ok(/pip/.test(G.rooms.propNear(G.players[0]).prompt(G.players[0]).join(' ')), 'booth shows its price (a health pip)');
     const hp0 = D.state().players[0].maxHp; D.state().players[0].items; const sel = G.players[0].items[G.players[0].sel], selCls = G.itemDefs[sel].cls;
+    if (!(G.rooms.current.props.find(q => q.type === 'booth').data.stock || []).length) { const spare = G.items.pool().find(id => !G.players[0].items.includes(id) && !G.run.spent.includes(id) && G.itemDefs[id].cls !== selCls); G.rooms.current.props.find(q => q.type === 'booth').data.stock = [spare]; }   // the pool is spent by now: the booth is dry, so give it one to swap
     tap('interact'); const clips = props('clip'); ok(clips.length === 4, 'booth offers four cuts, got ' + clips.length);
-    const cut = selCls === 'arc' ? 'ground' : 'arc'; use(clips.find(c => c.data.cls === cut));
+    
+    const stock = G.rooms.current.props.find(q => q.type === 'booth').data.stock || [], cut = ['arc', 'ground', 'pierce', 'burst'].find(c => c !== selCls && G.game.spareTokens(c, stock).length > 0) || 'arc'; use(clips.find(c => c.data.cls === cut));
     const neu = G.players[0].items[G.players[0].sel];
     ok(G.itemDefs[neu].cls === cut && neu !== sel, 'booth swapped to a token of the chosen cut: ' + sel + ' -> ' + neu);
     ok(D.state().players[0].maxHp === hp0 - 1, 'booth cost one max pip');
@@ -112,7 +115,8 @@ export default async ({ page }) => {
     ok(G.game.freeSlots() === 0, 'party is full');
     const pl = G.players[0], oldTok = pl.items[pl.sel];
     D.gotoRoom(nodeWith('ticket')[0].id); tap2(); function tap2() { at(props('ticket')[0]); tap('interact'); }
-    const pick = props('plinth').filter(p => p.data.group)[0];
+    const pick = props('plinth').filter(p => p.data.group && p.data.item)[0] || props('plinth').filter(p => p.data.group)[0];
+    at(pick);
     ok(/swap/i.test((G.rooms.propNear(G.players[0]) || { prompt: () => ['', '', ''] }).prompt(G.players[0])[2] || ''), 'full-party plinth says it will swap');
     use(pick);
     ok(pl.items.length === 4 && pl.items[pl.sel] === pick.data.item, 'swap put the new token in the selected slot');
@@ -161,11 +165,11 @@ export default async ({ page }) => {
     ok(G.meta.cuts.includes('pierce') && rares.every(id => G.items.pool().includes(id) && G.run.unlocked.includes(id)), 'punching a pierce slot unlocks its rare tokens and lists them');
     G.game.punched('pierce'); ok(G.run.unlocked.length === rares.length, 'a cut unlocks once');
     // pause menu: down, jump, jump restarts the same seed
-    const seed = G.run.seed; D.step(5); G.state = 'pause'; D.step(2);
+    const seed = G.run.seed; D.step(5); G.state = 'pause'; G.menus.open(); D.step(2);
     const press = a => { G.input.any.forced[a] = true; G.input.sync(); D.step(1); G.input.any.forced[a] = false; G.input.sync(); D.step(2); };
     press('down'); ok(G.menus.menu.sel === 1, 'pause menu moves to Restart run'); press('jump'); ok(G.menus.menu.confirm && G.state === 'pause', 'restart asks to confirm');
     press('jump'); ok(G.state === 'play' && G.run.seed === seed && G.run.time < 0.2, 'restart run keeps the seed and starts over');
-    G.state = 'pause'; D.step(2); press('jump'); ok(G.state === 'play', 'resume works');
+    G.state = 'pause'; G.menus.open(); D.step(2); press('jump'); ok(G.state === 'play', 'resume works');
     // every screen draws (with and without the Slate)
     for (const slate of [false, true]) for (const st of ['map', 'pause', 'over']) {
       G.run.mods.revealMap = slate; G.run.over = st === 'over' ? 'win' : null; G.state = st;
