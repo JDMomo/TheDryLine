@@ -1,0 +1,39 @@
+:root {
+  /* One visual world, dark by choice: a lamplit cavern. Canvas on top, reference notes folded away below. */
+  --ink: #0a1110;
+  --stone: #15201e;
+  --moss: #3f6b5a;
+  --bone: #e9e2cf;
+  --dim: #9aa89f;
+  --amber: #e9a23b;
+  --display: "Spectral SC", "Iowan Old Style", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+/* One screen, no scrolling: a slim header row, then the canvas scaled to fit what is left of the window (both width and height). The
+   controls and notes open as a panel over the canvas instead of below it. */
+:root { --hdr: 44px; --pad: 10px; }
+body { background: var(--ink); color: var(--bone); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+main { height: 100vh; height: 100dvh; padding: 0 var(--pad); display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+header { flex: none; width: 100%; height: var(--hdr); display: flex; align-items: center; gap: 12px; position: relative; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 24px; line-height: 1; letter-spacing: 0.04em; margin: 0; color: var(--amber); white-space: nowrap; }
+header p { margin: 0; color: var(--dim); font-size: 14px; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frame { position: relative; flex: none; width: min(1440px, calc(100vw - 2 * var(--pad)), calc((100vh - var(--hdr) - var(--pad)) * 960 / 544)); width: min(1440px, calc(100vw - 2 * var(--pad)), calc((100dvh - var(--hdr) - var(--pad)) * 960 / 544)); border: 1px solid var(--moss); border-radius: 6px; overflow: hidden; background: #000; line-height: 0; }
+canvas { display: block; width: 100%; height: auto; aspect-ratio: 960 / 544; outline: none; }
+canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--amber); }
+.start { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(6, 11, 11, 0.92); color: var(--amber); font: 600 30px var(--display); letter-spacing: 0.06em; cursor: pointer; }
+.start:hover, .start:focus-visible { color: var(--bone); outline: none; }
+.start[hidden] { display: none; }
+details { flex: none; }
+summary { cursor: pointer; font-family: var(--display); font-size: 15px; letter-spacing: 0.05em; padding: 4px 10px; background: var(--stone); border-radius: 6px; white-space: nowrap; list-style-position: inside; }
+summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.notes { position: absolute; z-index: 5; right: 0; top: var(--hdr); width: min(760px, calc(100vw - 2 * var(--pad))); max-height: calc(100vh - var(--hdr) - 2 * var(--pad)); max-height: calc(100dvh - var(--hdr) - 2 * var(--pad)); overflow: auto; background: var(--stone); border: 1px solid var(--moss); border-radius: 6px; padding: 14px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 28px; line-height: 1.5; }
+h2 { font-family: var(--display); font-weight: 500; font-size: 16px; letter-spacing: 0.05em; margin: 0 0 8px; text-wrap: balance; }
+dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 0; }
+dt { color: var(--dim); }
+dd { margin: 0; }
+kbd { font-family: var(--body); font-size: 12.5px; font-weight: 600; background: var(--ink); border: 1px solid var(--moss); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 640px) { header p { display: none; } header { justify-content: space-between; } }

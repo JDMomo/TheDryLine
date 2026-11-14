@@ -1,0 +1,376 @@
+/* CONTENT: enemies. One G.defineEnemy per type (fields and helpers: js/game/enemies.js; recipe: docs/ARCHITECTURE.md).
+   The eight enemies of bible section 5. Every hurtful attack has a visible wind-up of at least 0.3 s.
+   Drawn in code: chunky rounded shapes, a 3 px dark outline, light fills so they read on the dark backgrounds.
+   Colours stay out of the player's teal and amber and out of the four token colours. */
+(() => {
+'use strict';
+const G = window.G, C = G.C, T = C.T, U = G.util, tiles = G.tiles, fx = G.fx;
+
+/* ---------- shared helpers ---------- */
+const OUT = '#0e1518', RUST = '#B8482F', SAND = '#D9C5A0', SALT = '#F4F1E8', LAMP = '#F4E6B8', SEA = '#3C6E71';
+const TAU = 6.283;
+const rr = () => G.run.rng();
+const hit = (e, c) => e.flash > 0 ? '#ffffff' : c;
+
+// Fill a path with an outline of 3 px.
+const solid = (ctx, fill, path) => {
+  ctx.beginPath(); path(); ctx.fillStyle = fill; ctx.fill();
+  ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = OUT; ctx.stroke();
+};
+const rrect = (ctx, x, y, w, h, r) => {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+};
+const line = (ctx, x0, y0, x1, y1, col, w) => {   // a stroked limb with outline
+  ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+  ctx.strokeStyle = OUT; ctx.lineWidth = w + 3; ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+};
+const eye = (ctx, x, y, r, col) => { ctx.fillStyle = col || OUT; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
+
+// Ground checks for walkers: the cell row of the floor under the feet, floor ahead, no spikes, no wall.
+const frow = e => Math.floor((e.y + 2) / T);
+const cellSafe = (x, e) => {
+  const c = Math.floor(x / T), r = frow(e);
+  return tiles.floorAt(c, r) && !tiles.spike(c, r - 1) && !tiles.spike(c, r) && !tiles.solid(c, r - 1);
+};
+const safeAhead = (e, far = 6) => cellSafe(e.x + e.face * (e.w / 2 + far), e);
+// Every cell of a hop of 'dist' px ahead has floor at this level and nothing in the way.
+const hopSafe = (e, dist) => { for (let d = 8; d <= dist + e.w / 2; d += 10) if (!cellSafe(e.x + e.face * d, e)) return false; return cellSafe(e.x + e.face * (dist + e.w / 2), e); };
+const faceTarget = (e, p) => { if (p && Math.abs(p.x - e.x) > 4) e.face = p.x > e.x ? 1 : -1; };
+const near = (e, p, rx, ry) => p && Math.abs(p.x - e.x) < rx && Math.abs(p.y - e.y) < ry;
+
+// Brine drops (the Spout's lob and the Toad's splash) share a look.
+const brinePaint = (ctx, s) => {
+  ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fillStyle = '#d6e8dc'; ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(s.x - s.r * 0.3, s.y - s.r * 0.3, s.r * 0.25, 0, TAU); ctx.fill();
+};
+const warnRing = (ctx, y, r, k) => {     // the rust warning glow of a wind-up, k 0..1
+  ctx.save(); ctx.globalAlpha = 0.25 + 0.5 * k; ctx.strokeStyle = RUST; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(0, y, r + 4 + 4 * k, 0, TAU); ctx.stroke(); ctx.restore();
+};
+
+/* A slash is the only thing that can be shielded: wrap melee so the guard of a def can see who slashed. */
+if (!G.combat.slashBy && G.combat.melee) {
+  const melee = G.combat.melee;
+  G.combat.slashBy = null;
+  G.combat.melee = function (p, s, rect) {
+    G.combat.slashBy = { p, s };
+    try { return melee.call(this, p, s, rect); } finally { G.combat.slashBy = null; }
+  };
+}
+
+/* ---------- 1. Ballast Crab: small walker, patrols, turns at walls, ledges and spikes ---------- */
+G.defineEnemy({
+  id: 'ballast_crab', name: 'Ballast Crab', hp: 26, w: 30, h: 22, touch: 1, shards: [2, 5],
+  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; },
+  update(e) {
+    if (e.onGround && (e.hitWall || !safeAhead(e))) e.face = -e.face;
+    e.vx = e.face * 60;
+  },
+  draw(e, ctx) {
+    ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.face, 1);
+    const step = Math.sin(G.time * 12 + e.x * 0.1) * 3, body = hit(e, '#b7ad8e'), dark = hit(e, '#7d7660');
+    for (const lx of [-11, -4, 5, 12]) line(ctx, lx, -8, lx + (lx > 0 ? 3 : -3), -1 + (lx > 0 ? step : -step) * 0.4, '#8c846c', 3);
+    solid(ctx, body, () => ctx.ellipse(0, -11, 14, 9, 0, 0, TAU));                              // shell
+    solid(ctx, dark, () => rrect(ctx, -9, -14, 18, 5, 2));                                        // ballast band
+    line(ctx, 11, -11, 17, -14, '#b7ad8e', 4);                                                    // arm
+    solid(ctx, body, () => ctx.arc(19, -15, 5, 0.5, TAU - 0.5));                                  // claw
+    line(ctx, 4, -17, 4, -23, '#b7ad8e', 2); line(ctx, 10, -16, 10, -22, '#b7ad8e', 2);          // eye stalks
+    eye(ctx, 4, -24, 2.6, LAMP); eye(ctx, 10, -23, 2.6, LAMP); eye(ctx, 4.6, -24, 1, OUT); eye(ctx, 10.6, -23, 1, OUT);
+    ctx.restore();
+  }
+});
+
+/* ---------- 2. Brine Spout: stationary vent, lobs brine at the nearest player ---------- */
+G.defineEnemy({
+  id: 'brine_spout', name: 'Brine Spout', hp: 30, w: 26, h: 30, touch: 1, shards: [3, 5],
+  init(e) { e.set('idle', 1 + rr() * 1.2); },
+  update(e) {
+    e.vx = 0;
+    const p = e.target();
+    if (e.state === 'idle') {
+      faceTarget(e, p);
+      if (e.t <= 0 && p && Math.abs(p.x - e.x) < 560 && Math.abs(p.y - e.y) < 340) e.set('wind', 0.6);
+    } else if (e.state === 'wind') {
+      faceTarget(e, p);
+      if (e.t <= 0) {
+        const ox = e.x + e.face * 4, oy = e.y - e.h, tx = p ? p.x : e.x + e.face * 200, ty = p ? p.cy : e.y, g = 900;
+        const tt = U.clamp(Math.abs(tx - ox) / 380, 0.45, 0.95);
+        G.combat.shoot({ x: ox, y: oy, vx: (tx - ox) / tt, vy: (ty - oy - 0.5 * g * tt * tt) / tt, grav: g, r: 7, life: 3, hostile: true, cut: true, paint: brinePaint });
+        fx.spark(ox, oy, 8, '#d6e8dc', 200, 0.3); e.set('spent', 0.35);
+      }
+    } else if (e.t <= 0) e.set('idle', 1.8 + rr() * 0.8);
+  },
+  draw(e, ctx) {
+    const k = e.state === 'wind' ? 1 - Math.max(0, e.t) / 0.6 : e.state === 'spent' ? -0.5 * e.t / 0.35 : 0;
+    ctx.save(); ctx.translate(e.x, e.y);
+    if (e.state === 'wind') warnRing(ctx, -16, 14, k);
+    ctx.scale(1 + 0.12 * k, 1 - 0.1 * k);
+    const body = hit(e, '#9fb4af');
+    solid(ctx, '#6d8a88', () => rrect(ctx, -16, -8, 32, 8, 3));                                   // base plate
+    solid(ctx, body, () => { ctx.moveTo(-9, -8); ctx.lineTo(-7, -26); ctx.lineTo(7, -26); ctx.lineTo(9, -8); ctx.closePath(); });   // pipe
+    solid(ctx, hit(e, e.state === 'wind' ? RUST : '#c4d2cc'), () => rrect(ctx, -12, -32, 24, 9, 4));   // lip
+    solid(ctx, hit(e, '#c4d2cc'), () => rrect(ctx, -9, -17, 18, 4, 2));                          // band
+    eye(ctx, e.face * 3, -28, 3, OUT);                                                            // the mouth faces the target
+    if (e.state === 'wind' && Math.random() < 0.5) fx.spark(e.x + e.face * 2, e.y - 34, 1, '#d6e8dc', 60, 0.3);
+    ctx.restore();
+  }
+});
+
+/* ---------- 3. Turnstile: slow walker behind a front shield; slashes from the front bounce ---------- */
+G.defineEnemy({
+  id: 'turnstile', name: 'Turnstile', hp: 44, w: 34, h: 40, touch: 1, shards: [3, 5], heavy: true,
+  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.set('walk', 0); e.cool = 1; },
+  // Slashes from the front (not a down slash from above) are blocked while the shield is up; tokens always hurt.
+  guard(e, d, fromX) {
+    const s = G.combat.slashBy;
+    if (!s || e.state === 'turn' || s.s.dir === 'down') return true;
+    if (Math.sign(s.p.x - e.x) === e.face) { fx.spark(e.x + e.face * 22, e.y - 20, 6, '#ffffff', 220, 0.2); e.flash = 0; e.shieldHit = 0.12; return false; }
+    return true;
+  },
+  update(e, dt) {
+    e.shieldHit = Math.max(0, (e.shieldHit || 0) - dt); e.cool -= dt;
+    const p = e.target();
+    if (e.state === 'walk') {
+      if (e.onGround && (e.hitWall || !safeAhead(e))) { e.set('turn', 0.5); e.flip = true; }
+      else if (e.cool <= 0 && p && Math.sign(p.x - e.x) === -e.face && Math.abs(p.x - e.x) < 150 && Math.abs(p.y - e.y) < 70) { e.set('turn', 0.5); e.flip = true; e.cool = 3; }
+      e.vx = e.state === 'walk' ? e.face * 28 : 0;
+    } else {
+      e.vx = 0;                                                  // turning: the shield swings open for half a second
+      if (e.flip && e.t < 0.25) { e.face = -e.face; e.flip = false; }
+      if (e.t <= 0) e.set('walk', 0);
+    }
+  },
+  draw(e, ctx) {
+    ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.face, 1);
+    const open = e.state === 'turn', body = hit(e, SAND), sway = Math.sin(G.time * 5 + e.x) * 1.5;
+    for (const lx of [-9, 9]) line(ctx, lx, -8, lx, 0, '#a89a78', 6);                            // legs
+    solid(ctx, body, () => rrect(ctx, -14, -34, 28, 28, 7));                                      // body
+    solid(ctx, hit(e, '#a89a78'), () => rrect(ctx, -10, -40, 20, 10, 5));                         // head
+    eye(ctx, 3, -35, 2.4, LAMP); eye(ctx, 3.7, -35, 1, OUT);
+    for (let k = 0; k < 3; k++) line(ctx, -9 + k * 9, -29 - sway * 0.2, -9 + k * 9, -11, '#a89a78', 2);   // turnstile arms on the back
+    // front shield: an iron plate; swung up and open while turning, rust flash when it bounces a hit
+    ctx.save(); ctx.translate(14, -20); if (open) ctx.rotate(-1.1);
+    solid(ctx, e.shieldHit > 0 ? '#ffffff' : '#8d979a', () => rrect(ctx, -2, -17, 9, 34, 4));
+    eye(ctx, 2.5, -9, 1.6, RUST); eye(ctx, 2.5, 9, 1.6, RUST);
+    ctx.restore(); ctx.restore();
+  }
+});
+
+/* ---------- 4. Signal Gull: hovers, then swoops in an arc ---------- */
+G.defineEnemy({
+  id: 'signal_gull', name: 'Signal Gull', hp: 22, w: 30, h: 22, touch: 1, shards: [2, 4], flying: true, gravity: false,
+  init(e) { e.off = rr() < 0.5 ? -100 : 100; e.set('hover', 1.2 + rr()); e.bob = rr() * 6; },
+  update(e, dt) {
+    const p = e.target(), top = e.h + 40, bot = tiles.rows * T - 40;
+    if (e.state === 'hover') {
+      if (p) {
+        const tx = p.x + e.off, ty = U.clamp(p.y - 150, top, bot);
+        e.vx = U.clamp((tx - e.x) * 2, -130, 130); e.vy = U.clamp((ty - e.y) * 3, -120, 120) + Math.sin(G.time * 4 + e.bob) * 25;
+        faceTarget(e, p);
+        if (e.t <= 0 && Math.abs(p.x - e.x) < 460 && p.y > e.y - 40) e.set('wind', 0.55);
+      } else { e.vx = 0; e.vy = Math.sin(G.time * 3 + e.bob) * 20; }
+    } else if (e.state === 'wind') {
+      faceTarget(e, p);
+      e.vx = -e.face * 40; e.vy = -50 * (e.t / 0.55);               // rears back and up
+      if (e.t <= 0) {
+        const tx = p ? p.x : e.x + e.face * 100, ty = U.clamp(p ? p.cy : e.y + 100, top, bot);
+        e.ax = e.x; e.ay = e.y; e.bx = U.clamp(2 * tx - e.x, 40, tiles.cols * T - 40); e.ty = ty; e.dur = 1.0; e.u = 0;
+        e.set('swoop', e.dur);
+      }
+    } else if (e.state === 'swoop') {
+      e.u = 1 - Math.max(0, e.t) / e.dur;
+      const nx = e.ax + (e.bx - e.ax) * e.u, ny = e.ay + (e.ty - e.ay) * Math.sin(Math.PI * e.u);
+      e.vx = (nx - e.x) / dt; e.vy = (ny - e.y) / dt; e.face = e.bx > e.ax ? 1 : -1;
+      if (e.u >= 1 || e.hitWall || e.onGround) { e.off = -e.off; e.set('hover', 1.6 + rr()); }
+    } else e.set('hover', 1);
+  },
+  draw(e, ctx) {
+    ctx.save(); ctx.translate(e.x, e.y - e.h / 2); ctx.scale(e.face, 1);
+    const flap = e.state === 'swoop' ? 0.2 : Math.sin(G.time * 11 + e.bob) * (e.state === 'wind' ? 0.2 : 0.7);
+    const body = hit(e, SALT), wing = hit(e, '#a9b5b6');
+    if (e.state === 'wind') warnRing(ctx, 0, 16, 1 - Math.max(0, e.t) / 0.55);
+    ctx.save(); ctx.rotate(e.state === 'swoop' ? Math.atan2(e.vy, Math.abs(e.vx) + 1) * 0.6 : 0);
+    ctx.save(); ctx.translate(-2, -4); ctx.rotate(-0.5 - flap * 0.8);
+    solid(ctx, wing, () => { ctx.moveTo(0, 0); ctx.quadraticCurveTo(-6, -22, -16, -20); ctx.quadraticCurveTo(-14, -8, 6, 2); ctx.closePath(); }); ctx.restore();
+    solid(ctx, body, () => ctx.ellipse(0, 0, 14, 9, 0, 0, TAU));                                  // body
+    solid(ctx, body, () => ctx.arc(11, -5, 6, 0, TAU));                                           // head
+    solid(ctx, e.state === 'wind' ? RUST : '#c9633f', () => { ctx.moveTo(15, -7); ctx.lineTo(24, -4); ctx.lineTo(15, -2); ctx.closePath(); });   // beak
+    eye(ctx, 12, -7, 1.8);
+    solid(ctx, wing, () => { ctx.moveTo(-12, 2); ctx.lineTo(-22, 6 + flap * 3); ctx.lineTo(-12, 7); ctx.closePath(); });   // tail
+    ctx.restore(); ctx.restore();
+  }
+});
+
+/* ---------- 5. Lamp Wisp: slow flyer that drifts at the player; pops (0.45 s warning) when killed ---------- */
+G.defineEnemy({
+  id: 'lamp_wisp', name: 'Lamp Wisp', hp: 20, w: 24, h: 24, touch: 1, shards: [2, 4], flying: true, gravity: false,
+  init(e) { e.bob = rr() * 6; e.set('drift', 0); },
+  // The killing blow does not kill yet: the wisp swells for 0.45 s, then bursts and dies.
+  guard(e, d) {
+    if (e.state === 'pop') return false;
+    if (e.state !== 'gone' && e.hp - d <= 0) { e.set('pop', 0.45); e.harmless = true; e.hp = 0.001; e.flash = 0.1; return false; }
+    return true;
+  },
+  update(e) {
+    const p = e.target();
+    if (e.state === 'drift') {
+      const wob = Math.sin(G.time * 2.4 + e.bob) * 18;
+      if (p) { const dx = p.x - e.x, dy = p.cy - 10 - e.y, d = Math.hypot(dx, dy) || 1, s = Math.min(55, d * 2); e.vx = dx / d * s; e.vy = dy / d * s + wob; faceTarget(e, p); }
+      else { e.vx = 0; e.vy = wob; }
+    } else if (e.state === 'pop') {
+      e.vx = e.vy = 0;
+      if (e.t <= 0) {
+        const x = e.x, y = e.y - e.h / 2;
+        G.combat.shoot({ x, y, r: 56, life: 0.14, hostile: true, tile: 'pass', paint: (ctx, s) => {
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fillStyle = 'rgba(244,230,184,0.55)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = LAMP; ctx.stroke(); } });
+        fx.spark(x, y, 24, LAMP, 360, 0.5); fx.ring(x, y, 10, 260, LAMP, 0.3);
+        e.set('gone', 0); e.damage(1, e.x);
+      }
+    }
+  },
+  draw(e, ctx) {
+    ctx.save(); ctx.translate(e.x, e.y - e.h / 2);
+    const k = e.state === 'pop' ? 1 - Math.max(0, e.t) / 0.45 : 0, sw = 1 + 0.5 * k, pulse = 1 + Math.sin(G.time * 6 + e.bob) * 0.06;
+    ctx.save(); ctx.globalAlpha = 0.18 + 0.2 * k; ctx.fillStyle = LAMP; ctx.beginPath(); ctx.arc(0, 0, 26 * sw, 0, TAU); ctx.fill(); ctx.restore();   // light
+    if (e.state === 'pop') { ctx.save(); ctx.globalAlpha = 0.3 + 0.5 * k; ctx.strokeStyle = RUST; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(0, 0, 56 * (0.5 + 0.5 * k), 0, TAU); ctx.stroke(); ctx.restore(); }
+    ctx.scale(sw * pulse, sw * pulse);
+    for (let i = -1; i <= 1; i++) line(ctx, i * 5, 8, i * 6 + Math.sin(G.time * 5 + i) * 2, 17, '#b7ad8e', 3);   // wisps of smoke
+    solid(ctx, hit(e, e.state === 'pop' && Math.floor(G.time * 14) % 2 ? '#ffffff' : LAMP), () => ctx.arc(0, 0, 11, 0, TAU));
+    solid(ctx, hit(e, '#b7ad8e'), () => rrect(ctx, -7, -15, 14, 6, 3));                           // cap
+    eye(ctx, -3.5, 0, 2); eye(ctx, 3.5, 0, 2);
+    ctx.restore();
+  }
+});
+
+/* ---------- 6. Brine Toad: crouches, hops toward players, splashes on landing ---------- */
+G.defineEnemy({
+  id: 'brine_toad', name: 'Brine Toad', hp: 34, w: 32, h: 24, touch: 1, shards: [2, 5],
+  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.set('rest', 0.5 + rr()); },
+  update(e) {
+    const p = e.target();
+    if (e.state === 'rest') {
+      e.vx = 0;
+      if (e.t <= 0 && e.onGround) {
+        if (p && near(e, p, 460, 160)) faceTarget(e, p);
+        if (hopSafe(e, 100)) e.set('crouch', 0.4);
+        else { e.face = -e.face; e.set('rest', 0.5); }
+      }
+    } else if (e.state === 'crouch') {
+      e.vx = 0;
+      if (e.t <= 0) { e.vy = -520; e.vx = e.face * 170; e.set('hop', 0.12); }
+    } else if (e.state === 'hop') {
+      e.vx = e.face * 170;
+      if (e.t <= 0 && e.onGround) {
+        e.vx = 0;
+        for (const s of [-1, 1]) G.combat.shoot({ x: e.x + s * 14, y: e.y - 6, vx: s * 230, r: 6, life: 0.3, hug: true, hostile: true, cut: true, paint: brinePaint });
+        fx.spark(e.x, e.y - 4, 10, '#d6e8dc', 220, 0.3); fx.ring(e.x, e.y - 2, 6, 120, '#d6e8dc', 0.25);
+        e.set('rest', 0.9 + rr() * 0.5);
+      }
+    }
+  },
+  draw(e, ctx) {
+    ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.face, 1);
+    const k = e.state === 'crouch' ? 1 - Math.max(0, e.t) / 0.4 : 0, air = e.state === 'hop' ? 1 : 0;
+    if (e.state === 'crouch') warnRing(ctx, -10, 14, k);
+    ctx.scale(1 + 0.18 * k - 0.1 * air, 1 - 0.28 * k + 0.12 * air);
+    const body = hit(e, '#8fa56a'), belly = hit(e, '#cdd6a5');
+    solid(ctx, '#6f8450', () => rrect(ctx, -16, -8, 12, 8, 4));                                   // back foot
+    solid(ctx, body, () => ctx.ellipse(0, -11, 15, 10, 0, 0, TAU));                               // body
+    solid(ctx, belly, () => ctx.ellipse(3, -6, 9, 4, 0, 0, TAU));
+    solid(ctx, '#6f8450', () => rrect(ctx, 6, -6, 12, 6, 3));                                     // front foot
+    solid(ctx, body, () => ctx.arc(9, -19, 5, 0, TAU)); solid(ctx, body, () => ctx.arc(2, -20, 4.5, 0, TAU));   // eye bumps
+    eye(ctx, 10, -19.5, 2, LAMP); eye(ctx, 10.6, -19.5, 0.9, OUT); eye(ctx, 2.5, -20.5, 1.8, LAMP); eye(ctx, 3, -20.5, 0.8, OUT);
+    ctx.restore();
+  }
+});
+
+/* ---------- 7. Handcar: pump trolley; winds up (pumping, rust flash), dashes along the floor, then rests ---------- */
+G.defineEnemy({
+  id: 'handcar', name: 'Handcar', hp: 56, w: 46, h: 30, touch: 1, shards: [4, 5], heavy: true,
+  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.set('roll', 0); e.cool = 1.5; },
+  update(e, dt) {
+    e.cool -= dt;
+    const p = e.target();
+    if (e.state === 'roll') {
+      if (e.onGround && (e.hitWall || !safeAhead(e))) e.face = -e.face;
+      e.vx = e.face * 40;
+      if (e.cool <= 0 && p && e.onGround && Math.abs(p.y - e.y) < 70 && Math.abs(p.x - e.x) < 400 && Math.abs(p.x - e.x) > 40) { faceTarget(e, p); if (safeAhead(e)) e.set('wind', 0.65); }
+    } else if (e.state === 'wind') {
+      e.vx = -e.face * 12 * (e.t / 0.65);                          // rocks back as the handle pumps
+      if (e.t <= 0) e.set('dash', 1.0);
+    } else if (e.state === 'dash') {
+      e.vx = e.face * 340;
+      if (e.hitWall || !safeAhead(e, 8) || e.t <= 0) { e.vx = 0; fx.spark(e.x + e.face * 20, e.y - 8, 8, '#e9e2cf', 200, 0.3); e.set('rest', 0.9); }
+    } else if (e.state === 'rest') {
+      e.vx = 0;
+      if (e.t <= 0) { e.cool = 1.5; e.set('roll', 0); }
+    }
+  },
+  draw(e, ctx) {
+    ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.face, 1);
+    const wind = e.state === 'wind' ? 1 - Math.max(0, e.t) / 0.65 : 0, dash = e.state === 'dash';
+    const pump = e.state === 'wind' ? Math.sin(wind * 18) : e.state === 'roll' ? Math.sin(G.time * 3 + e.x) * 0.3 : dash ? 0.9 : 0;
+    if (e.state === 'wind') warnRing(ctx, -16, 24, wind);
+    const ang = G.time * (dash ? 14 : 3) * (e.state === 'rest' ? 0 : 1);
+    for (const wx of [-14, 14]) {                                                                // wheels
+      ctx.save(); ctx.translate(wx, -7); solid(ctx, hit(e, SAND), () => ctx.arc(0, 0, 7, 0, TAU)); ctx.rotate(ang);
+      line(ctx, -5, 0, 5, 0, OUT, 1); line(ctx, 0, -5, 0, 5, OUT, 1); ctx.restore();
+    }
+    solid(ctx, hit(e, e.state === 'wind' && Math.floor(wind * 8) % 2 ? RUST : '#a46a4d'), () => rrect(ctx, -22, -22, 44, 12, 4));   // deck
+    solid(ctx, hit(e, '#c9b48a'), () => rrect(ctx, -3, -29, 6, 10, 2));                           // post
+    ctx.save(); ctx.translate(0, -29); ctx.rotate(pump * 0.5);                                    // pump handle
+    solid(ctx, hit(e, '#8d979a'), () => rrect(ctx, -19, -3, 38, 6, 3)); eye(ctx, -19, 0, 3, LAMP); eye(ctx, 19, 0, 3, LAMP); ctx.restore();
+    solid(ctx, hit(e, '#8d979a'), () => rrect(ctx, 14, -26, 9, 14, 3));                           // front plate
+    ctx.restore();
+  }
+});
+
+/* ---------- 8. Hanging Lamp: hangs from the ceiling above its spawn, drops when a player passes under, then burns out ---------- */
+G.defineEnemy({
+  id: 'hanging_lamp', name: 'Hanging Lamp', hp: 20, w: 24, h: 30, touch: 1, shards: [2, 3], gravity: false, ceiling: true,
+  init(e) {
+    const c = Math.floor(e.x / T); let r = Math.floor((e.y - 2) / T);
+    while (r >= 0 && !tiles.solid(c, r)) r--;
+    e.ceil = Math.max(0, (r + 1) * T);                           // underside of the ceiling tile above the spawn
+    e.y = e.ceil + 14 + e.h; e.set('hang', 0); e.sway = rr() * 6;
+  },
+  update(e, dt) {
+    if (e.state === 'hang') {
+      e.vx = e.vy = 0;
+      for (const p of G.players) if (!p.down && Math.abs(p.x - e.x) < 26 && p.y > e.y) { e.set('shake', 0.45); break; }
+    } else if (e.state === 'shake') {
+      e.vx = e.vy = 0;
+      if (e.t <= 0) { e.set('fall', 0); e.vy = 60; }
+    } else if (e.state === 'fall') {
+      e.vy = Math.min(e.vy + 2000 * dt, 900);
+      if (e.onGround) {
+        e.vy = 0; e.set('landed', 3.2);
+        fx.spark(e.x, e.y - 4, 12, LAMP, 260, 0.4); fx.ring(e.x, e.y - 2, 8, 140, LAMP, 0.3); fx.jolt(0.03, 3);
+      }
+    } else if (e.state === 'landed') {
+      e.vx = e.vy = 0;
+      if (e.t <= 0) { e.dead = true; fx.spark(e.x, e.y - 12, 16, '#e9e2cf', 280, 0.4); fx.ring(e.x, e.y - 12, 6, 160, '#e9e2cf', 0.25); }   // breaks: no scrip
+    }
+  },
+  draw(e, ctx) {
+    ctx.save(); ctx.translate(e.x, e.y);
+    const swing = e.state === 'hang' ? Math.sin(G.time * 1.6 + e.sway) * 0.05 : e.state === 'shake' ? Math.sin(G.time * 60) * 0.12 : 0;
+    if (e.ceil !== undefined && e.state !== 'landed') {                                           // chain up to the ceiling
+      ctx.save(); ctx.translate(0, -e.h); ctx.rotate(swing); const len = Math.max(0, e.y - e.h - e.ceil);
+      line(ctx, 0, 0, 0, -len, '#8d979a', 2); ctx.restore();
+    }
+    ctx.translate(0, -e.h / 2); ctx.rotate(e.state === 'landed' ? 0 : swing);
+    const lit = e.state === 'landed' ? (e.t < 0.9 ? Math.floor(G.time * 12) % 2 : 1) : e.state === 'shake' ? 1 : 0.55;
+    const glass = e.state === 'landed' || e.state === 'shake' ? RUST : LAMP;
+    if (e.state === 'landed' || e.state === 'shake') { ctx.save(); ctx.globalAlpha = 0.25 * lit; ctx.fillStyle = RUST; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); ctx.restore(); }
+    solid(ctx, hit(e, '#8d979a'), () => rrect(ctx, -9, -15, 18, 7, 3));                          // cap
+    solid(ctx, hit(e, glass), () => { ctx.moveTo(-8, -9); ctx.lineTo(8, -9); ctx.lineTo(11, 9); ctx.arc(0, 9, 11, 0, Math.PI); ctx.closePath(); });   // glass
+    ctx.save(); ctx.globalAlpha = lit; eye(ctx, 0, 2, 4, '#ffffff'); ctx.restore();
+    solid(ctx, hit(e, '#8d979a'), () => rrect(ctx, -10, 11, 20, 4, 2));                          // rim
+    ctx.restore();
+  }
+});
+})();

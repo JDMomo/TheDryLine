@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Dry Line</title>
+<link rel="stylesheet" href="css/page.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>The Dry Line</h1>
+    <p>A run down an old toll railway. Keyboard or up to four controllers.</p>
+    <details>
+    <summary>Controls and how a run works</summary>
+    <div class="notes">
+      <section>
+        <h2>Controls</h2>
+        <dl>
+          <dt>Move</dt><dd><kbd>Arrows</kbd> or <kbd>W A S D</kbd></dd>
+          <dt>Jump</dt><dd><kbd>Z</kbd> or <kbd>Space</kbd>. Hold for height.</dd>
+          <dt>Slash</dt><dd><kbd>X</kbd> or <kbd>J</kbd>. Hold Up or Down to aim.</dd>
+          <dt>Dash</dt><dd><kbd>C</kbd>, <kbd>K</kbd> or <kbd>Shift</kbd>, once found</dd>
+          <dt>Use token</dt><dd><kbd>V</kbd> or <kbd>L</kbd>. Switch with <kbd>Q</kbd> or <kbd>E</kbd>.</dd>
+          <dt>Mend</dt><dd>Hold <kbd>F</kbd> on the ground</dd>
+          <dt>Doors, props</dt><dd><kbd>Up</kbd></dd>
+          <dt>Map, pause</dt><dd><kbd>Tab</kbd>, <kbd>Esc</kbd>. The pause menu can restart the run.</dd>
+          <dt>Controller</dt><dd>A jump, X slash, B dash, Y token, LB mend, RB switch. Press A on another controller at the Junction to join.</dd>
+        </dl>
+      </section>
+      <section>
+        <h2>How a run works</h2>
+        <ul>
+          <li>Every gate at the Junction is open from the start. Each line ends at a Warden.</li>
+          <li>The party carries four tokens. Each token has a cut: pierce, arc, burst or ground.</li>
+          <li>A Warden opens a fare slot only for a cut you carry when the fight starts.</li>
+          <li>Three token hits punch a slot: heavy damage, a stagger, and the Warden loses an attack. That token is then void.</li>
+          <li>Trials hold signal posts that teach new moves. Each line has a guarded plinth with its own fixed token. Two lost trunks (they open when the room is clear), two ticket machines (30, then 45, then 60 scrip), one kiosk (tokens 60, trinkets 40) and one clipping booth (one health pip for a new token of a cut you choose) are somewhere on the line.</li>
+          <li>A standpipe in the Junction and one before the last Warden each mend the party once. A Warden gives one more health pip, 40 scrip and a choice of one of three trinkets.</li>
+          <li>Punching a slot of a cut for the first time unlocks that cut's rare tokens for every later run. The map (Tab) lists each Warden's four fare slots by cut.</li>
+        </ul>
+      </section>
+    </div>
+  </details>
+  </header>
+  <div class="frame">
+    <canvas id="game" width="960" height="544" tabindex="0" aria-label="Game"></canvas>
+    <button id="start" class="start" type="button">Click to play</button>
+  </div>
+</main>
+<script src="js/core/util.js"></script>
+<script src="js/core/input.js"></script>
+<script src="js/core/fx.js"></script>
+<script src="js/core/tiles.js"></script>
+<script src="js/core/camera.js"></script>
+<script src="js/core/art.js"></script>
+<script src="js/game/player.js"></script>
+<script src="js/game/combat.js"></script>
+<script src="js/game/items.js"></script>
+<script src="js/game/trinkets.js"></script>
+<script src="js/game/enemies.js"></script>
+<script src="js/game/bosses.js"></script>
+<script src="js/game/props.js"></script>
+<script src="js/game/rooms.js"></script>
+<script src="js/game/worldgen.js"></script>
+<script src="js/game/run.js"></script>
+<script src="js/content/items.js"></script>
+<script src="js/content/trinkets.js"></script>
+<script src="js/content/enemies.js"></script>
+<script src="js/content/boss_r1.js"></script>
+<script src="js/content/boss_r2.js"></script>
+<script src="js/content/boss_r3.js"></script>
+<script src="js/content/boss_r4.js"></script>
+<script src="js/content/boss_final.js"></script>
+<script src="js/content/rooms_hub.js"></script>
+<script src="js/content/rooms_shared.js"></script>
+<script src="js/content/rooms_r1.js"></script>
+<script src="js/content/rooms_r2.js"></script>
+<script src="js/content/rooms_r3.js"></script>
+<script src="js/content/rooms_r4.js"></script>
+<script src="js/content/rooms_final.js"></script>
+<script src="js/content/regions.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/menus.js"></script>
+<script src="js/ui/map.js"></script>
+<script src="js/art/sprites.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

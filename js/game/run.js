@@ -1,0 +1,146 @@
+/* The run (G.run), the party, tokens changing hands, Warden rewards, win and lose, and the save kept between runs (G.meta). */
+(() => {
+'use strict';
+const G = window.G, C = G.C, U = G.util, fx = G.fx;
+const SAVE_KEY = 'dryline-meta-v1';
+
+// Between runs: runs played, wins, best winning time (s), cuts punched at least once (unlocks rare tokens of that cut),
+// taught (which first-time prop tips have been shown). Reads and writes never throw: without storage the game plays on in memory.
+G.meta = { runs: 0, wins: 0, best: null, cuts: [], taught: {} };
+function loadMeta() {
+  const m = G.meta;
+  let saved = null;
+  try { const raw = localStorage.getItem(SAVE_KEY); saved = raw ? JSON.parse(raw) : null; } catch (e) { saved = null; }   // storage missing or save damaged
+  if (saved && typeof saved === 'object') {
+    const num = v => typeof v === 'number' && isFinite(v) && v >= 0;
+    if (num(saved.runs)) m.runs = saved.runs;
+    if (num(saved.wins)) m.wins = saved.wins;
+    if (num(saved.best)) m.best = saved.best;
+    if (Array.isArray(saved.cuts)) m.cuts = saved.cuts.filter(c => typeof c === 'string' && G.CLASSES[c]);
+    if (saved.taught && typeof saved.taught === 'object' && !Array.isArray(saved.taught)) m.taught = Object.assign({}, saved.taught);
+  }
+  return m;
+}
+loadMeta();
+
+const game = G.game = {
+  loadMeta,
+  saveMeta() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.meta)); } catch (e) { /* storage unavailable */ } },
+
+  // The win and lose rules. Replace these functions to change them (each gets the run and returns true when it applies).
+  win: run => !!run.beaten.final,
+  lose: () => G.players.every(p => p.down),
+
+  newRun(seed) {
+    if (seed === undefined || seed === null) seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
+    const run = G.run = { seed, rng: U.makeRng((seed ^ 0x9e3779b9) >>> 0), time: 0, shards: 0, abil: {}, trinkets: [], spent: [], beaten: {},
+      mods: G.baseMods(), bonusHp: 0, tickets: 0, rooms: {}, over: null, overT: 0, stats: { hits: 0, breaks: 0, kills: 0 }, graph: null,
+      punchLog: [], unlocked: [] };
+    for (const id in G.abilityDefs) run.abil[id] = false;
+    run.graph = G.worldgen.build(seed);
+    if (!G.players.length) game.addPlayer(0);
+    for (const p of G.players) { p.items = []; p.sel = 0; p.hp = p.maxHp; p.glow = 0; p.down = false; }
+    game.reslot();
+    G.rooms.trans = null;
+    G.rooms.enter(run.graph.hub, { start: true });
+    G.meta.runs++; game.saveMeta();
+    return run;
+  },
+  // Player 1 gets the keyboard as well as its gamepad. Returns the new player, or null if the party is full.
+  addPlayer(pad = -1) {
+    if (G.players.length >= 4) return null;
+    const p = new G.Player(G.players.length, G.input.makeState({ kb: !G.players.length, pad }));
+    G.players.push(p); game.reslot();
+    const lead = G.players[0];
+    if (p !== lead && G.rooms.current) { p.hp = p.maxHp; p.place(lead.x, lead.y, lead.face); fx.say('Player ' + (p.index + 1) + ' joined', 'The party shares four token slots.', 2.4); }
+    return p;
+  },
+  // Four slots in total: floor(4 / n) each, the remainder to player 1. Tokens are dealt back out in order.
+  reslot() {
+    const n = G.players.length, each = Math.floor(C.SLOTS / n), all = G.players.flatMap(p => p.items);
+    G.players.forEach((p, i) => { p.slots = each + (i === 0 ? C.SLOTS - each * n : 0); p.items = []; p.sel = 0; });
+    for (const id of all) { const p = G.players.find(q => q.items.length < q.slots); if (p) p.items.push(id); }
+  },
+  partyItems() { return G.players.flatMap(p => p.items); },
+  partyClasses() { return new Set(game.partyItems().map(id => G.itemDefs[id].cls)); },
+  freeSlots() { return G.players.reduce((s, p) => s + p.slots - p.items.length, 0); },
+  // Tokens of a cut (or any cut) that the run can still hand out at random: in the pool, and not held, not void and not already placed or
+  // offered by a source of this run (graph.claimed). Empty when the pool has run dry.
+  // `stock`: the tokens the clipping booth was given when the run was built (they are in graph.claimed, but are the booth's to hand out).
+  spareTokens(cls, stock = []) {
+    const gone = new Set([...game.partyItems(), ...G.run.spent]), taken = new Set([...gone, ...G.run.graph.claimed]);
+    const mine = stock.filter(id => G.itemDefs[id] && (!cls || G.itemDefs[id].cls === cls) && !gone.has(id));
+    return G.items.pool(cls).filter(id => !taken.has(id)).concat(mine.filter(id => !G.items.pool(cls).includes(id) || taken.has(id)));
+  },
+  // A player picks a token up. If the whole party is full it replaces that player's selected token, which is returned (else null).
+  takeItem(p, id) {
+    const holder = p.items.length < p.slots ? p : G.players.find(q => q.items.length < q.slots);
+    G.tips.fire('token');
+    if (holder) { holder.items.push(id); holder.sel = holder.items.length - 1; return null; }
+    const old = p.items[p.sel]; p.items[p.sel] = id; return old;
+  },
+  // A token lands the punching hit on a fare slot and is void. Returns its definition, or null if nobody holds it any more.
+  spend(itemId, owner) {
+    const holder = owner && owner.items.includes(itemId) ? owner : G.players.find(q => q.items.includes(itemId));
+    if (!holder) return null;
+    holder.items.splice(holder.items.indexOf(itemId), 1); G.run.spent.push(itemId);
+    return G.itemDefs[itemId];
+  },
+  // A fare slot of this cut was punched (called by the boss right after spend). Logs which token, which slot and where, and
+  // unlocks the rare tokens of that cut for every later run. Newly unlocked ones are listed in run.unlocked for the end screens.
+  punched(cls) {
+    const run = G.run, boss = G.rooms.current && G.rooms.current.boss, spot = boss && boss.spots.find(s => s.cls === cls && s.broken);
+    run.stats.breaks++;
+    const itemId = run.spent.length > run.punchLog.filter(l => l.item).length ? run.spent[run.spent.length - 1] : null, region = G.rooms.current ? G.rooms.current.region : null;
+    run.punchLog.push({ cut: cls, item: itemId, slot: spot ? spot.def.name : '', boss: boss ? boss.def.name : '', region });
+    if (!G.meta.cuts.includes(cls)) {
+      G.meta.cuts.push(cls);
+      for (const d of Object.values(G.itemDefs)) if (d.rarity === 'rare' && d.cls === cls && !run.unlocked.includes(d.id)) run.unlocked.push(d.id);
+    }
+    game.saveMeta();
+  },
+  addTrinket(id) {
+    const before = G.players.map(p => p.maxHp);
+    G.run.trinkets.push(id); G.run.mods = G.baseMods();
+    for (const t of G.run.trinkets) G.trinketDefs[t].apply(G.run.mods);
+    G.players.forEach((p, i) => { if (!p.down) p.hp = U.clamp(p.hp + Math.max(0, p.maxHp - before[i]), 1, p.maxHp); });
+  },
+  // Health pips for the rest of the run: +1 per Warden, -1 per clipping. New pips arrive full.
+  addMaxPips(n) {
+    G.run.bonusHp += n;
+    for (const p of G.players) if (!p.down) p.hp = U.clamp(p.hp + Math.max(0, n), 1, p.maxHp);
+  },
+  // A Warden falls: one more health pip, 40 scrip, and a choice of one trinket from three.
+  bossBeaten(boss) {
+    const room = G.rooms.current, run = G.run;
+    run.beaten[boss.region] = true;
+    G.rooms.endFight(room);
+    game.addMaxPips(1);
+    run.shards += C.WARDEN_SCRIP;
+    fx.floatText(boss.x, boss.y - boss.h - 20, '+' + C.WARDEN_SCRIP + ' scrip', '#fff3c4');
+    const mid = (room.def.floorX[0] + room.def.floorX[1]) / 2, picks = [];
+    for (let i = 0; i < 3; i++) { const t = G.trinkets.roll(run.rng, picks); if (t) picks.push(t); }
+    picks.forEach((t, i) => room.props.push(G.props.make('plinth', mid + (i - 1) * 58, boss.floor, { trinket: t, group: 'reward' })));
+  },
+  // Token slots (cut and name) the party holds, for the map and screens.
+  heldTokens() { return game.partyItems().map(id => ({ id, name: G.itemDefs[id].name, cls: G.itemDefs[id].cls, color: G.CLASSES[G.itemDefs[id].cls].color, shape: G.CLASSES[G.itemDefs[id].cls].shape })); },
+  // Called every step while playing.
+  checkEnd() {
+    const run = G.run;
+    if (run.over) return;
+    const result = game.win(run) ? 'win' : game.lose(run) ? 'dead' : null;
+    if (!result) return;
+    run.over = result;
+    if (result === 'win') { G.meta.wins++; if (G.meta.best === null || run.time < G.meta.best) G.meta.best = run.time; game.saveMeta(); }
+  }
+};
+
+// Props that worldgen placed on top of a template (node.extras) join the room the first time it is entered.
+const enterRoom = G.rooms.enter;
+G.rooms.enter = function (nodeId, entry) {
+  const fresh = !G.run.rooms[nodeId];
+  enterRoom.call(this, nodeId, entry);
+  const room = G.rooms.current, node = room && room.node;
+  if (fresh && node && node.extras) for (const e of node.extras) room.props.push(G.props.make(e.type, e.x, e.y, Object.assign({}, e.data)));
+};
+})();

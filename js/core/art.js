@@ -1,0 +1,103 @@
+/* The one door all drawing goes through, so a later art pass can swap pictures in without touching gameplay.
+   G.art.draw(id, ctx, opts) uses G.sprites[id] if it exists, otherwise the registered procedural painter. */
+(() => {
+'use strict';
+const G = window.G, C = G.C, T = C.T;
+
+G.sprites = {};                       // id -> HTMLImageElement | HTMLCanvasElement (filled by the art pass)
+const painters = {};
+const BASE_PALETTE = {
+  sky0: '#0d1a19', sky1: '#152825', sky2: '#0c1514', far: '#11201e', near: '#0e1a18',
+  tile: '#060b0b', side: '#1c2c29', edge: '#3f6b5a', edgeHi: '#6fa08a', accent: '#d9c5a0', spike: '#c9c2ae'
+};
+const hash1 = (i, s) => Math.abs(Math.sin(i * 12.9898 + s) * 43758.5453) % 1;
+
+const art = G.art = {
+  define(id, painter) { painters[id] = painter; },
+  // opts: { x, y, w, h, face, anchor: 'feet' | 'center', ... anything the painter wants }.
+  // A sprite is drawn with its bottom centre (or centre) on x, y. Returns false if nothing is registered.
+  draw(id, ctx, opts = {}) {
+    const img = G.sprites[id];
+    if (img) {
+      const w = opts.w || img.width, h = opts.h || img.height;
+      ctx.save(); ctx.translate(opts.x || 0, opts.y || 0); if (opts.face < 0) ctx.scale(-1, 1);
+      ctx.drawImage(img, -w / 2, opts.anchor === 'center' ? -h / 2 : -h, w, h);
+      ctx.restore(); return true;
+    }
+    if (painters[id]) { painters[id](ctx, opts); return true; }
+    return false;
+  },
+  // Region colours: { sky0, sky1, sky2, far, near, tile, side, edge, edgeHi, accent, spike }; a region's palette overrides the base.
+  palette(regionId) {
+    const r = G.regionDefs && G.regionDefs[regionId];
+    return Object.assign({}, BASE_PALETTE, r && r.palette);
+  },
+  // A cut's shape (see G.CLASSES[cls].shape) filled at 0,0 with radius r: 'triangle' | 'crescent' | 'star' | 'slab'.
+  cutShape(ctx, shape, r) {
+    ctx.beginPath();
+    if (shape === 'triangle') { ctx.moveTo(0, -r); ctx.lineTo(r * 0.9, r * 0.7); ctx.lineTo(-r * 0.9, r * 0.7); ctx.closePath(); ctx.fill(); }
+    else if (shape === 'crescent') { ctx.arc(0, 0, r, 0.5, Math.PI * 2 - 0.5); ctx.arc(r * 0.45, 0, r * 0.7, Math.PI * 2 - 0.9, 0.9, true); ctx.closePath(); ctx.fill(); }
+    else if (shape === 'star') {
+      for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 - Math.PI / 2, k = i % 2 ? r * 0.45 : r; ctx.lineTo(Math.cos(a) * k, Math.sin(a) * k); }
+      ctx.closePath(); ctx.fill();
+    } else ctx.fillRect(-r, -r * 0.4, r * 2, r * 0.8);
+  },
+  label(ctx, text, x, y, size, color, align = 'center', font = C.FONT, weight = 500) {
+    ctx.font = weight + ' ' + size + 'px ' + font; ctx.textAlign = align; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(5,9,8,0.75)'; ctx.fillText(text, x + 1, y + 1.5);
+    ctx.fillStyle = color; ctx.fillText(text, x, y);
+  },
+  // Screen-space background with two parallax layers and drifting motes.
+  backdrop(ctx, pal, camX, time) {
+    const g = ctx.createLinearGradient(0, 0, 0, C.H);
+    g.addColorStop(0, pal.sky0); g.addColorStop(0.6, pal.sky1); g.addColorStop(1, pal.sky2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, C.W, C.H);
+    for (const [f, col, n, seed] of [[0.25, pal.far, 26, 3.1], [0.5, pal.near, 22, 7.7]]) {
+      ctx.fillStyle = col;
+      for (let i = 0; i < n; i++) {
+        const h1 = hash1(i, seed), h2 = hash1(i * 6.02, seed + 1.3);
+        const x = i * 190 * (0.6 + f) + h1 * 120 - camX * f, w = 40 + h2 * 70;
+        if (x > C.W + 100 || x < -160) continue;
+        if (i % 2) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + w, 0); ctx.lineTo(x + w * 0.5, 120 + h1 * 200); ctx.closePath(); ctx.fill(); }
+        else ctx.fillRect(x, 120 + h1 * 160, w, C.H);
+      }
+    }
+    ctx.fillStyle = pal.accent;
+    for (let i = 0; i < 46; i++) {
+      const x = (((i * 211.7 + time * (6 + i % 5 * 3)) - camX * 0.8) % (C.W + 40) + C.W + 40) % (C.W + 40) - 20;
+      const y = (i * 97.3 + Math.sin(time * 0.6 + i) * 18) % 440 + 30;
+      ctx.globalAlpha = 0.25 + 0.2 * Math.sin(time * 1.3 + i * 2.1); ctx.fillRect(x, y, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  },
+  // World-space tiles of the current room.
+  tiles(ctx, pal) {
+    const tl = G.tiles, grid = tl.grid;
+    const c0 = Math.max(0, Math.floor(G.cam.x / T)), c1 = Math.min(tl.cols - 1, Math.floor((G.cam.x + C.W) / T));
+    const r0 = Math.max(0, Math.floor(G.cam.y / T)), r1 = Math.min(tl.rows - 1, Math.floor((G.cam.y + C.H) / T));
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+      const x = c * T, y = r * T, ch = grid[r][c];
+      if (ch === '#') {
+        ctx.fillStyle = pal.tile; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        if (r > 0 && grid[r - 1][c] !== '#') {
+          ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 4); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
+          if ((c * 7 + r) % 3 === 0) { ctx.fillStyle = pal.edge; ctx.fillRect(x + 6, y - 3, 2, 3); ctx.fillRect(x + 19, y - 4, 2, 4); }
+        }
+        ctx.fillStyle = pal.side;
+        if (c > 0 && grid[r][c - 1] !== '#') ctx.fillRect(x, y, 2, T);
+        if (c < tl.cols - 1 && grid[r][c + 1] !== '#') ctx.fillRect(x + T - 2, y, 2, T);
+        if (r < tl.rows - 1 && grid[r + 1][c] !== '#') ctx.fillRect(x, y + T - 2, T, 2);
+      } else if (ch === '^') {
+        ctx.fillStyle = pal.tile; ctx.fillRect(x, y + 26, T + 0.5, 6.5);
+        ctx.fillStyle = pal.spike;
+        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x + i * 8, y + 28); ctx.lineTo(x + i * 8 + 4, y + 8); ctx.lineTo(x + i * 8 + 8, y + 28); ctx.closePath(); ctx.fill(); }
+      } else if (ch === '=') {
+        ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 5); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
+        ctx.fillStyle = pal.side; ctx.fillRect(x + 4, y + 5, 3, 5); ctx.fillRect(x + T - 7, y + 5, 3, 5);
+      }
+    }
+    ctx.fillStyle = pal.accent;
+    for (const b of tl.blockers) if (b.on) for (let i = 0; i < 4; i++) ctx.fillRect(b.c * T + 3 + i * 8, b.r0 * T, 3, (b.r1 - b.r0 + 1) * T);
+  }
+};
+})();
