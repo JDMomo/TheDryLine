@@ -161,7 +161,7 @@ export default async ({ page }) => {
     // pause menu: down, jump, jump restarts the same seed
     const seed = G.run.seed; D.step(5); G.state = 'pause'; G.menus.open(); D.step(2);
     const press = a => { G.input.any.forced[a] = true; G.input.sync(); D.step(1); G.input.any.forced[a] = false; G.input.sync(); D.step(2); };
-    press('down'); ok(G.menus.menu.sel === 1, 'pause menu moves to Restart run'); press('jump'); ok(G.menus.menu.confirm && G.state === 'pause', 'restart asks to confirm');
+    press('down'); press('down'); press('down'); ok(G.menus.menu.sel === 3, 'pause menu moves to Restart run'); press('jump'); ok(G.menus.menu.confirm && G.state === 'pause', 'restart asks to confirm');
     press('jump'); ok(G.state === 'play' && G.run.seed === seed && G.run.time < 0.2, 'restart run keeps the seed and starts over');
     G.state = 'pause'; G.menus.open(); D.step(2); press('jump'); ok(G.state === 'play', 'resume works');
     // every screen draws (with and without the Slate)

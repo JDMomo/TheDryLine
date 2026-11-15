@@ -193,6 +193,7 @@ class Player {
   }
 
   draw(ctx, dt) {
+    if (G.debug.hidePlayers) return;                 // (tests: hide every player to compare a picture with and without)
     const p = this, sc = p.scarf;
     sc[0].x = p.x - p.face * 7; sc[0].y = p.y - 30;
     for (let i = 1; i < sc.length; i++) {
@@ -271,7 +272,7 @@ G.pickStrip = pickStrip;                           // (for the art_test check)
 
 // Procedural painter for the player. opts.p is the Player.
 G.art.define('player', (ctx, o) => {
-  const p = o.p, base = p.down ? 0.55 : (p.inv > 0 && Math.floor(G.time * 22) % 2 ? 0.45 : 1);
+  const p = o.p, base = p.down ? 0.55 : (p.inv > 0 ? (G.meta.settings.reduceFlashes ? 0.6 : Math.floor(G.time * 22) % 2 ? 0.45 : 1) : 1);   // (never false/0: a bare `inv > 0 && ...` made the player invisible whenever not hurt)
   ctx.globalAlpha = base;
   // Watercolor player (F2 toggles; player 1 only): strips replace the code-drawn body and scarf. Missing files fall through to the code-drawn player.
   if (stripsOn(p)) {

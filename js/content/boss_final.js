@@ -84,7 +84,7 @@ function summon(b) {
     e.summoned = true;
     e.damage = function (d, fromX) {                                  // summoned crabs drop no scrip, so they cannot be farmed
       if (this.dead) return;
-      this.hp -= d; this.flash = 0.1; this.kbT = 0.12; this.kbV = Math.sign(this.x - fromX || 1) * 220;
+      this.hp -= d; this.flash = G.fx.flashT(0.1); this.kbT = 0.12; this.kbV = Math.sign(this.x - fromX || 1) * 220;
       if (this.hp <= 0) { this.dead = true; fx.spark(this.x, this.y - this.h / 2, 18, '#e9e2cf', 320, 0.5); }
     };
     room.enemies.push(e); fx.dust(x, b.floor, 10); fx.ring(x, b.floor - 10, 4, 120, LAMP, 0.3);

@@ -90,7 +90,7 @@ G.hud = {
     for (let i = 0; i < p1.slots; i++) slot(ctx, p1, i, W - 22 - (p1.slots - i) * 50, 16, 44);
     let ry = 74;
     const cur = p1.items[p1.sel];
-    if (cur) { const d = G.itemDefs[cur]; art.label(ctx, d.name + '  ·  ' + G.CLASSES[d.cls].name + ' cut', W - 22, ry, 12, G.CLASSES[d.cls].color, 'right', C.FONT, 600); ry += 20; }
+    if (cur) { const d = G.itemDefs[cur]; art.label(ctx, d.name + '  ·  ' + G.CLASSES[d.cls].name + ' cut', W - 22, ry, 12, G.CLASSES[d.cls].color, 'right', C.FONT, 600); ry += 16; G.materials.drawChips(ctx, d.mat, W - 22, ry + 2, 'right'); ry += 18; }
     else if (!p1.items.length) { art.label(ctx, 'No tokens. Slashes always work.', W - 22, ry, 12, '#9aa89f', 'right'); ry += 20; }
     if (run.spent.length) {
       art.label(ctx, 'Void', W - 26 - run.spent.length * 20, ry, 12, '#9aa89f', 'right');

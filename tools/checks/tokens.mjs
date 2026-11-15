@@ -3,8 +3,8 @@
 const CUTS = { pierce: 'cobalt_awl', arc: 'ochre_ladle', burst: 'cinder_bell', ground: 'basalt_roller' };
 const RANGE = { pierce: 150, arc: 130, burst: 50, ground: 120, sulphur_kettle: 150, chalk_skipstone: 200 };
 const WANT = {
-  brass_buckle: { maxHp: 1 }, oiled_strap: { dashCd: 0.7 }, whetstone_chip: { dmg: 1.25 }, lead_boot: { knockback: 0.5, speed: 0.92 },
-  magnet_tooth: { magnet: 1.6, shopCost: 1.1 }, punch_glove: { itemCd: 0.75 }, brine_flask: { mendTime: 0.7 }, surveyors_slate: { revealMap: true }
+  brass_buckle: { maxHp: 1 }, oiled_strap: { slick: true }, whetstone_chip: { spark: true }, lead_boot: { anchor: true, knockback: 0, speed: 0.92 },
+  magnet_tooth: { magnetic: true, magnet: 1.6 }, punch_glove: { punt: true }, brine_flask: { conduct: true }, surveyors_slate: { revealMap: true }
 };
 
 export default async ({ page }) => {

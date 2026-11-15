@@ -9,6 +9,8 @@ const G = window.G, C = G.C, U = G.util, fx = G.fx, art = G.art;
 const priceOf = d => Math.round(d.price * G.run.mods.shopCost);
 const goodName = d => d.item ? G.itemDefs[d.item].name : d.trinket ? G.trinketDefs[d.trinket].name : d.scrip ? 'Purse of scrip' : '';
 const goodDesc = d => d.item ? G.CLASSES[G.itemDefs[d.item].cls].name + ' token. ' + G.itemDefs[d.item].desc : d.trinket ? 'Trinket. ' + G.trinketDefs[d.trinket].desc : d.scrip ? d.scrip + ' scrip.' : '';
+// Material card of a plinth's good: { tags, line } (chips and the interactions line, see G.materials), or null.
+const goodMat = d => { const def = d.item ? G.itemDefs[d.item] : d.trinket ? G.trinketDefs[d.trinket] : null; return def && def.mat ? { tags: def.mat, line: def.inter } : null; };
 const goodColor = d => d.item ? G.itemDefs[d.item].color : d.trinket ? G.trinketDefs[d.trinket].color : d.scrip ? '#fff3c4' : '#888';
 const hasGood = d => !!(d.item || d.trinket || d.scrip);
 function drawGood(ctx, d, x, y, s) {
@@ -80,7 +82,7 @@ const TYPES = {
       const hint = d.locked && !G.rooms.current.cleared ? 'Guarded until the room is clear'
         : d.price ? 'Up to buy for ' + priceOf(d) + ' scrip' + (G.run.shards < priceOf(d) ? ' (you have ' + Math.floor(G.run.shards) + ')' : '') + (swap ? ', swaps your selected token' : '')
         : swap ? 'Up to swap with your selected token' + (sel ? ' (' + G.itemDefs[sel].name + ')' : '') : 'Up to take';
-      return [goodName(d), goodDesc(d), hint];
+      return [goodName(d), goodDesc(d), hint, goodMat(d)];
     },
     draw(pr, ctx) {
       const d = pr.data, x = pr.x, y = pr.y;
@@ -363,13 +365,15 @@ G.props = {
   PROMPT_W: 340,     // widest line of a prompt, px
   // Where the prompt panel of a prop goes: lines wrapped to PROMPT_W, the whole panel clamped inside the screen (world coordinates).
   layoutPrompt(ctx, pr, lines) {
-    const [title, line, hint] = lines, tip = G.props.tip(pr), maxW = G.props.PROMPT_W, PAD = 10, GAP = 4;
+    const [title, line, hint, mat] = lines, tip = G.props.tip(pr), maxW = G.props.PROMPT_W, PAD = 10, GAP = 4;
     const rows = [];
-    for (const [text, size, kind, weight] of [[tip, 12, 'tip', 500], [title, 15, 'title', 600], [line, 12.5, 'line', 500], [hint, 12.5, 'hint', 500]])
+    for (const [text, size, kind, weight] of [[tip, 12, 'tip', 500], [title, 15, 'title', 600], [line, 12.5, 'line', 500], [mat && mat.line, 12, 'mat', 500], [hint, 12.5, 'hint', 500]]) {
       if (text) for (const t of G.props.wrap(ctx, text, size, maxW, weight)) rows.push({ t, size, kind, weight });
+      if (kind === 'line' && mat) rows.push({ t: '', size: 14, kind: 'chips', tags: mat.tags, weight: 500, cw: G.materials.chipsWidth(ctx, mat.tags) });   // the material chips sit under the description
+    }
     if (!rows.length) return null;
     let w = 0, h = PAD * 2 - GAP;
-    for (const r of rows) { ctx.font = r.weight + ' ' + r.size + 'px ' + C.FONT; w = Math.max(w, ctx.measureText(r.t).width); r.h = r.size + GAP; h += r.h; }
+    for (const r of rows) { ctx.font = r.weight + ' ' + r.size + 'px ' + C.FONT; w = Math.max(w, r.cw || ctx.measureText(r.t).width); r.h = r.size + GAP; h += r.h; }
     w += PAD * 2;
     const M = 8, camX = G.cam.x, camY = G.cam.y, topMin = camY + 96;       // below the HUD rows at the top of the screen
     const x0 = U.clamp(pr.x - w / 2, camX + M, camX + C.W - M - w);
@@ -387,8 +391,8 @@ G.props = {
     if (!L) return;
     ctx.fillStyle = 'rgba(6,11,11,0.78)'; ctx.fillRect(L.x0, L.y0, L.x1 - L.x0, L.y1 - L.y0);
     const cx = (L.x0 + L.x1) / 2, titleCol = pr.data.item ? G.itemDefs[pr.data.item].color : '#e9a23b';
-    for (const r of L.rows)
-      art.label(ctx, r.t, cx, r.y, r.size, r.kind === 'tip' ? '#9fd3c7' : r.kind === 'title' ? titleCol : r.kind === 'line' ? '#e9e2cf' : '#9aa89f', 'center', C.FONT, r.weight);
+    for (const r of L.rows) if (r.kind === 'chips') G.materials.drawChips(ctx, r.tags, cx, r.y, 'center');
+      else art.label(ctx, r.t, cx, r.y, r.size, r.kind === 'tip' ? '#9fd3c7' : r.kind === 'mat' ? '#c9d6cf' : r.kind === 'title' ? titleCol : r.kind === 'line' ? '#e9e2cf' : '#9aa89f', 'center', C.FONT, r.weight);
   }
 };
 })();

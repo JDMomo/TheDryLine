@@ -17,9 +17,12 @@ G.itemDefs = {};
    rarity: 'common' | 'rare' | 'fixed'. Fixed tokens never roll at random; a region names one as its fixedItem.
            A rare token joins the random pool once any run has punched a fare slot of its cut (G.meta.cuts).
    use(player): spawn shots with G.combat.shoot or call G.combat.strike, always passing cls, itemId and owner.
-   drawIcon(ctx): about 24 px, centred on 0,0. Without one the cut's shape is drawn. */
+   drawIcon(ctx): about 24 px, centred on 0,0. Without one the cut's shape is drawn.
+   mat: one or two material tags (G.MATERIALS in js/game/combat.js); inter: one card line naming the interactions the tags give it. Both are
+   required and shown on every card (plinth, kiosk, map, HUD). Materials never change which fare slot a token opens: that stays its cut. */
 G.defineItem = def => {
   if (!def.id || !G.CLASSES[def.cls] || typeof def.use !== 'function') return G.fail('bad item definition: ' + (def.id || '?'));
+  if (!Array.isArray(def.mat) || def.mat.length < 1 || def.mat.length > 2 || def.mat.some(t => !G.MATERIALS[t]) || typeof def.inter !== 'string' || !def.inter) return G.fail('item needs 1 or 2 material tags and an inter line: ' + def.id);
   G.itemDefs[def.id] = Object.assign({ rarity: 'common', cd: 1, color: G.CLASSES[def.cls].color, desc: '' }, def);
   if (def.drawIcon) G.art.define('item_' + def.id, (ctx, o) => { ctx.save(); ctx.translate(o.x, o.y); ctx.scale(o.scale, o.scale); def.drawIcon(ctx); ctx.restore(); });
 };

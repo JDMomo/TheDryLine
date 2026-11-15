@@ -29,4 +29,15 @@ const loadStrip = (key, file, frames) => {
 // The Wanderer: cut from the owner's watercolor sheets by tools/art (frames are 192 x 136 at twice game scale, feet 4 px above the bottom edge).
 const PLAYER_STRIPS = { arc: 6, burst: 6, dash: 4, doublejump: 4, ground: 4, heavy: 6, hurt: 4, idle: 4, interact: 4, jump: 4, ko: 4, land: 4, mend: 4, pierce: 6, revive: 4, run: 8, slash_down: 4, slash_side: 6, wallslide: 4 };
 for (const name in PLAYER_STRIPS) loadStrip('player_' + name, 'player/' + name + '.png', PLAYER_STRIPS[name]);
+// Enemy skins cut from the owner's sheets by tools/art/cut_set.py (cells at twice game scale, feet 4 px above the bottom edge). Each
+// maps an enemy id to the art that stands in for it while the watercolor art is on: move (4 frames), attack (3 wind-up, 1 strike,
+// 2 recovery) and defeat (4). h = the cell height in game pixels (sized so the figure fits the hitbox; see tools/art/README.md),
+// fps = the move loop's speed, center + fig = a flyer: centred on its hitbox, fig = the figure's height in cell pixels.
+// The state-to-frame mapping lives in each enemy's skinFrame (js/content/enemies.js).
+G.enemySkins = { ballast_crab: { id: 'strider', h: 32, fps: 8 }, brine_spout: { id: 'boiler', h: 36, fps: 3 }, signal_gull: { id: 'rivet', h: 32, fps: 14, center: true, fig: 59 },
+  handcar: { id: 'gearling', h: 40, fps: 6 }, turnstile: { id: 'scrapper', h: 52, fps: 5 } };
+for (const k in G.enemySkins) {
+  const id = G.enemySkins[k].id;
+  loadStrip(id + '_move', 'enemies/' + id + '/move.png', 4); loadStrip(id + '_attack', 'enemies/' + id + '/attack.png', 6); loadStrip(id + '_defeat', 'enemies/' + id + '/defeat.png', 4);
+}
 })();

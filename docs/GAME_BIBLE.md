@@ -69,14 +69,16 @@ Beating a Warden gives the party: one more health pip, a choice of one trinket f
 ## 5. Enemies (none are insects)
 | id | Name | Behaviour | Regions |
 |---|---|---|---|
-| ballast_crab | Ballast Crab | small walker; patrols, turns at edges | all |
-| brine_spout | Brine Spout | stationary vent; lobs brine at the nearest player | r1, r3, final |
-| turnstile | Turnstile | walks slowly behind a front shield; hit it from behind, from above, or with a token | r1, r4 |
-| signal_gull | Signal Gull | flyer; hovers, then swoops in an arc | r2, final |
+| ballast_crab | Strider | small walker; patrols, turns at edges | all |
+| brine_spout | Boiler | stationary vent; lobs brine at the nearest player | r1, r3, final |
+| turnstile | Scrapper | walks slowly behind a front shield; hit it from behind, from above, or with a token | r1, r4 |
+| signal_gull | Rivet | flyer; hovers, then swoops in an arc | r2, final |
 | lamp_wisp | Lamp Wisp | slow flyer that drifts at the player and bursts when killed | r2, r4 |
 | brine_toad | Brine Toad | hops toward players; splashes on landing | r3 |
-| handcar | Handcar | a pump trolley; winds up, then dashes along the floor | r4, final |
+| handcar | Gearling | a small lamp-eyed machine; winds up, then dashes along the floor | r4, final |
 | hanging_lamp | Hanging Lamp | hangs from ceilings; drops when a player passes under | r2, r3 |
+
+Ids stay as listed; the names changed when the watercolor art came in (Ballast Crab became Strider, Brine Spout Boiler, Turnstile Scrapper, Signal Gull Rivet, Handcar Gearling). The Scrapper's front guard blocks slashes and shows a "Blocked" float.
 
 Every enemy must be readable: a wind-up before anything that hurts, and a clear silhouette.
 
@@ -127,6 +129,48 @@ Rules, from research: slots are few so each pick costs another; every token is u
 | quartz_wake | Quartz Wake | ground | rare | sliding wave | splits in two at each ledge |
 | pumice_crawler | Pumice Crawler | ground | fixed, r1 | slow floor flame that lasts a long time | waits at ledges; press the item button again to send it on |
 
+### Materials (decision "Materials", 2026-11-15)
+Every token and trinket has one or two material tags and one card line naming the interactions they give it. The tags appear as small labelled chips on every card (plinth prompt, kiosk, map, HUD) and the line sits under the description. Interactions have fixed numbers, no dice, and a floating word names each one when it fires. Materials never change which fare slot a token opens: that stays its cut.
+
+| Tag | Meaning |
+|---|---|
+| Heavy | breaks brittle shots; stops against a Lead Boot |
+| Metal | conducts through wet things; a magnet pulls it |
+| Flammable | a spark lights it |
+| Wet | puts fire out; lets metal conduct |
+| Slick | Ground shots slide |
+| Brittle | shatters when a heavy shot touches it |
+| Magnetic | pulls metal shots and scrip (trinket only) |
+| Spark | lights flammable things |
+
+| Token | Tags | Interactions on its card |
+|---|---|---|
+| Cobalt Awl, Tin Spindle, Cinder Bell, Copper Drum | metal | Conduct (Brine Flask or a brine puddle), Pull (Magnet Tooth) |
+| Flint Tether | metal, spark | its bolt Ignites flammable shots and sets off clouds (Flare) |
+| Ochre Ladle | wet | its burst leaves a brine puddle for 4 s: Douse, and enemies in it let metal Conduct |
+| Sulphur Kettle | flammable, heavy | leaves a 3 s sulphur cloud (Flare when sparked); Shatters brittle shots |
+| Chalk Skipstone, Quartz Wake | brittle | Shatter (3 fragments, 6 damage each); Crack |
+| Rust Censer | metal, flammable | each pulse leaves a 2.5 s cinder cloud; Conduct |
+| Basalt Roller | heavy | Shatter; with Lead Boot it Stops at you or a wall and a slash Kicks it for double damage |
+| Pumice Crawler | flammable, spark | its flame Ignites and Flares things it touches |
+
+| Interaction | Rule (all fixed) |
+|---|---|
+| Ignite | a spark (Flint Tether bolt, Pumice flame, Whetstone slash) within 38 px of a flammable shot of yours: x1.6 damage, x1.6 burst, bigger shot |
+| Flare | a spark on a cloud: burst of radius 110, 20 damage |
+| Douse | a puddle removes clouds and unlights shots; with Brine Flask a spark lights nothing |
+| Conduct | a metal hit on an enemy standing in a puddle, or any metal hit with Brine Flask, chains to the nearest other enemy within 150 px for half damage |
+| Pull | with Magnet Tooth a metal shot turns towards the nearest enemy or open fare slot of its cut within 240 px at 2.4 rad/s (never more than 70 degrees off its line) |
+| Stop, Kick | with Lead Boot a heavy Ground shot stops against any player or a wall (not ending); a slash on it sends it at 820 px/s for double damage |
+| Slide | Oiled Strap: Ground shots start 45% faster and last 50% longer |
+| Shatter | a heavy shot touching a brittle one, or a Punch Glove slash on one: three fragments of 6 damage |
+| Crack | a brittle shot of yours breaks the same way if you are hurt within 0.5 s of casting it |
+| Punt | Punch Glove: a slash on your own shot launches it at 1.5x damage |
+| Anchor | Lead Boot: being hurt neither pushes nor hops you |
+
+Co-op jobs: one player sparks while another lobs a Kettle; one rolls a Basalt Roller into the other's Skipstone; a Lead Boot carrier is the wall a roller stops against; the Ladle player makes puddles for the other's metal shots. Every rule also works solo with two or three of your own tokens (Lead Boot lets a roller stop against a wall instead). Trinkets belong to the whole party, like the old stat trinkets.
+Not built: wind and brine hazards from enemies (nothing in the game pushes the party sideways yet; Anchor covers knockback only, and enemy brine drops do not soak).
+
 - The run starts with the four commons and the four fixed tokens in the pool (fixed tokens are placed on their plinths; the rest of the pool feeds the trunks and the ticket machine). Each rare is locked until the player has punched one slot of that cut in any run (meta save).
 - Picking up a token when the party is full swaps it with the selected slot; the old one stays on the plinth.
 
@@ -140,17 +184,19 @@ Rules, from research: slots are few so each pick costs another; every token is u
 - Standpipes: one in the hub, one before the final arena. Full heal, once each per run.
 - Scrip: enemies drop 2 to 5; a beaten Warden drops 40. Scrip left on the floor is collected when the party leaves the room.
 
-## 9. Trinkets (passive, last the whole run)
-| id | Name | Effect |
-|---|---|---|
-| brass_buckle | Brass Buckle | one more health pip |
-| oiled_strap | Oiled Strap | dash recovers 30% faster |
-| whetstone_chip | Whetstone Chip | slashes hit 25% harder |
-| lead_boot | Lead Boot | half the knockback, 8% slower running |
-| magnet_tooth | Magnet Tooth | scrip flies to you from further away; kiosk prices up 10% |
-| punch_glove | Punch Glove | tokens recharge 25% faster |
-| brine_flask | Brine Flask | mending is 30% faster |
-| surveyors_slate | Surveyor's Slate | the map shows what every branch room holds |
+## 9. Trinkets (passive, last the whole run, belong to the whole party)
+Six enable a materials rule (section 8); two are plain. Each has tags and a card line like a token. Ids are unchanged.
+
+| id | Name | Tags | Effect |
+|---|---|---|---|
+| brass_buckle | Brass Buckle | metal | plain: one more health pip |
+| oiled_strap | Oiled Strap | slick | Slide: Ground shots start 45% faster and last 50% longer (no longer a dash bonus) |
+| whetstone_chip | Whetstone Chip | metal, spark | Ignite and Flare: a slash lights your flammable shots and sets off clouds (no longer +25% damage) |
+| lead_boot | Lead Boot | heavy, metal | Anchor: no knockback; Stop and Kick for heavy Ground shots; 8% slower running |
+| magnet_tooth | Magnet Tooth | magnetic, metal | Pull: metal shots curve to enemies and open slots; scrip flies in from further (kiosk price rise removed) |
+| punch_glove | Punch Glove | heavy | Punt: a slash launches your shot at 1.5x damage; Shatter on brittle ones (no longer faster recharge) |
+| brine_flask | Brine Flask | wet | Conduct: metal hits chain; Douse: sparks light nothing, so it trades against fire builds (no longer faster mending) |
+| surveyors_slate | Surveyor's Slate | brittle | plain: the map shows what every branch room holds |
 
 ## 10. Research sources behind this bible
 Controls and feel: Hollow Knight and Silksong control references (hollowknight.wiki, Destructoid), Spelunky controls (StrategyWiki), Celeste feel write-ups (Gigazine, GameSpot), Spelunky 2 design analysis (Game Developer).

@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Dry Line</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/page.css">
 </head>
 <body>
 <main>
   <header>
     <h1>The Dry Line</h1>
-    <p>A run down an old toll railway. Keyboard or up to four controllers.</p>
+    <p>A run down an old toll railway. Up to four players: the keyboard counts as one device, every controller as another.</p>
     <details>
     <summary>Controls and how a run works</summary>
     <div class="notes">
@@ -24,9 +25,11 @@
           <dt>Use token</dt><dd><kbd>V</kbd> or <kbd>L</kbd>. Switch with <kbd>Q</kbd> or <kbd>E</kbd>.</dd>
           <dt>Mend</dt><dd>Hold <kbd>F</kbd> on the ground</dd>
           <dt>Doors, props</dt><dd><kbd>Up</kbd></dd>
-          <dt>Map, pause</dt><dd><kbd>Tab</kbd>, <kbd>Esc</kbd>. The pause menu can restart the run.</dd>
+          <dt>Map, pause</dt><dd><kbd>Tab</kbd>, <kbd>Esc</kbd>. The pause menu restarts the run, remaps every key and button (Controls), and has the comfort options (screen shake, reduced flashes).</dd>
           <dt>Art test</dt><dd><kbd>F2</kbd> switches every player between the watercolor test and the code-drawn player (players 2 to 4 wear a coloured marker over the head).</dd>
-          <dt>Controller</dt><dd>A jump, X slash, B dash, Y token, LB mend, RB switch. Press A on another controller at the Junction to join.</dd>
+          <dt>Controller</dt><dd>A jump, X slash, B dash, Y token, LB mend, RB switch, Back map, Start pause.</dd>
+          <dt>Players</dt><dd>On the title screen the first device to press a button (keyboard or any controller) is player 1. At the Junction any other device joins as the next player by pressing Jump. Hold Pause for one second at the Junction to leave. If a controller is unplugged the game pauses and names the player; reconnect it, or press a button on another device to take over.</dd>
+          <dt>Remap</dt><dd>Pause, Controls: choose an action, press Jump, press the new key or button. A key or button already in use is refused. The keys listed here are the defaults; the prompts in the game show your own.</dd>
         </dl>
       </section>
       <section>
@@ -89,6 +92,8 @@
 <script src="js/ui/menus.js"></script>
 <script src="js/ui/map.js"></script>
 <script src="js/art/sprites.js"></script>
+<script src="js/content/music.js"></script>
+<script src="js/core/audio.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

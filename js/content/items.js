@@ -28,6 +28,7 @@ const floorAhead = (s, dir) => tiles.floorAt(Math.floor((s.x + dir * (s.r + 6)) 
 // ---------------------------------------------------------------- pierce (triangle, #56B4E9)
 G.defineItem({
   id: 'cobalt_awl', name: 'Cobalt Awl', cls: 'pierce', rarity: 'common', cd: 0.7,
+  mat: ['metal'], inter: 'Metal: Conduct with the Brine Flask or a brine puddle; Pull with the Magnet Tooth.',
   desc: 'A fast straight shot. Hold Up to fire it upward.',
   use(p) {
     const up = p.in.held.up, col = CL.pierce.color;
@@ -43,6 +44,7 @@ G.defineItem({
 
 G.defineItem({
   id: 'tin_spindle', name: 'Tin Spindle', cls: 'pierce', rarity: 'rare', cd: 0.9,
+  mat: ['metal'], inter: 'Metal: Conduct with the Brine Flask or a brine puddle; Pull with the Magnet Tooth.',
   desc: 'A thin needle that passes through enemies. Stand still for 0.6 s first and it flies twice as far and hits harder.',
   tick(p, dt) { const k = tok(p); k.still = p.onGround && Math.abs(p.vx) < 8 && !p.down ? (k.still || 0) + dt : 0; },
   use(p) {
@@ -61,6 +63,7 @@ G.defineItem({
 
 G.defineItem({
   id: 'flint_tether', name: 'Flint Tether', cls: 'pierce', rarity: 'fixed', cd: 1.2,
+  mat: ['metal', 'spark'], inter: 'Spark: its bolt Ignites flammable shots and sets off clouds (Flare). Metal: Conduct, Pull.',
   desc: 'A bolt on a cable. Where it lands, it pulls you.',
   use(p) {
     const col = CL.pierce.color;
@@ -93,6 +96,7 @@ G.defineItem({
 // ---------------------------------------------------------------- arc (crescent, #F0E442)
 G.defineItem({
   id: 'ochre_ladle', name: 'Ochre Ladle', cls: 'arc', rarity: 'common', cd: 1.0,
+  mat: ['wet'], inter: 'Wet: its burst leaves a brine puddle (4 s) that Douses fire and soaks enemies, so metal hits Conduct.',
   desc: 'A short, steep lob that bursts where it lands, about 130 px ahead. Hold Up to lob it high, hold the way you face to throw it far, hold Down to drop it close.',
   // [vx, vy] per aim. neutral lands about 130 px ahead, down about 70, fwd about 250, up about 120 (and high: 300 px above the hand)
   LOB: { neutral: [175, -480], down: [100, -300], fwd: [320, -540], up: [105, -900] },
@@ -101,13 +105,14 @@ G.defineItem({
     G.combat.shoot({ x: p.x + p.face * 10, y: p.y - 34, vx: p.face * vx + p.vx * 0.15, vy, grav: 1500, life: 3, r: 6, burst: 26,
       owner: p, cls: 'arc', itemId: 'ochre_ladle', dmg: 8,
       paint(ctx, s) { ctx.save(); ctx.translate(s.x, s.y); if (!spr(ctx, 'ochre_ladle', 24, G.time * 12)) shape(ctx, 'arc', 8, G.time * 12); ctx.restore(); },
-      onEnd(s) { fx.spark(s.x, s.y, 18, CL.arc.color, 300, 0.4); fx.ring(s.x, s.y, 8, 240, CL.arc.color, 0.22); } });
+      onEnd(s) { fx.spark(s.x, s.y, 18, CL.arc.color, 300, 0.4); fx.ring(s.x, s.y, 8, 240, CL.arc.color, 0.22); G.materials.puddle(s.x, s.y + 4, p); } });
   },
   drawIcon: icon('arc', c => { c.beginPath(); c.arc(0, 0, 2.4, 0, 6.283); c.fill(); })
 });
 
 G.defineItem({
   id: 'sulphur_kettle', name: 'Sulphur Kettle', cls: 'arc', rarity: 'rare', cd: 1.5,
+  mat: ['flammable', 'heavy'], inter: 'Flammable: leaves a sulphur cloud (3 s); a spark makes it Flare. Heavy: Shatters brittle shots.',
   desc: 'A heavy, slow lob with a big burst. Hold Up to lob it high, hold the way you face to throw it far. Steer it left and right in flight.',
   LOB: { neutral: [150, -470], down: [90, -330], fwd: [250, -520], up: [95, -820] },
   use(p) {
@@ -116,13 +121,14 @@ G.defineItem({
       owner: p, cls: 'arc', itemId: 'sulphur_kettle', dmg: 14,
       step(s, dt) { const h = p.in.held; s.vx = G.util.clamp(s.vx + ((h.right ? 1 : 0) - (h.left ? 1 : 0)) * 700 * dt, -320, 320); },
       paint(ctx, s) { ctx.save(); ctx.translate(s.x, s.y); if (!spr(ctx, 'sulphur_kettle', 36, s.age * 5)) { shape(ctx, 'arc', 13, s.age * 5); ctx.fillStyle = '#5b4d10'; ctx.fillRect(-3, -3, 6, 6); } ctx.restore(); },
-      onEnd(s) { fx.spark(s.x, s.y, 30, CL.arc.color, 380, 0.5); fx.ring(s.x, s.y, 10, 320, CL.arc.color, 0.28); fx.jolt(0, 3); } });
+      onEnd(s) { fx.spark(s.x, s.y, 30, CL.arc.color, 380, 0.5); fx.ring(s.x, s.y, 10, 320, CL.arc.color, 0.28); fx.jolt(0, 3); if (!s.ignited) G.materials.cloud(s.x, s.y, p, 60, 3, 'arc', 'sulphur_kettle'); } });
   },
   drawIcon: icon('arc', c => { c.fillRect(-3.5, -3, 7, 6); })
 });
 
 G.defineItem({
   id: 'chalk_skipstone', name: 'Chalk Skipstone', cls: 'arc', rarity: 'fixed', cd: 1.1,
+  mat: ['brittle'], inter: 'Brittle: a heavy shot Shatters it into 3 hits; Crack if you are hurt just after casting.',
   desc: 'A bouncing throw. Each bounce (up to 3) adds damage. Hold Up to lob it high instead.',
   LOB: { neutral: [380, -120], down: [380, -120], fwd: [380, -120], up: [130, -1000] },
   use(p) {
@@ -146,6 +152,7 @@ G.defineItem({
 // ---------------------------------------------------------------- burst (eight-point star, #D55E00)
 G.defineItem({
   id: 'cinder_bell', name: 'Cinder Bell', cls: 'burst', rarity: 'common', cd: 1.2,
+  mat: ['metal'], inter: 'Metal: Conduct with the Brine Flask or a brine puddle, so its pulse chains past its ring.',
   desc: 'A pulse around you that snuffs out shots in the air.',
   use(p) {
     const x = p.x, y = p.cy, col = CL.burst.color;
@@ -158,10 +165,12 @@ G.defineItem({
 
 G.defineItem({
   id: 'rust_censer', name: 'Rust Censer', cls: 'burst', rarity: 'rare', cd: 1.5,
+  mat: ['metal', 'flammable'], inter: 'Flammable: each pulse leaves a cinder cloud (2.5 s); a spark makes it Flare. Metal: Conduct.',
   desc: 'A pulse around you. A second pulse fires 1.2 s later where you stood.',
   use(p) {
     const x = p.x, y = p.cy, col = CL.burst.color, hit = (px, py) => {
       pulse(px, py, 100, 400, col); fx.jolt(0, 3); G.combat.clearHostile(px, py, 115);
+      G.materials.cloud(px, py, p, 50, 2.5, 'burst', 'rust_censer');
       G.combat.strike({ x: px, y: py, r: 100, cls: 'burst', itemId: 'rust_censer', owner: p, dmg: 5, all: true });
     };
     hit(x, y);
@@ -174,6 +183,7 @@ G.defineItem({
 
 G.defineItem({
   id: 'copper_drum', name: 'Copper Drum', cls: 'burst', rarity: 'fixed', cd: 1.4,
+  mat: ['metal'], inter: 'Metal: Conduct with the Brine Flask or a brine puddle. Launches allies, but Lead Boot carriers are Anchored.',
   desc: 'A pulse around you that launches you and nearby allies upward.',
   use(p) {
     const x = p.x, y = p.cy, col = CL.burst.color;
@@ -190,6 +200,7 @@ const slab = col => (ctx, s) => { ctx.fillStyle = col; ctx.fillRect(s.x - 10, s.
 
 G.defineItem({
   id: 'basalt_roller', name: 'Basalt Roller', cls: 'ground', rarity: 'common', cd: 0.9,
+  mat: ['heavy'], inter: 'Heavy: Shatters brittle shots. With Lead Boot it Stops at you or a wall; a slash Kicks it on at double damage.',
   desc: 'A slab that slides along the floor and drops off ledges.',
   use(p) {
     const col = CL.ground.color;
@@ -201,6 +212,7 @@ G.defineItem({
 
 G.defineItem({
   id: 'quartz_wake', name: 'Quartz Wake', cls: 'ground', rarity: 'rare', cd: 1.1,
+  mat: ['brittle'], inter: 'Brittle: a heavy shot Shatters it into 3 hits; Crack if you are hurt just after casting.',
   desc: 'A sliding wave that splits in two at each ledge.',
   use(p) {
     const col = CL.ground.color;
@@ -218,6 +230,7 @@ G.defineItem({
 
 G.defineItem({
   id: 'pumice_crawler', name: 'Pumice Crawler', cls: 'ground', rarity: 'fixed', cd: 1.0,
+  mat: ['flammable', 'spark'], inter: 'Spark: its flame Ignites flammable shots and sets off clouds. Flammable: another spark makes it burn bigger.',
   desc: 'A slow floor flame that lasts a long time. It waits at ledges: press the item button again to send it on.',
   use(p) {
     const k = tok(p), col = CL.ground.color, live = k.crawler && G.shots.includes(k.crawler) ? k.crawler : null;

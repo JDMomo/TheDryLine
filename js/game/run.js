@@ -14,7 +14,9 @@ const BORROWS = {
 
 // Between runs: runs played, wins, best winning time (s), cuts punched at least once (unlocks rare tokens of that cut),
 // taught (which first-time prop tips have been shown). Reads and writes never throw: without storage the game plays on in memory.
-G.meta = { runs: 0, wins: 0, best: null, cuts: [], taught: {} };
+// bindings: { keyboard: { action: [codes] }, gamepad: { action: [buttons] } }, only what differs from the defaults (see js/core/input.js).
+// settings: comfort options { shake: screen shake on, reduceFlashes: fewer and softer flashes }.
+G.meta = { runs: 0, wins: 0, best: null, cuts: [], taught: {}, bindings: { keyboard: {}, gamepad: {} }, settings: { shake: true, reduceFlashes: false } };
 function loadMeta() {
   const m = G.meta;
   let saved = null;
@@ -26,7 +28,15 @@ function loadMeta() {
     if (num(saved.best)) m.best = saved.best;
     if (Array.isArray(saved.cuts)) m.cuts = saved.cuts.filter(c => typeof c === 'string' && G.CLASSES[c]);
     if (saved.taught && typeof saved.taught === 'object' && !Array.isArray(saved.taught)) m.taught = Object.assign({}, saved.taught);
+    const plain = v => v && typeof v === 'object' && !Array.isArray(v);
+    if (plain(saved.bindings)) for (const type of ['keyboard', 'gamepad']) {
+      const src = saved.bindings[type], out = {};
+      if (plain(src)) for (const a of G.input.REBINDABLE) if (Array.isArray(src[a]) && src[a].length && src[a].every(c => type === 'keyboard' ? typeof c === 'string' : Number.isInteger(c) && c >= 0 && c < 32)) out[a] = src[a].slice(0, 4);
+      m.bindings[type] = out;
+    }
+    if (plain(saved.settings)) { if (typeof saved.settings.shake === 'boolean') m.settings.shake = saved.settings.shake; if (typeof saved.settings.reduceFlashes === 'boolean') m.settings.reduceFlashes = saved.settings.reduceFlashes; }
   }
+  G.input.refresh();
   return m;
 }
 loadMeta();
@@ -61,7 +71,7 @@ const game = G.game = {
     run.graph = G.worldgen.build(seed, cuts);
     run.chart = run.graph.chart;
     G.combat.clear(); G.rooms.current = null;                       // nothing of the last run (shots, scrip) comes along
-    if (!G.players.length) game.addPlayer('first');
+    if (!G.players.length) game.addPlayer(G.input.claimed || 'kb');
     for (const p of G.players) { p.items = []; p.sel = 0; p.hp = p.maxHp; p.glow = 0; p.down = false; }
     game.reslot();
     G.rooms.trans = null;
@@ -69,15 +79,27 @@ const game = G.game = {
     G.meta.runs++; game.saveMeta();
     return run;
   },
-  // Player 1 gets the keyboard as well as its gamepad. Returns the new player, or null if the party is full.
-  addPlayer(pad = -1) {
+  // A player joins on a device: 'kb' (the keyboard), 'pad:N' (a gamepad), or null (none: only forced input, for tests). Returns the new player, or null if the party is full.
+  addPlayer(dev = null) {
     if (G.players.length >= 4) return null;
-    const p = new G.Player(G.players.length, G.input.makeState({ kb: !G.players.length, pad: G.players.length ? pad : (pad === -1 ? -1 : 'first') }));
+    const p = new G.Player(G.players.length, G.input.makeState({ dev }));
     G.players.push(p); game.reslot();
     const lead = G.players[0];
     if (p !== lead && G.rooms.current) { p.hp = p.maxHp; p.place(lead.x, lead.y, lead.face); fx.say('Player ' + (p.index + 1) + ' joined', 'The party carries three tokens in all.', 2.4); }
     return p;
   },
+  // A player leaves the party (never the last one). Their tokens go back to the others as far as the slots allow.
+  removePlayer(p) {
+    const i = G.players.indexOf(p);
+    if (i < 0 || G.players.length < 2) return false;
+    G.input.release(p.in); G.players.splice(i, 1);
+    G.players.forEach((q, k) => { q.index = k; q.color = C.PLAYER_COLORS[k % C.PLAYER_COLORS.length]; });
+    game.reslot();
+    fx.say('Player ' + (i + 1) + ' left', G.players.length + ' player' + (G.players.length > 1 ? 's' : '') + ' in the party.', 2.4);
+    return true;
+  },
+  // Back to the title: nobody is in the party until a device presses a button there.
+  resetParty() { for (const p of G.players) G.input.release(p.in); G.players.length = 0; },
   // Three slots in total (1 player: 3, 2: 2 and 1, 3: 1 each); a fourth player brings a slot of their own (1 each, 4 in all).
   // Tokens are dealt back out in order.
   reslot() {

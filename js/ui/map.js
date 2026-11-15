@@ -66,6 +66,7 @@ G.map = {
       if (!t) { art.label(ctx, '(empty slot)', x + 16, 48, 12, '#4d5a54', 'left'); continue; }
       G.items.icon(ctx, t.id, x + 6, 48, 0.75);
       art.label(ctx, t.name + ' · ' + G.CLASSES[t.cls].name, x + 20, 48, 12, t.color, 'left', C.FONT, 600);
+      G.materials.drawChips(ctx, G.itemDefs[t.id].mat, x + 20, 61, 'left');
     }
 
     const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), rowH = Math.min(80, (H - 146) / order.length);

@@ -178,7 +178,7 @@ const rooms = G.rooms = {
     if (!rooms.trans) for (const p of G.players) {
       if (p.down || !p.onGround) continue;
       const pr = rooms.propNear(p);
-      if (pr) { G.props.drawPrompt(ctx, pr, pr.prompt(p)); break; }
+      if (pr) { const L = pr.prompt(p); if (L && L[2]) L[2] = L[2].replace(/^Up\b/, G.input.name('interact', p)); G.props.drawPrompt(ctx, pr, L); break; }
     }
     ctx.restore();
   }

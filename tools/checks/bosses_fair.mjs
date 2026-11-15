@@ -22,14 +22,20 @@ const OPEN = new Set(['idle', 'recover', 'peckStuck', 'peckOut', 'lying', 'rise'
 // States in which the clean-play bot actually slashes (a player waits for a real opening, not for the boss to wander about).
 const STRICT = new Set(['recover', 'peckStuck', 'peckOut', 'lying', 'rise', 'stagger']);
 
-export default async ({ page }) => {
+// Shards (they run side by side): each Warden's dodge trials and its slashes-only fight apart; the Long Clock's eight attacks in two halves. `BOSS=r2` still runs one whole boss.
+export const slow = true, weight = 100;
+export const shards = ['r1:dodge', 'r1:fight', 'r2:dodge', 'r2:fight', 'r3:dodge', 'r3:fight', 'r4:dodge', 'r4:fight', 'final:dodge1', 'final:dodge2', 'final:fight'];
+export default async ({ page, shard }) => {
   await page.addScriptTag({ path: path.join(here, '..', 'lib', 'fightbot.js') });
-  const only = process.env.BOSS, onlyAttack = process.env.ATTACK, noFight = !!process.env.NOFIGHT, trials = +(process.env.TRIALS || 9);
+  const [only, part] = (shard || process.env.BOSS || '').split(':'), onlyAttack = process.env.ATTACK, noFight = !!process.env.NOFIGHT, trials = +(process.env.TRIALS || 9);
   const report = [], problems = [];
   for (const region of Object.keys(BOSSES)) {
     if (only && only !== region) continue;
     const spec = BOSSES[region];
-    const res = await page.evaluate(async ({ region, attacks, trials, open, strict, onlyAttack, noFight }) => {
+    const keys = Object.keys(spec.attacks);
+    const list = part === 'fight' ? [] : part === 'dodge1' ? keys.filter((k, i) => i % 2 === 0) : part === 'dodge2' ? keys.filter((k, i) => i % 2 === 1) : null;   // which attacks this shard runs
+    const pendulum = region === 'final' && (!part || part === 'dodge2');
+    const res = await page.evaluate(async ({ region, attacks, trials, open, strict, onlyAttack, noFight, list, pendulum }) => {
       const OPEN = new Set(open);
       const D = G.debug, out = { attacks: {}, fight: null };
       const setup = (seed, rage) => {
@@ -54,6 +60,7 @@ export default async ({ page }) => {
       };
       for (const a in attacks) {
         if (onlyAttack && onlyAttack !== a) continue;
+        if (list && !list.includes(a)) continue;
         const tell = attacks[a], rec = { dodged: 0, n: 0, hits: [], still: Infinity, stillRage: Infinity };
         for (let i = 0; i < trials; i++) {
           const rage = i >= trials - 3;
@@ -78,7 +85,7 @@ export default async ({ page }) => {
         out.attacks[a] = rec;
       }
       // the Long Clock's pendulum (phase two) taken alone
-      if (region === 'final' && (!onlyAttack || onlyAttack === 'pendulum')) {
+      if (pendulum && (!onlyAttack || onlyAttack === 'pendulum')) {
         let ok = 0, n = 0; const hits = [];
         for (let i = 0; i < 4; i++) {
           const b = setup(51 + i, true); b.set('recover', 99); b.pt = 0;
@@ -109,8 +116,20 @@ export default async ({ page }) => {
       b.set = set0;
       const opens = cycles.map(c => c.open).sort((x, y) => x - y);
       out.fight = { dead: r.dead, t: r.t, hits: r.hits, hitAt: r.hitAt.slice(0, 6), cycles: cycles.length, openMin: opens[0], openP10: opens[Math.floor(opens.length * 0.1)], openMed: opens[Math.floor(opens.length / 2)], tells, hpPct: b.hp / b.maxHp };
+      // the same fight with all three charted fare slots punched at 3, 8 and 13 s (applied directly: the shortest a punched fight can be; this was the old `fight_len` check)
+      const b2 = setup(77, false); D.place(0, Math.max(b2.minX, b2.x - 150), b2.floor, 1);
+      const t1 = G.time, at = [3, 8, 13]; let np = 0;
+      const r2 = FB.run({ mode: 'fight', maxT: 260, seed: 5, open: new Set(strict), delay: 0.35, until: bb => {
+        if (np < 3 && G.time - t1 >= at[np]) {
+          const sp = bb.spots.find(x => !x.broken);
+          if (sp) { sp.broken = true; bb.hp -= bb.maxHp * G.C.BREAK_FRAC; bb.set('stagger', G.C.STAGGER); if (sp.def.onBreak) sp.def.onBreak(bb); }
+          np++;
+        }
+        return false;
+      } });
+      out.fight.punched = { dead: r2.dead, t: r2.t, slots: b2.spots.length, maxHp: b2.maxHp };
       return out;
-    }, { region, attacks: spec.attacks, trials, open: [...OPEN], strict: [...STRICT], onlyAttack, noFight });
+    }, { region, attacks: spec.attacks, trials, open: [...OPEN], strict: [...STRICT], onlyAttack, noFight: noFight || part === 'dodge' || part === 'dodge1' || part === 'dodge2', list, pendulum });
     // verdicts
     const line = [];
     for (const a in res.attacks) {
@@ -126,6 +145,15 @@ export default async ({ page }) => {
     if (!f.dead) problems.push(spec.name + ': the slashes-only bot did not win in ' + f.t.toFixed(0) + ' s (boss at ' + (f.hpPct * 100).toFixed(0) + '%)');
     else if (f.t > 150) problems.push(spec.name + ': slashes-only fight took ' + f.t.toFixed(0) + ' s (aim: 60 to 120)');
     if (f.openMin < 1.0) problems.push(spec.name + ': an attack cycle leaves only ' + f.openMin.toFixed(2) + ' s of safe slashing time (median ' + f.openMed.toFixed(2) + ', ' + f.cycles + ' cycles)');
+    // fight length rules (they were the check `fight_len`): slashes alone win in 150 s or less; three punched slots take at least 30 s and clearly shorten the fight
+    const pf = f.punched;
+    if (pf.slots !== 3) problems.push(spec.name + ': ' + pf.slots + ' fare slots (the lock chart gives three)');
+    if (!pf.dead) problems.push(spec.name + ': the three-punch fight was not won in ' + pf.t.toFixed(0) + ' s');
+    else {
+      if (pf.t < 30) problems.push(spec.name + ': three punches end the fight in ' + pf.t.toFixed(0) + ' s (at least 30)');
+      if (f.dead && pf.t > f.t * 0.85) problems.push(spec.name + ': three punches only save ' + (100 - 100 * pf.t / f.t).toFixed(0) + '% (' + pf.t.toFixed(0) + ' of ' + f.t.toFixed(0) + ' s)');
+    }
+    if (region === 'final' && f.dead && f.t < 106) problems.push('going straight to the Long Clock takes ' + f.t.toFixed(0) + ' s slash only (it borrows four attacks: wanted 106 or more)');
     report.push(region + ' [' + line.join(', ') + '] fight ' + (f.dead ? f.t.toFixed(0) + ' s' : 'NOT WON') + ' hits ' + f.hits + ' open min/med ' + f.openMin.toFixed(2) + '/' + f.openMed.toFixed(2));
   }
   if (problems.length) throw new Error(problems.length + ' problems:\n  ' + problems.join('\n  ') + '\n' + report.join('\n'));

@@ -1,6 +1,9 @@
 /* CONTENT: enemies. One G.defineEnemy per type (fields and helpers: js/game/enemies.js; recipe: docs/ARCHITECTURE.md).
-   The eight enemies of bible section 5. Every hurtful attack has a visible wind-up of at least 0.3 s.
-   Drawn in code: chunky rounded shapes, a 3 px dark outline, light fills so they read on the dark backgrounds.
+   The eight enemies of bible section 5 (ids are stable; display names: Strider, Boiler, Scrapper, Rivet, Gearling, Lamp Wisp, Brine Toad, Hanging Lamp). Every hurtful attack has a visible wind-up of at least 0.3 s.
+   Drawn in code: chunky rounded shapes, a 3 px dark outline, light fills so they read on the dark backgrounds. The three without
+   watercolor art (Lamp Wisp, Brine Toad, Hanging Lamp) use the 'wash' helpers instead: warm ink 2 px outline, a light-to-dark wash on
+   the fill, muted brass / moss / ochre, to sit beside the watercolor skins.
+   Skins: each enemy with art has a skinFrame(e, skin) returning [strip, frame, rotation?] (see js/game/enemies.js, tools/art/README.md).
    Colours stay out of the player's teal and amber and out of the four token colours. */
 (() => {
 'use strict';
@@ -16,6 +19,19 @@ const hit = (e, c) => e.flash > 0 ? '#ffffff' : c;
 const solid = (ctx, fill, path) => {
   ctx.beginPath(); path(); ctx.fillStyle = fill; ctx.fill();
   ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = OUT; ctx.stroke();
+};
+// Watercolor-style helpers for enemies without art: warm ink, 2 px outline, a light wash from the top and a darker one at the foot.
+const INK = '#2b2118';
+const wash = (ctx, fill, path, top, bot, lo = 0.22) => {       // top, bot: the shape's y extent, for the wash
+  const h = bot - top;
+  ctx.beginPath(); path(); ctx.fillStyle = fill; ctx.fill();
+  ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(255,248,226,0.28)'; ctx.fillRect(-80, top - 2, 160, h * 0.35 + 2);
+  ctx.fillStyle = 'rgba(43,33,24,' + lo + ')'; ctx.fillRect(-80, bot - h * 0.3, 160, h * 0.3 + 2); ctx.restore();
+  ctx.beginPath(); path(); ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = INK; ctx.stroke();
+};
+const wline = (ctx, x0, y0, x1, y1, col, w) => {
+  ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+  ctx.strokeStyle = INK; ctx.lineWidth = w + 2; ctx.stroke(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
 };
 const rrect = (ctx, x, y, w, h, r) => {
   r = Math.min(r, w / 2, h / 2);
@@ -61,9 +77,9 @@ if (!G.combat.slashBy && G.combat.melee) {
   };
 }
 
-/* ---------- 1. Ballast Crab: small walker, patrols, turns at walls, ledges and spikes ---------- */
+/* ---------- 1. Strider (ballast_crab): small walker, patrols, turns at walls, ledges and spikes ---------- */
 G.defineEnemy({
-  id: 'ballast_crab', name: 'Ballast Crab', hp: 26, w: 30, h: 22, touch: 1, shards: [2, 5],
+  id: 'ballast_crab', name: 'Strider', hp: 26, w: 30, h: 22, touch: 1, shards: [2, 5],
   init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; },
   update(e) {
     if (e.onGround && (e.hitWall || !safeAhead(e))) e.face = -e.face;
@@ -83,9 +99,9 @@ G.defineEnemy({
   }
 });
 
-/* ---------- 2. Brine Spout: stationary vent, lobs brine at the nearest player ---------- */
+/* ---------- 2. Boiler (brine_spout): stationary vent, lobs brine at the nearest player ---------- */
 G.defineEnemy({
-  id: 'brine_spout', name: 'Brine Spout', hp: 30, w: 26, h: 30, touch: 1, shards: [3, 5],
+  id: 'brine_spout', name: 'Boiler', hp: 30, w: 26, h: 30, touch: 1, shards: [3, 5],
   init(e) { e.set('idle', 1 + rr() * 1.2); },
   update(e) {
     e.vx = 0;
@@ -103,6 +119,12 @@ G.defineEnemy({
       }
     } else if (e.t <= 0) e.set('idle', 1.8 + rr() * 0.8);
   },
+  // Skin: wind-up frames 0-2 across the 0.6 s, the strike frame (3) as it fires, then the two recovery frames across the 0.35 s.
+  skinFrame(e, sk) {
+    if (e.state === 'wind') return ['attack', Math.min(2, Math.floor(e.prog() * 3))];
+    if (e.state === 'spent') { const u = e.prog(); return ['attack', u < 0.35 ? 3 : u < 0.7 ? 4 : 5]; }
+    return ['move', G.time * sk.fps];
+  },
   draw(e, ctx) {
     const k = e.state === 'wind' ? 1 - Math.max(0, e.t) / 0.6 : e.state === 'spent' ? -0.5 * e.t / 0.35 : 0;
     ctx.save(); ctx.translate(e.x, e.y);
@@ -119,16 +141,29 @@ G.defineEnemy({
   }
 });
 
-/* ---------- 3. Turnstile: slow walker behind a front shield; slashes from the front bounce ---------- */
+/* ---------- 3. Scrapper (turnstile): slow walker behind a front shield; slashes from the front bounce ---------- */
 G.defineEnemy({
-  id: 'turnstile', name: 'Turnstile', hp: 44, w: 34, h: 40, touch: 1, shards: [3, 5], heavy: true,
+  id: 'turnstile', name: 'Scrapper', hp: 44, w: 34, h: 40, touch: 1, shards: [3, 5], heavy: true,
   init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.set('walk', 0); e.cool = 1; },
   // Slashes from the front (not a down slash from above) are blocked while the shield is up; tokens always hurt.
   guard(e, d, fromX) {
     const s = G.combat.slashBy;
     if (!s || e.state === 'turn' || s.s.dir === 'down') return true;
-    if (Math.sign(s.p.x - e.x) === e.face) { fx.spark(e.x + e.face * 22, e.y - 20, 6, '#ffffff', 220, 0.2); e.flash = 0; e.shieldHit = 0.12; return false; }
+    if (Math.sign(s.p.x - e.x) === e.face) {
+      fx.spark(e.x + e.face * 22, e.y - 20, 6, '#ffffff', 220, 0.2); fx.ring(e.x + e.face * 22, e.y - 20, 4, 90, '#ffffff', 0.15);
+      if (!(e.shieldHit > 0)) fx.floatText(e.x, e.y - e.h - 6, 'Blocked', '#e9e2cf');
+      e.flash = 0; e.shieldHit = 0.2; return false;
+    }
     return true;
+  },
+  // Skin: the braced arm (attack frame 4) is held while the front faces a player in reach, the shove (3) flashes when a slash is refused,
+  // the turn (shield open, hittable) crouches in (1) and comes back up (0); otherwise it walks.
+  skinFrame(e, sk) {
+    if (e.shieldHit > 0) return ['attack', 3];
+    if (e.state === 'turn') return ['attack', e.prog() < 0.5 ? 1 : 0];
+    const p = e.target();
+    if (p && Math.sign(p.x - e.x) === e.face && Math.abs(p.x - e.x) < 220 && Math.abs(p.y - e.y) < 90) return ['attack', 4];
+    return ['move', G.time * sk.fps];
   },
   update(e, dt) {
     e.shieldHit = Math.max(0, (e.shieldHit || 0) - dt); e.cool -= dt;
@@ -159,9 +194,9 @@ G.defineEnemy({
   }
 });
 
-/* ---------- 4. Signal Gull: hovers, then swoops in an arc ---------- */
+/* ---------- 4. Rivet (signal_gull): hovers, then swoops in an arc ---------- */
 G.defineEnemy({
-  id: 'signal_gull', name: 'Signal Gull', hp: 22, w: 30, h: 22, touch: 1, shards: [2, 4], flying: true, gravity: false,
+  id: 'signal_gull', name: 'Rivet', hp: 22, w: 30, h: 22, touch: 1, shards: [2, 4], flying: true, gravity: false,
   init(e) { e.off = rr() < 0.5 ? -100 : 100; e.set('hover', 1.2 + rr()); e.bob = rr() * 6; },
   update(e, dt) {
     const p = e.target(), top = e.h + 40, bot = tiles.rows * T - 40;
@@ -187,6 +222,14 @@ G.defineEnemy({
       if (e.u >= 1 || e.hitWall || e.onGround) { e.off = -e.off; e.set('hover', 1.6 + rr()); }
     } else e.set('hover', 1);
   },
+  // Skin: wind-up frames across the 0.55 s rear-back, the strike frame through the swoop (recovery as it ends), two recovery frames after it,
+  // the move loop (wing beats) while hovering; the body pitches into the swoop.
+  skinFrame(e, sk) {
+    if (e.state === 'wind') return ['attack', Math.min(2, Math.floor(e.prog() * 3))];
+    if (e.state === 'swoop') return ['attack', e.prog() < 0.8 ? 3 : 4, Math.atan2(e.vy, Math.abs(e.vx) + 1) * 0.6 * e.face];
+    if (e.prev === 'swoop' && e.age() < 0.3) return ['attack', e.age() < 0.15 ? 4 : 5];
+    return ['move', G.time * sk.fps + e.bob];
+  },
   draw(e, ctx) {
     ctx.save(); ctx.translate(e.x, e.y - e.h / 2); ctx.scale(e.face, 1);
     const flap = e.state === 'swoop' ? 0.2 : Math.sin(G.time * 11 + e.bob) * (e.state === 'wind' ? 0.2 : 0.7);
@@ -211,7 +254,7 @@ G.defineEnemy({
   // The killing blow does not kill yet: the wisp swells for 0.45 s, then bursts and dies.
   guard(e, d) {
     if (e.state === 'pop') return false;
-    if (e.state !== 'gone' && e.hp - d <= 0) { e.set('pop', 0.45); e.harmless = true; e.hp = 0.001; e.flash = 0.1; return false; }
+    if (e.state !== 'gone' && e.hp - d <= 0) { e.set('pop', 0.45); e.harmless = true; e.hp = 0.001; e.flash = fx.flashT(0.1); return false; }
     return true;
   },
   update(e) {
@@ -237,10 +280,10 @@ G.defineEnemy({
     ctx.save(); ctx.globalAlpha = 0.18 + 0.2 * k; ctx.fillStyle = LAMP; ctx.beginPath(); ctx.arc(0, 0, 26 * sw, 0, TAU); ctx.fill(); ctx.restore();   // light
     if (e.state === 'pop') { ctx.save(); ctx.globalAlpha = 0.3 + 0.5 * k; ctx.strokeStyle = RUST; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(0, 0, 56 * (0.5 + 0.5 * k), 0, TAU); ctx.stroke(); ctx.restore(); }
     ctx.scale(sw * pulse, sw * pulse);
-    for (let i = -1; i <= 1; i++) line(ctx, i * 5, 8, i * 6 + Math.sin(G.time * 5 + i) * 2, 17, '#b7ad8e', 3);   // wisps of smoke
-    solid(ctx, hit(e, e.state === 'pop' && Math.floor(G.time * 14) % 2 ? '#ffffff' : LAMP), () => ctx.arc(0, 0, 11, 0, TAU));
-    solid(ctx, hit(e, '#b7ad8e'), () => rrect(ctx, -7, -15, 14, 6, 3));                           // cap
-    eye(ctx, -3.5, 0, 2); eye(ctx, 3.5, 0, 2);
+    for (let i = -1; i <= 1; i++) wline(ctx, i * 5, 8, i * 6 + Math.sin(G.time * 5 + i) * 2, 17, '#a89a7c', 3);   // wisps of smoke
+    wash(ctx, hit(e, e.state === 'pop' && Math.floor(G.time * 14) % 2 ? '#ffffff' : '#f0dc9c'), () => ctx.arc(0, 0, 11, 0, TAU), -11, 11, 0.12);
+    wash(ctx, hit(e, '#a98550'), () => rrect(ctx, -7, -15, 14, 6, 3), -15, -9);                    // brass cap
+    eye(ctx, -3.5, 0, 2, INK); eye(ctx, 3.5, 0, 2, INK);
     ctx.restore();
   }
 });
@@ -276,20 +319,20 @@ G.defineEnemy({
     const k = e.state === 'crouch' ? 1 - Math.max(0, e.t) / 0.4 : 0, air = e.state === 'hop' ? 1 : 0;
     if (e.state === 'crouch') warnRing(ctx, -10, 14, k);
     ctx.scale(1 + 0.18 * k - 0.1 * air, 1 - 0.28 * k + 0.12 * air);
-    const body = hit(e, '#8fa56a'), belly = hit(e, '#cdd6a5');
-    solid(ctx, '#6f8450', () => rrect(ctx, -16, -8, 12, 8, 4));                                   // back foot
-    solid(ctx, body, () => ctx.ellipse(0, -11, 15, 10, 0, 0, TAU));                               // body
-    solid(ctx, belly, () => ctx.ellipse(3, -6, 9, 4, 0, 0, TAU));
-    solid(ctx, '#6f8450', () => rrect(ctx, 6, -6, 12, 6, 3));                                     // front foot
-    solid(ctx, body, () => ctx.arc(9, -19, 5, 0, TAU)); solid(ctx, body, () => ctx.arc(2, -20, 4.5, 0, TAU));   // eye bumps
-    eye(ctx, 10, -19.5, 2, LAMP); eye(ctx, 10.6, -19.5, 0.9, OUT); eye(ctx, 2.5, -20.5, 1.8, LAMP); eye(ctx, 3, -20.5, 0.8, OUT);
+    const body = hit(e, '#8a9a5c'), belly = hit(e, '#d3c18a'), dark = hit(e, '#66733f');
+    wash(ctx, dark, () => rrect(ctx, -16, -8, 12, 8, 4), -8, 0);                                  // back foot
+    wash(ctx, body, () => ctx.ellipse(0, -11, 15, 10, 0, 0, TAU), -21, -1);                       // body
+    wash(ctx, belly, () => ctx.ellipse(3, -6, 9, 4, 0, 0, TAU), -10, -2, 0.1);
+    wash(ctx, dark, () => rrect(ctx, 6, -6, 12, 6, 3), -6, 0);                                    // front foot
+    wash(ctx, body, () => ctx.arc(9, -19, 5, 0, TAU), -24, -14); wash(ctx, body, () => ctx.arc(2, -20, 4.5, 0, TAU), -24.5, -15.5);   // eye bumps
+    eye(ctx, 10, -19.5, 2, '#efe3b8'); eye(ctx, 10.6, -19.5, 0.9, INK); eye(ctx, 2.5, -20.5, 1.8, '#efe3b8'); eye(ctx, 3, -20.5, 0.8, INK);
     ctx.restore();
   }
 });
 
-/* ---------- 7. Handcar: pump trolley; winds up (pumping, rust flash), dashes along the floor, then rests ---------- */
+/* ---------- 7. Gearling (handcar): pump trolley; winds up (pumping, rust flash), dashes along the floor, then rests ---------- */
 G.defineEnemy({
-  id: 'handcar', name: 'Handcar', hp: 56, w: 46, h: 30, touch: 1, shards: [4, 5], heavy: true,
+  id: 'handcar', name: 'Gearling', hp: 56, w: 46, h: 30, touch: 1, shards: [4, 5], heavy: true,
   init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.set('roll', 0); e.cool = 1.5; },
   update(e, dt) {
     e.cool -= dt;
@@ -308,6 +351,13 @@ G.defineEnemy({
       e.vx = 0;
       if (e.t <= 0) { e.cool = 1.5; e.set('roll', 0); }
     }
+  },
+  // Skin: wind-up frames across the 0.65 s pumping, the strike frame (3) for the whole dash, recovery 4 then 5 across the 0.9 s rest.
+  skinFrame(e, sk) {
+    if (e.state === 'wind') return ['attack', Math.min(2, Math.floor(e.prog() * 3))];
+    if (e.state === 'dash') return ['attack', 3];
+    if (e.state === 'rest') return ['attack', e.prog() < 0.5 ? 4 : 5];
+    return ['move', G.time * sk.fps];
   },
   draw(e, ctx) {
     ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.face, 1);
@@ -360,16 +410,16 @@ G.defineEnemy({
     const swing = e.state === 'hang' ? Math.sin(G.time * 1.6 + e.sway) * 0.05 : e.state === 'shake' ? Math.sin(G.time * 60) * 0.12 : 0;
     if (e.ceil !== undefined && e.state !== 'landed') {                                           // chain up to the ceiling
       ctx.save(); ctx.translate(0, -e.h); ctx.rotate(swing); const len = Math.max(0, e.y - e.h - e.ceil);
-      line(ctx, 0, 0, 0, -len, '#8d979a', 2); ctx.restore();
+      wline(ctx, 0, 0, 0, -len, '#7f8a84', 2); ctx.restore();
     }
     ctx.translate(0, -e.h / 2); ctx.rotate(e.state === 'landed' ? 0 : swing);
     const lit = e.state === 'landed' ? (e.t < 0.9 ? Math.floor(G.time * 12) % 2 : 1) : e.state === 'shake' ? 1 : 0.55;
-    const glass = e.state === 'landed' || e.state === 'shake' ? RUST : LAMP;
+    const glass = e.state === 'landed' || e.state === 'shake' ? RUST : '#f0dc9c';
     if (e.state === 'landed' || e.state === 'shake') { ctx.save(); ctx.globalAlpha = 0.25 * lit; ctx.fillStyle = RUST; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); ctx.restore(); }
-    solid(ctx, hit(e, '#8d979a'), () => rrect(ctx, -9, -15, 18, 7, 3));                          // cap
-    solid(ctx, hit(e, glass), () => { ctx.moveTo(-8, -9); ctx.lineTo(8, -9); ctx.lineTo(11, 9); ctx.arc(0, 9, 11, 0, Math.PI); ctx.closePath(); });   // glass
-    ctx.save(); ctx.globalAlpha = lit; eye(ctx, 0, 2, 4, '#ffffff'); ctx.restore();
-    solid(ctx, hit(e, '#8d979a'), () => rrect(ctx, -10, 11, 20, 4, 2));                          // rim
+    wash(ctx, hit(e, '#a98550'), () => rrect(ctx, -9, -15, 18, 7, 3), -15, -8);                   // brass cap
+    wash(ctx, hit(e, glass), () => { ctx.moveTo(-8, -9); ctx.lineTo(8, -9); ctx.lineTo(11, 9); ctx.arc(0, 9, 11, 0, Math.PI); ctx.closePath(); }, -9, 20, 0.12);   // glass
+    ctx.save(); ctx.globalAlpha = lit; eye(ctx, 0, 2, 4, '#fffaf0'); ctx.restore();
+    wash(ctx, hit(e, '#a98550'), () => rrect(ctx, -10, 11, 20, 4, 2), 11, 15);                   // rim
     ctx.restore();
   }
 });

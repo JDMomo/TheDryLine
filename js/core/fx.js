@@ -20,11 +20,16 @@ const fx = G.fx = {
   ring(x, y, r, vr, color, life = 0.3) { parts.push({ ring: true, x, y, r, vr, color, life, max: life, vx: 0, vy: 0, grav: 0 }); },
   // paint(ctx, alpha) draws a fading after-image at 0,0
   ghost(x, y, life, paint) { parts.push({ paint, x, y, life, max: life, vx: 0, vy: 0, grav: 0 }); },
+  // A strip animation that plays once where something died: o = { strip, x, y (feet), y1 (feet at the end, for a fall), face, h, foot, play, fade };
+  // the frames run over 'play' seconds, then the last one fades over 'fade'.
+  anim(o) { const st = G.strips[o.strip]; if (!st) return; parts.push({ anim: o, frames: st.frames, x: o.x, y: o.y, life: o.play + o.fade, max: o.play + o.fade, vx: 0, vy: 0, grav: 0 }); },
   floatText(x, y, text, color) { floaters.push({ x, y, text, color, t: 1 }); },
   // A short stamp for a graded fight: lines = ['BEATEN', 'PAR', 'CLEAN'], note = one line under it.
   stamp(lines, note = '', t = 4.2) { fx.stampNow = { lines, note, t, max: t }; },
   say(a, b, t = 3.2) { fx.banner = { a, b, t, max: t }; },
-  jolt(stop, sh) { fx.hitstop = Math.max(fx.hitstop, stop); if (!calm) fx.shake = Math.max(fx.shake, sh); },
+  jolt(stop, sh) { fx.hitstop = Math.max(fx.hitstop, stop); if (!calm && G.meta.settings.shake) fx.shake = Math.max(fx.shake, sh); },
+  // Length of a white hit flash on a body: none when 'reduced flashes' is on (sparks and knock-back still show the hit).
+  flashT(t) { return G.meta.settings.reduceFlashes ? 0 : t; },
   clear() { parts.length = 0; floaters.length = 0; },
   update(dt) {
     for (let i = parts.length - 1; i >= 0; i--) {
@@ -42,6 +47,11 @@ const fx = G.fx = {
     for (const q of parts) {
       const k = q.life / q.max;
       if (q.ring) { ctx.globalAlpha = k; ctx.strokeStyle = q.color; ctx.lineWidth = 3 * k + 1; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 6.283); ctx.stroke(); }
+      else if (q.anim) {
+        const a = q.anim, t = q.max - q.life, u = Math.min(1, t / a.play);
+        ctx.globalAlpha = t < a.play ? 1 : Math.max(0, 1 - (t - a.play) / a.fade);
+        G.art.drawFrame(a.strip, ctx, Math.min(q.frames - 1, Math.floor(u * q.frames)), { x: a.x, y: a.y + (a.y1 - a.y) * u * u, face: a.face, h: a.h, foot: a.foot });
+      }
       else if (q.paint) { ctx.save(); ctx.translate(q.x, q.y); q.paint(ctx, k * 0.45); ctx.restore(); }
       else if (q.soft) { ctx.globalAlpha = k * 0.5; ctx.fillStyle = q.color; ctx.beginPath(); ctx.arc(q.x, q.y, q.size * (1.4 - k * 0.4), 0, 6.283); ctx.fill(); }
       else { ctx.globalAlpha = k; ctx.fillStyle = q.color; ctx.fillRect(q.x - q.size / 2, q.y - q.size / 2, q.size, q.size); }

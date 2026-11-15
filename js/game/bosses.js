@@ -80,14 +80,14 @@ class Boss {
     }
     sp.hp--; sp.flash = 0.25; fx.jolt(0.08, 8); fx.spark(q.x, q.y, 22, col, 420, 0.5); fx.ring(q.x, q.y, 8, 300, col, 0.3);
     if (sp.hp > 0) { fx.floatText(q.x, q.y - 16, 'Punch ' + (C.SPOT_HP - sp.hp) + ' of ' + C.SPOT_HP, col); return; }
-    sp.broken = true; this.hp -= this.maxHp * C.BREAK_FRAC; this.flash = 0.2; this.set('stagger', C.STAGGER); fx.jolt(0.16, 16);
+    sp.broken = true; this.hp -= this.maxHp * C.BREAK_FRAC; this.flash = fx.flashT(0.2); this.set('stagger', C.STAGGER); fx.jolt(0.16, 16);
     fx.spark(q.x, q.y, 46, col, 560, 0.9); fx.ring(q.x, q.y, 10, 520, '#fff3c4', 0.45);
     if (sp.def.onBreak) sp.def.onBreak(this);
     const item = G.game.spend(st.itemId, st.owner);
     G.game.punched(sp.cls);
     fx.say(sp.def.name + ' punched', (item ? item.name + ' is void. ' : '') + (sp.def.lost || ''), 4);
   }
-  damage(d) { if (this.active()) { this.hp -= d; this.flash = Math.max(this.flash, 0.07); } }
+  damage(d) { if (this.active()) { this.hp -= d; this.flash = Math.max(this.flash, fx.flashT(0.07)); } }
 
   // The fight begins: a fare slot opens only if the party carries a token of its cut.
   start() {

@@ -9,23 +9,51 @@ G.time = 0;
 G.state = 'title';
 let manual = false, last = 0, acc = 0;
 
+// Holding Pause for LEAVE_T seconds in the Junction removes that player; a shorter press opens the pause menu when the button is let go.
+const LEAVE_T = 1.0;
+function hubPause(dt) {
+  let open = false;
+  for (const p of G.players.slice()) {
+    if (p.in.held.pause) { p.leaveT = (p.leaveT || 0) + dt; if (p.leaveT >= LEAVE_T && !p.leftNow) { p.leftNow = true; if (G.players.length > 1) G.game.removePlayer(p); else open = true; } }
+    else { if (p.leaveT > 0 && !p.leftNow) open = true; p.leaveT = 0; p.leftNow = false; }
+  }
+  return open;
+}
+// A controller of the party is gone: pause and say who. It comes back by reconnecting, or when another device presses a button.
+function checkLost() {
+  const lost = G.input.lost();
+  if (!lost.length) { if (G.menus.lost.length && G.menus.lostPause && G.state === 'pause') G.state = 'play'; G.menus.lost = []; G.menus.lostPause = false; return; }
+  if (G.state === 'play') { G.state = 'pause'; G.menus.open(G.players[0] && G.players[0].in.dev); G.menus.lostPause = true; }
+  const dev = G.input.takeOver(G.players.filter(p => !lost.includes(p)).map(p => p.in.dev).concat(lost.map(p => p.in.dev)));
+  if (dev) { lost[0].in.dev = dev; G.fx.say('Player ' + (lost[0].index + 1), 'now plays on ' + (dev === 'kb' ? 'the keyboard' : 'another controller'), 2.4); G.input.sync(); return checkLost(); }
+  G.menus.lost = lost.map(p => p.index);
+}
+
 function step(dt) {
   G.time += dt;
   const pr = any.pressed;
-  if (G.state === 'title') { if (pr.jump || pr.attack) { G.game.newRun(G.game.parseCode(location.hash) ? location.hash.slice(1) : undefined); G.state = 'play'; } }   // a #CODE in the address replays that run
+  if (G.state === 'title') {
+    const dev = G.input.claim();
+    if (dev || pr.jump || pr.attack) { G.input.claimed = dev || 'kb'; G.game.newRun(G.game.parseCode(location.hash) ? location.hash.slice(1) : undefined); G.input.claimed = null; G.state = 'play'; }   // the first device to press a button is player 1; a #CODE in the address replays that run
+  }
   else if (G.state === 'play') {
-    const run = G.run;
-    if (G.rooms.current.id === run.graph.hub) {                     // new players may join at the Junction
-      const pad = G.input.takeJoin(G.players.map(p => p.in.pad));
-      if (pad >= 0) G.game.addPlayer(pad);
+    const run = G.run, inHub = G.rooms.current.id === run.graph.hub;
+    checkLost();
+    if (G.state !== 'play') { G.input.endStep(); return; }
+    if (inHub) {                                                    // new players may join at the Junction: any other device, by pressing Jump
+      const dev = G.input.takeJoin(G.players.map(p => p.in.dev));
+      if (dev && G.players.length < 4) G.game.addPlayer(dev);
     }
     if (!run.over) run.time += dt;
     G.rooms.update(dt); G.fx.update(dt); G.tips.update(dt); G.game.checkEnd();
     if (run.over) { run.overT += dt; if (run.overT > 1.4) G.state = 'over'; }
-    else if (pr.pause) { G.state = 'pause'; G.menus.open(); }
+    else if (inHub ? (hubPause(dt) || (pr.pause && !G.players.some(p => p.in.held.pause))) : pr.pause) { G.state = 'pause'; G.menus.open(G.input.pauseDev() || (G.players[0] && G.players[0].in.dev)); }
     else if (pr.map) G.state = 'map';
   }
-  else if (G.state === 'pause') G.menus.pauseStep(pr);
+  else if (G.state === 'pause') {
+    for (const p of G.players) { p.leaveT = 0; p.leftNow = !!p.in.held.pause; }          // a Pause press that closes the menu must not count again as a hold in the Junction
+    checkLost(); if (G.state === 'pause') G.menus.pauseStep(pr);
+  }
   else if (G.state === 'map') { if (pr.map || pr.pause) G.state = 'play'; }
   else if (G.state === 'over') { if (pr.jump) { G.game.newRun(); G.state = 'play'; } }
   G.input.endStep();
@@ -54,7 +82,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 // Losing the window's focus pauses a run in progress (nothing is lost while the player is away).
-const autoPause = () => { if (G.state === 'play' && G.run && !G.run.over) { G.state = 'pause'; G.menus.open(); } };
+const autoPause = () => { if (G.state === 'play' && G.run && !G.run.over) { G.state = 'pause'; G.menus.open(G.players[0] && G.players[0].in.dev); } };
 addEventListener('blur', autoPause);
 document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
 overlay.addEventListener('click', () => { overlay.hidden = true; cv.focus(); });
@@ -72,6 +100,7 @@ const findNode = key => {
 const regionOf = id => G.regionDefs[id] ? id : Object.keys(G.regionDefs).find(r => G.regionDefs[r].boss === id);
 G.debug = {
   godMode: false,
+  hidePlayers: false,        // tests: draw no player (compare a picture with and without)
   fullCharts: false,         // tests that need every cut on every Warden: newRun then gives all four cuts to each region
   newRun(seed, cuts) {
     manual = true; G.game.newRun(seed, cuts); G.state = 'play';
@@ -84,9 +113,9 @@ G.debug = {
   gotoRoom(key, entry) { manual = true; const id = findNode(key); if (!id) return false; G.rooms.trans = null; G.rooms.enter(id, entry || { side: 'left' }); return true; },
   give(itemId, playerIndex = 0) { if (!G.itemDefs[itemId]) return false; G.game.takeItem(G.players[playerIndex], itemId); return true; },
   unlockAll() { for (const id in G.run.abil) G.run.abil[id] = true; },
-  addPlayer() { return !!G.game.addPlayer(-1); },
+  addPlayer() { return !!G.game.addPlayer(null); },
   // Hold (true) or release (false) actions for one player until changed again, e.g. setInput(0, { right: true, jump: false }).
-  setInput(playerIndex, map) { Object.assign(G.players[playerIndex].in.forced, map); G.input.sync(); },
+  setInput(playerIndex, map) { const s = G.players[playerIndex].in; Object.assign(s.forced, map); G.input.syncState(s); },
   step(n = 1) { manual = true; for (let i = 0; i < n; i++) step(C.STEP); },
   // id: a region id or a boss id. Goes to that region's arena, puts the party inside the boss door and wakes the boss.
   startBoss(id) {
@@ -123,7 +152,7 @@ G.debug = {
         enemies: room.enemies.map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp })), props: room.props.map(p => ({ type: p.type, x: p.x, y: p.y, data: JSON.parse(JSON.stringify(p.data)) })),
         boss: b && { id: b.id, hp: b.hp, maxHp: b.maxHp, state: b.state, x: b.x, y: b.y, face: b.face, floor: b.floor, minX: b.minX, maxX: b.maxX,
           spots: b.spots.map(s => ({ cls: s.cls, name: s.def.name, hp: s.hp, open: s.open, broken: s.broken })) } },
-      players: G.players.map(p => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, hp: p.hp, maxHp: run ? p.maxHp : 0, down: p.down, onGround: p.onGround, face: p.face,
+      players: G.players.map(p => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, hp: p.hp, inv: p.inv, dev: p.in.dev, maxHp: run ? p.maxHp : 0, down: p.down, onGround: p.onGround, face: p.face,
         items: p.items.slice(), slots: p.slots, sel: p.sel, glow: p.glow, itemCd: p.itemCd })),
       run: run && { seed: run.seed, code: run.code, cuts: run.cuts.slice(), chart: JSON.parse(JSON.stringify(run.graph.chart)), time: run.time, shards: run.shards, abil: Object.assign({}, run.abil), spent: run.spent.slice(), trinkets: run.trinkets.slice(),
         beaten: Object.assign({}, run.beaten), over: run.over, stats: Object.assign({}, run.stats) },

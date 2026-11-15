@@ -89,17 +89,17 @@ Draw the cloak in flat amber with one shadow tone, so the game can recolour it f
 
 # 2. Enemies
 
-Each needs a hurt frame (can be the idle frame in white) and a death burst (shared, see effects). Wind-ups glow rust red.
+Display names changed with the art (ids unchanged); the first five are now cut and in the game (assets/enemies/, see tools/art/README.md); the descriptions below are the original briefs. Each needs a hurt frame (can be the idle frame in white) and a death burst (shared, see effects). Wind-ups glow rust red.
 
 | Enemy | Hitbox | Frame | Animations and frames | Description and colours |
 |---|---|---|---|---|
-| Ballast Crab | 30 x 22 | 40 x 32 | Walk 4 loop, turn 2 | Low, flat crab whose shell is a lump of railway ballast stone. Grey stone shell, rust-brown legs, two small lamp-white eyes. The simplest enemy: it just patrols |
-| Brine Spout | 26 x 30 | 32 x 40 | Idle 2 loop, swell (wind-up) 3, spit 2 | A barnacle-like vent fixed to the floor. Salt-crusted pale grey cone, dark wet mouth. Swells and glows rust before lobbing brine |
-| Turnstile | 34 x 40 | 48 x 48 | Walk 4 loop, brace (wind-up) 2, shove 2 | A three-armed station turnstile walking on two stubby legs, holding a flat shield plate in front. Brass arms, dark green post, steel shield. The shield must be obvious: it blocks slashes from the front |
-| Signal Gull | 30 x 22 | 48 x 40 | Hover flap 4 loop, rear back (wind-up) 2, swoop 2 loop | A gull with a small signal lamp where its head should be. Grey-violet wings, lamp-white head lens that flashes rust before the dive |
+| Strider (ballast_crab) | 30 x 22 | 40 x 32 | Walk 4 loop, turn 2 | Low, flat crab whose shell is a lump of railway ballast stone. Grey stone shell, rust-brown legs, two small lamp-white eyes. The simplest enemy: it just patrols |
+| Boiler (brine_spout) | 26 x 30 | 32 x 40 | Idle 2 loop, swell (wind-up) 3, spit 2 | A barnacle-like vent fixed to the floor. Salt-crusted pale grey cone, dark wet mouth. Swells and glows rust before lobbing brine |
+| Scrapper (turnstile) | 34 x 40 | 48 x 48 | Walk 4 loop, brace (wind-up) 2, shove 2 | A three-armed station turnstile walking on two stubby legs, holding a flat shield plate in front. Brass arms, dark green post, steel shield. The shield must be obvious: it blocks slashes from the front |
+| Rivet (signal_gull) | 30 x 22 | 48 x 40 | Hover flap 4 loop, rear back (wind-up) 2, swoop 2 loop | A gull with a small signal lamp where its head should be. Grey-violet wings, lamp-white head lens that flashes rust before the dive |
 | Lamp Wisp | 24 x 24 | 32 x 32 | Drift 4 loop, swell (warning) 3, burst 4 at 48 x 48 | A loose lamp flame inside a bent wire cage. Lamp-white flame with a violet core. Bursts when killed, so the swell must read clearly |
 | Brine Toad | 32 x 24 | 48 x 40 | Sit 2 loop, crouch (wind-up) 2, leap 2, land 2 | A squat toad crusted with salt crystals. Slate blue-grey skin, white crystal lumps on its back, pale belly |
-| Handcar | 46 x 30 | 64 x 40 | Idle 2 loop, pump (wind-up) 3, dash 2 loop, skid 2 | A railway pump trolley: flat deck, two wheels, a see-saw lever, one lamp eye at the front. Dark green deck, brass lever, lamp-white eye. Sparks from the wheels when it pumps |
+| Gearling (handcar) | 46 x 30 | 64 x 40 | Idle 2 loop, pump (wind-up) 3, dash 2 loop, skid 2 | A railway pump trolley: flat deck, two wheels, a see-saw lever, one lamp eye at the front. Dark green deck, brass lever, lamp-white eye. Sparks from the wheels when it pumps |
 | Hanging Lamp | 24 x 30 | 32 x 48 | Hang 2 loop, shake (warning) 3, fall 1, shatter 4, floor fire 3 loop at 32 x 24 | A heavy signal lamp on a chain (chain link tile 8 x 16, repeats upward). Dark iron frame, lamp-white glass. Drops when someone walks under |
 
 Enemy shots: brine glob 16 x 16, 2 frames, pale grey-green #B8C9A8 with a white highlight; toad splash 64 x 24, 3 frames.
@@ -259,7 +259,7 @@ The sky behind them is a three-colour vertical gradient the game draws from the 
 
 1. The player's idle, run, jump, fall and side slash. This sets the style for everything.
 2. Wreck Quay tiles and its three background layers.
-3. The Ballast Crab.
+3. The Strider (was Ballast Crab).
 4. The Tollkeeper.
 5. Stop and look at those four together in the game before drawing anything else.
 
