@@ -8,6 +8,7 @@ const WANT = {
 };
 
 export default async ({ page }) => {
+  await page.evaluate(() => { G.debug.fullCharts = true; });      // these checks use every cut on every Warden
   const res = await page.evaluate(({ RANGE }) => {
     const D = G.debug, out = { tokens: {}, ids: Object.keys(G.itemDefs), trinkets: Object.keys(G.trinketDefs) };
     G.defineEnemy({ id: 'test_dummy', name: 'Dummy', hp: 100000, w: 30, h: 40, touch: 0, shards: [0, 0], update(e) { e.vx = 0; }, draw() {} });

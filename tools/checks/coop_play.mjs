@@ -8,7 +8,7 @@ export default async ({ page }) => {
     const slots = () => G.players.reduce((s, p) => s + p.slots, 0);
     const check = where => {
       const s = D.state();
-      if (slots() !== 4) bad.push(where + ': slots ' + slots());
+      if (slots() !== (G.players.length === 4 ? 4 : 3)) bad.push(where + ': slots ' + slots());
       for (const p of s.players) if (![p.x, p.y, p.hp].every(Number.isFinite)) bad.push(where + ': NaN player');
     };
     const shake = (where, secs, bias) => {

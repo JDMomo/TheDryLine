@@ -34,7 +34,7 @@ const TIPS = {
   token: () => N('item') + ' uses your token. ' + N('cycle') + ' switches tokens.',
   mend: () => 'Hold ' + N('heal') + ' on the ground to mend a pip with your gauge.',
   bounce: () => 'In the air over spikes, hold Down and slash (' + N('attack') + ') to bounce off them.',
-  fare: () => 'A lit fare slot takes the token with the same shape. Select it and use it.'
+  fare: () => 'A lit fare slot takes the token with the same shape. Not every cut has a slot: see the board and the map.'
 };
 const tipQ = [];
 G.tips = {

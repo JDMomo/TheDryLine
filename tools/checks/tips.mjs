@@ -2,6 +2,7 @@
 // mend, first spike pit (the bounce), first boss with an open fare slot (match the shape). Wording follows the device used last. The hub
 // signs say where tokens come from.
 export default async ({ page }) => {
+  await page.evaluate(() => { G.debug.fullCharts = true; });      // the fare tip needs the token's cut on the Tollkeeper's chart
   const res = await page.evaluate(() => {
     const D = G.debug, bad = [], ok = (c, m) => { if (!c) bad.push(m); };
     const fresh = () => { G.meta.taught = {}; G.tips.clear(); G.input.last = 'keyboard'; };
@@ -50,7 +51,7 @@ export default async ({ page }) => {
     ok(has('fare'), 'no fare tip when a slot opens'); ok(/shape/.test(text().join(' ')), 'fare wording: ' + text().join(' '));
 
     fresh(); D.newRun(7); const signs = G.rooms.current.props.filter(p => p.type === 'sign').map(p => p.data.text).join(' ');
-    ok(/plinth/i.test(signs) && /trunk/i.test(signs) && /ticket/i.test(signs) && /kiosk/i.test(signs) && /booth/i.test(signs), 'hub signs do not say where tokens come from: ' + signs);
+    ok(/plinth/i.test(signs) && /trunk/i.test(signs) && /ticket/i.test(signs) && /kiosk/i.test(signs) && /three/i.test(signs) && /chart/i.test(signs), 'hub signs do not say where tokens come from: ' + signs);
 
     // 6. the tip is drawn on screen, wrapped, inside the canvas
     fresh(); D.newRun(7); G.input.last = 'keyboard'; D.give('cobalt_awl'); D.step(130);

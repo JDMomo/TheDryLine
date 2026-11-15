@@ -30,12 +30,17 @@ G.items = {
     const d = G.itemDefs[id];
     ctx.save(); ctx.translate(x, y); ctx.fillStyle = d ? d.color : '#888'; G.art.cutShape(ctx, d ? G.CLASSES[d.cls].shape : 'slab', 9 * scale); ctx.restore();
   },
+  // The cuts whose rare tokens are unlocked for the world being built or played: G.items.cutsOverride (set while worldgen builds), else the
+  // set the run recorded when it started (G.run.cuts), else the save file. A run never reads the save after it has started.
+  unlockedCuts() { return G.items.cutsOverride || (G.run && G.run.cuts) || G.meta.cuts; },
   // Ids that may turn up at random this run, optionally only of one cut.
   pool(cls) {
-    return Object.values(G.itemDefs).filter(d => d.rarity !== 'fixed' && (d.rarity !== 'rare' || G.meta.cuts.includes(d.cls)) && (!cls || d.cls === cls)).map(d => d.id);
+    const cuts = G.items.unlockedCuts();
+    return Object.values(G.itemDefs).filter(d => d.rarity !== 'fixed' && (d.rarity !== 'rare' || cuts.includes(d.cls)) && (!cls || d.cls === cls)).map(d => d.id);
   },
   // Weighted draw (rares come up a third as often) of a pool token that is not in exclude. Returns an id, or null when the pool has run
   // dry: it never repeats an excluded token (callers then offer a trinket or scrip instead, see G.worldgen).
+  cutsOverride: null,
   roll(rng, exclude = []) {
     const ids = G.items.pool().filter(id => !exclude.includes(id));
     const bag = ids.flatMap(id => G.itemDefs[id].rarity === 'rare' ? [id] : [id, id, id]);

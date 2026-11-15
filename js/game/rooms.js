@@ -88,6 +88,7 @@ const rooms = G.rooms = {
   enter(nodeId, entry) {
     const node = G.run.graph.nodes[nodeId];
     const room = G.run.rooms[nodeId] || (G.run.rooms[nodeId] = instance(node));
+    if (rooms.current && rooms.current !== room) G.combat.leave();         // scrip on the floor goes with the party
     rooms.current = room; tiles.load(room.grid); G.combat.clear(); fx.clear();
     let x = 3 * T, y = groundY(room, 1), face = 1;
     if (entry.side === 'left') { x = 40; y = groundY(room, 1); }

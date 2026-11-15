@@ -1,6 +1,6 @@
 /* Map overlay (Tab or Back). Top: the tokens the party holds, each with its cut's shape and colour. Then one row for the Junction and
    one per region: a box per room (seen, here, unseen), the Warden's sigil on the last box and whether it has fallen, what every
-   side room found so far holds, and a line naming the Warden's four fare slots by cut so the party can plan its tokens.
+   side room found so far holds, and a line naming the Warden's three charted fare slots by cut so the party can plan its tokens.
    With the Surveyor's Slate (mods.revealMap) the side rooms not yet entered show what they hold too. */
 (() => {
 'use strict';
@@ -106,11 +106,11 @@ G.map = {
         const half = (W - 20 - X0) / 2;
         pieces.forEach((parts, k) => inline(ctx, parts, X0 + (k % 2) * half, y + 44 + Math.floor(k / 2) * 12, X0 + (k % 2) * half + half - 8, 10));
       } else inline(ctx, [{ text: 'No side rooms found yet', color: '#4d5a54' }], X0, y + 44, W - 20, 10);
-      // the Warden's four fare slots, by cut
-      const parts = [{ text: 'Fare slots: ', color: '#9aa89f' }];
-      for (const cut in G.CLASSES) {
+      // the Warden's three fare slots on this run's lock chart, by cut
+      const parts = [{ text: 'Lock chart: ', color: '#9aa89f' }];
+      for (const cut of (graph.chart && graph.chart[reg.id]) || Object.keys(G.CLASSES)) {
         const s = boss && boss.spots && boss.spots[cut];
-        parts.push({ cut }); parts.push({ text: (s ? s.name : '(none)') + ' (' + G.CLASSES[cut].name.toLowerCase() + ')   ', color: G.CLASSES[cut].color });
+        parts.push({ cut }); parts.push({ text: (s ? s.name : '?') + ' (' + G.CLASSES[cut].name.toLowerCase() + ')   ', color: G.CLASSES[cut].color });
       }
       inline(ctx, parts, X0, y + 68, W - 10, 10);
     });

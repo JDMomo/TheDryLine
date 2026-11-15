@@ -1,4 +1,4 @@
-// A token turns up once per run. Every source (guarded plinths, trunks, ticket machines, kiosk, clipping booth) draws only ids that are not
+// A token turns up once per run. Every source (guarded plinths, trunks, the ticket machine, kiosk) draws only ids that are not
 // held, not void and not already placed or offered elsewhere in the run; a dry pool offers a trinket or scrip, never a copy; seeds replay.
 export default async ({ page }) => {
   const res = await page.evaluate(() => {
@@ -11,7 +11,7 @@ export default async ({ page }) => {
         const d = c.data || {};
         if (c.type === 'plinth' && d.item) out.push([d.item, n.id + ' ' + (d.price ? 'ware' : 'plinth')]);
         else if (c.type === 'trunk' && d.item) out.push([d.item, n.id + ' trunk']);
-        else if (c.type === 'ticket') (d.choices || []).forEach(o => { if (o.item) out.push([o.item, n.id + ' ticket']); });
+        else if (c.type === 'ticket') (d.choices || []).concat(d.next || []).forEach(o => { if (o.item) out.push([o.item, n.id + ' ticket']); });
       }
       return out;
     };
@@ -20,7 +20,7 @@ export default async ({ page }) => {
       for (const n of Object.values(g.nodes)) for (const c of G.worldgen.contents(n)) {
         const d = c.data || {};
         if (c.type === 'plinth' && d.trinket) out.push([d.trinket, n.id]); else if (c.type === 'trunk' && d.trinket) out.push([d.trinket, n.id]);
-        else if (c.type === 'ticket') (d.choices || []).forEach(o => { if (o.trinket) out.push([o.trinket, n.id]); });
+        else if (c.type === 'ticket') (d.choices || []).concat(d.next || []).forEach(o => { if (o.trinket) out.push([o.trinket, n.id]); });
       }
       return out;
     };
@@ -29,7 +29,7 @@ export default async ({ page }) => {
       for (const node of Object.values(g.nodes)) for (const c of G.worldgen.contents(node)) {
         const d = c.data || {};
         if (c.type === 'trunk' && !(d.item || d.trinket || d.scrip)) n++;
-        if (c.type === 'ticket' && (!d.choices || d.choices.length !== 3 || d.choices.some(o => !(o.item || o.trinket || o.scrip)))) n++;
+        if (c.type === 'ticket' && (!d.choices || d.choices.length !== 3 || !d.next || d.next.length !== 3 || d.choices.concat(d.next).some(o => !(o.item || o.trinket || o.scrip)))) n++;
         if (c.type === 'plinth' && !(d.item || d.trinket || d.scrip)) n++;
       }
       return n;
@@ -51,7 +51,7 @@ export default async ({ page }) => {
         if (empty(g)) bad.push('seed ' + seed + ': a source holds nothing');
         if (g.warnings.length) bad.push('seed ' + seed + ' warnings: ' + g.warnings.join('; '));
         if (!cuts.length && G.items.pool().length <= ids.filter(([id]) => G.itemDefs[id].rarity !== 'fixed').length) stats.dry++;
-        stats.filler += Object.values(g.nodes).reduce((s, n) => s + G.worldgen.contents(n).filter(c => (c.data && (c.data.scrip || (c.type === 'ticket' && c.data.choices.some(o => o.trinket || o.scrip))))).length, 0);
+        stats.filler += Object.values(g.nodes).reduce((s, n) => s + G.worldgen.contents(n).filter(c => (c.data && (c.data.scrip || (c.type === 'ticket' && c.data.choices.concat(c.data.next).some(o => o.trinket || o.scrip))))).length, 0);
       }
     }
     G.meta.cuts = [];
@@ -85,57 +85,12 @@ export default async ({ page }) => {
         if (take) { useAt(take); D.step(2); }
         if (heldTwice()) bad.push('seed ' + seed + ' ' + id + ': the party holds a token twice: ' + G.game.partyItems());
         if (G.game.partyItems().length >= 3) { const v = G.game.partyItems()[0]; G.game.spend(v, null); if (G.run.spent.filter(x => x === v).length > 1) bad.push('seed ' + seed + ': ' + v + ' void twice'); }
-        for (const b of live().filter(x => x.type === 'booth').slice()) {
-          const before = new Set([...G.game.partyItems(), ...G.run.spent, ...G.run.graph.claimed]);
-          for (const cls of Object.keys(G.CLASSES)) {
-            const spare = G.game.spareTokens(cls);
-            for (const o of spare) if (before.has(o)) bad.push('seed ' + seed + ': the booth would offer ' + o + ' which is held, void or placed');
-          }
-        }
       }
       for (const v of G.run.spent) if (G.game.partyItems().includes(v)) bad.push('seed ' + seed + ': void token ' + v + ' is held again');
     }
 
-    // 4. the clipping booth: only spare tokens; dry, it gives a trinket or scrip for the same pip and keeps the token
-    const booth = (seed, cutsOn, claimAll) => {
-      G.meta.cuts = cutsOn; D.newRun(seed); D.god(true); const p = G.players[0];
-      const node = Object.values(G.run.graph.nodes).find(n => G.worldgen.contents(n).some(c => c.type === 'booth'));
-      D.gotoRoom(node.id); G.rooms.current.enemies.length = 0;
-      const start = G.items.pool().find(id => !G.run.graph.claimed.includes(id)) || 'cobalt_awl';
-      p.items = [start]; p.sel = 0;
-      if (claimAll) for (const id of G.items.pool()) if (!G.run.graph.claimed.includes(id)) G.run.graph.claimed.push(id);
-      const b = G.rooms.current.props.find(x => x.type === 'booth'); if (claimAll) b.data.stock = [];
-      D.place(0, b.x, b.y); D.step(3);
-      const tap = a => { D.setInput(0, { [a]: true }); D.step(2); D.setInput(0, { [a]: false }); D.step(2); };
-      tap('interact');
-      const clip = G.rooms.current.props.filter(x => x.type === 'clip'); ok(clip.length === 4, 'booth shows four cuts');
-      return { p, clip, claimed0: G.run.graph.claimed.slice(), spent0: G.run.spent.slice(), start };
-    };
-    {
-      // the booth's own stock: with every cut unlocked it was given tokens when the run was built
-      const ALL = ['pierce', 'arc', 'burst', 'ground'];
-      G.meta.cuts = ALL; D.newRun(12);
-      const bn = Object.values(G.run.graph.nodes).find(n => G.worldgen.contents(n).some(c => c.type === 'booth')), stock = G.worldgen.contents(bn).find(c => c.type === 'booth').data.stock;
-      ok(stock && stock.length === 2 && new Set(stock).size === 2, 'the booth has two tokens in stock: ' + JSON.stringify(stock));
-      const cut = G.itemDefs[stock[0]].cls, ctxB = booth(12, ALL, false), { p, clip, claimed0 } = ctxB, pr = clip.find(c => c.data.cls === cut), pip = p.maxHp;
-      p.items = [G.items.pool().find(id => G.itemDefs[id].cls !== cut && !stock.includes(id))]; p.sel = 0; const was = p.items[0];
-      D.place(0, pr.x, pr.y); D.step(3); D.setInput(0, { interact: true }); D.step(2); D.setInput(0, { interact: false }); D.step(2);
-      const neu = p.items[p.sel];
-      ok(stock.includes(neu) && neu !== was && G.itemDefs[neu].cls === cut, 'the booth gave ' + neu + ', not from its stock ' + stock + ' (' + cut + ')');
-      ok(p.maxHp === pip - 1, 'the booth costs a pip');
-      ok(!heldTwice(), 'held twice after the booth');
-    }
-    {
-      const ctxB = booth(12, ['pierce', 'arc', 'burst', 'ground'], true);       // nothing is spare
-      const { p, clip } = ctxB, held0 = p.items.slice(), pip = p.maxHp, sh0 = G.run.shards, tr0 = G.run.trinkets.length;
-      const pr = clip[1]; D.place(0, pr.x, pr.y); D.step(3); D.setInput(0, { interact: true }); D.step(2); D.setInput(0, { interact: false }); D.step(2);
-      ok(p.items.join() === held0.join(), 'a dry booth changed the token: ' + p.items + ' from ' + held0);
-      ok(G.run.trinkets.length === tr0 + 1 || G.run.shards > sh0, 'a dry booth gave neither a trinket nor scrip');
-      ok(p.maxHp === pip - 1, 'a dry booth still costs the pip it was paid');
-      ok(!heldTwice(), 'held twice after a dry booth');
-    }
     G.meta.cuts = [];
-    // 5. a plinth never hands out a second copy
+    // 4. a plinth never hands out a second copy
     D.newRun(4); D.god(true); D.give('cobalt_awl'); G.rooms.current.props.push(G.props.make('plinth', G.players[0].x, G.players[0].y, { item: 'cobalt_awl' }));
     D.step(3); const pl = G.rooms.current.props[G.rooms.current.props.length - 1];
     D.setInput(0, { interact: true }); D.step(2); D.setInput(0, { interact: false }); D.step(2);
@@ -143,5 +98,5 @@ export default async ({ page }) => {
     return { bad, stats };
   });
   if (res.bad.length) throw new Error(res.bad.length + ' problems: ' + res.bad.slice(0, 5).join(' | '));
-  return '80 graphs, dry runs ' + res.stats.dry + ', no token twice, clipping booth, replays';
+  return '80 graphs, dry runs ' + res.stats.dry + ', no token twice, replays';
 };

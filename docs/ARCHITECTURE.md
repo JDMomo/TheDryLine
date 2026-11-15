@@ -25,7 +25,7 @@ js/core/input.js    G.input: keyboard + 4 gamepads -> per-player { held, pressed
 js/core/fx.js       G.fx: spark, dust, ring, ghost, floatText, say (banner), jolt(hitstop, shake)
 js/core/tiles.js    G.tiles: current grid, solid / spike / oneway / floorAt, moveBox(o, dx, dy), wallDir(o), blockers
 js/core/camera.js   G.cam.follow(dt, x, y, snap)
-js/core/art.js      G.art: draw(id, ctx, opts) sprite hook, define(id, painter), palette(regionId), cutShape, label, backdrop, tiles
+js/core/art.js      G.art: draw(id, ctx, opts) sprite hook, hasStrip(id) and drawFrame(id, ctx, n, opts) for multi-frame strips (G.strips; js/art/sprites.js loads assets/player/idle.png 4 frames and run.png 8 frames; F2 toggles G.artTest), define(id, painter), palette(regionId), cutShape, label, backdrop, tiles
 js/game/player.js   G.Player, G.players, G.defineAbility, G.abilityDefs
 js/game/combat.js   G.combat (shoot, strike, melee, hurtPlayers, clearHostile, dropShards), G.shots, G.pickups
 js/game/items.js    G.CLASSES (the four cuts), G.defineItem, G.itemDefs, G.items (icon, pool, roll)
@@ -42,10 +42,10 @@ tools/smoke.mjs, tools/checks/*.mjs   headless test harness (not shipped)
 ```
 
 ## Players and input
-- `G.players`: 1 to 4 `G.Player`. Player 1 has the keyboard and gamepad 0. Another gamepad joins by pressing A (Jump) while the party is in the hub.
+- `G.players`: 1 to 4 `G.Player`. Player 1 has the keyboard and the first connected gamepad whatever its index (`pad: 'first'`, sticky while that pad stays connected; a pad that player 1 uses never joins as another player). Another gamepad joins by pressing A (Jump) while the party is in the hub.
 - Actions: `left right up down jump attack dash item heal cycle interact map pause`. `p.in.held[a]`, `p.in.pressed[a]` (true for one step).
 - Keyboard: arrows / WASD; Z, Space jump; X, J slash; C, K, Shift dash; V, L token; F mend; Q, E switch token; Up / W also interact; Tab map; Esc, P pause. Gamepad: stick / d-pad, A jump, X slash, B or RT dash, Y token, LB mend, RB switch, Back map, Start pause.
-- Slot rule: 4 token slots for the party, `floor(4 / n)` each, remainder to player 1 (4; 2+2; 2+1+1; 1+1+1+1). `G.game.reslot()` deals tokens back out when a player joins.
+- Slot rule: `C.SLOTS = 3` token slots for the party: 1 player 3; 2 players 2 + 1; 3 players 1 each; 4 players 1 each (4 in all). `G.game.reslot()` deals tokens back out when a player joins.
 - Abilities are shared run flags: `G.run.abil = { dash, grip, double, heavy }`. `G.defineAbility({ id, name, how })` adds one (it then shows on the HUD; the movement code that uses it goes in player.js).
 - Health: `p.maxHp = 5 + G.run.bonusHp + G.run.mods.maxHp`. A player at 0 is `down`; downed players revive with 1 hp when the party enters a room; `G.game.lose` is a party wipe.
 - `p.place(x, y, face)` moves a player and clears motion. `p.rect()`, `p.cy` (body centre y), `p.face`, `p.items`, `p.sel`, `p.slots`, `p.glow` (mend gauge).
@@ -57,34 +57,37 @@ tools/smoke.mjs, tools/checks/*.mjs   headless test harness (not shipped)
 - Slashes (in player.js) call `G.combat.melee`; damage 13 (heavy 32) x `mods.dmg`; landing a slash fills the mend gauge; a down slash on an enemy or spikes pogoes.
 
 ## Fare slots (boss weak points)
-- Keyed by cut on the boss definition: `spots: { pierce: {...}, arc: {...}, burst: {...}, ground: {...} }`, at most one per cut.
+- Keyed by cut on the boss definition: `spots: { pierce: {...}, arc: {...}, burst: {...}, ground: {...} }`, at most one per cut. A definition still holds all four, but a boss built in a run keeps only the three cuts on its lock chart (`G.run.graph.chart[region]`, also `b.chart`); the fourth has no entry in `b.spots` (never drawn, listed or punchable). Boss code must not index `b.spots` by position (use `b.spots.find(s => s.cls === ...)`) and must not assume a cut's slot exists.
+- **Lock chart**: `G.worldgen.rollChart(seed)` (called by `build`, stored as `graph.chart`) gives every region `[cut, cut, cut]`. The first four regions (by gate) each lock a different cut (so every cut is locked on at least one Warden and no two share a chart); the rest lock a random cut. Shown by the hub prop `board`, the map's row per region and the gate prompt.
 - A slot opens when the fight starts only if the party carries a token of its cut; sealed slots show a grey plate and take no punches.
-- 3 token hits punch a slot (`G.C.SPOT_HP`): the boss loses 20% of max hp, staggers 2.6 s, `onBreak(b)` runs, and the punching token is void (`G.run.spent`). The punched cut is added to `G.meta.cuts` (unlocks rare tokens of that cut).
-- Every boss must be beatable with slashes alone.
+- 3 token hits punch a slot (`G.C.SPOT_HP`): the boss loses 10% of max hp (`C.BREAK_FRAC`), staggers 2.6 s, `onBreak(b)` runs, and the punching token is void (`G.run.spent`). The punched cut is added to `G.meta.cuts` (unlocks rare tokens of that cut).
+- Co-op: `Boss.start()` multiplies max hp by `1 + C.COOP_HP * (players - 1)` (0.6 per extra player). A boss that sets its own hp when the fight starts (the Long Clock) must reset `this.scale = 1` after doing so.
+- Every boss must be beatable with slashes alone. Boss health is balanced with `tools/checks/fight_len.mjs` (slashes alone win in 150 s or less; all three charted slots punched takes at least 30 s).
 
 ## Template characters (G.defineRoom)
 ```
 #  solid             .  empty             ^  spikes (hurt; a down slash bounces off)     =  one-way platform
 E  ground enemy      F  flying enemy      L  ceiling enemy      I  plinth (a token)                             C  lost trunk (becomes a plinth when the room is clear)
-R  ticket machine    S  kiosk ware        K  clipping booth                               M  signal post (region's ability)
+R  ticket machine    S  kiosk ware        K  clipping booth (unused: worldgen leaves it empty, no template has one)                              M  signal post (region's ability)
 H  standpipe         D  doorway           B  boss (arena)       G  region gate (hub)      ?  sign (text from signs[])    P  party start (hub)
 ```
 - A marker stands on the tile below it: put it in the empty tile directly above a floor. The exception is L: it needs no floor, only a solid ceiling above it in the same column (the enemy climbs to the first solid tile above the marker, so put it in the empty tile just under the ceiling, within 6 tiles). L spawns an enemy defined with `ceiling: true` (the Hanging Lamp), taken from the region's `ceiling` list; it drops when a player passes under it. R needs 2 free tiles each side, K needs 3 (they spawn choices).
 - Main rooms: open (`.`) on both side edges at rows 12 to 14 of the bottom cell (the floor is row 15); crossable left to right with run and jump only (a full jump rises about 4 tiles and carries about 6 across). About one D each.
 - Arena: open on the left edge at rows 12 to 14, one B. The boss door is the first column from the left whose row 11 is solid and rows 12 to 14 are open; the fight starts when a player is 2 tiles past it, the door closes (a blocker) and reopens when the boss dies. The fight floor runs from the door to the first solid tile right of B on B's row: that sets `b.minX / b.maxX`.
 - Branch and trial rooms: exactly one D (the way back), closed edges, a `label` naming the doorway that leads in (the map shows its first letter).
-- Plinth contents: in a region's own branch room the plinth holds the region's `fixedItem` (random until that token exists) and is guarded (locked until the room is clear); elsewhere a random pool token. Kiosk ware: a token for 60 or a trinket for 40 scrip (x `mods.shopCost`). Ticket machine: three tokens, keep one; costs 30, 45, 60 ... per run. Clipping booth: choose a cut; the selected token becomes a random different token of that cut for one health pip for the run. Standpipe: full party heal, once.
+- Plinth contents: in a region's own branch room the plinth holds the region's `fixedItem` (random until that token exists) and is guarded (locked until the room is clear); elsewhere a random pool token. Kiosk ware: a trinket for 40 scrip (x `mods.shopCost`); the kiosk sells no tokens. Ticket machine: three tickets (tokens first), keep one; one machine per run, usable twice (`data.choices`, then `data.next`): 30 scrip, then 45. It hides while its tickets stand and returns when one is taken. Clipping booth (and its `clip` prop): code kept in props.js, no longer placed in any run. Standpipe: full party heal, once.
 
 ## World generation
 `G.worldgen.build(seed)` returns `{ seed, hub, nodes, regions, warnings }`:
 - node: `{ id, def, region, exits: { left, right }, content: [one per marker], seen, parent }`; an exit is `{ to: nodeId, entry }` and entry is `{ side }`, `{ mark }`, `{ gate }` or `{ start }`.
 - hub gates go to regions in order of `gate`. Per region: `length` main rooms drawn from the pool region's main templates (no repeats until the pool runs out; redrawn up to 30 times to get enough doorways), then one arena. The doorways lead to: the trial (only if the region has an ability), the pool region's own branch room, then shared branch rooms (or own branch rooms again). Unused doorways are empty. A shared branch room that holds a standpipe (H) is never drawn as an ordinary side room: the last region (the Terminus) reserves one for a doorway of its last main room when that room has one, and `graph.regions.final.pipe` names it. That room holds the run's second standpipe; with no such room the standpipe is placed in the last main room itself.
 - Every room has a way back: main rooms link left and right, branch rooms have their doorway, the arena links left, and a beaten boss adds a doorway to the hub. `G.worldgen.check(graph)` returns `{ unreachable, deadEnds }`.
-- Rewards are rolled with the run's rng at build time, except the ticket machine price and the Warden's trinket choice.
+- Rewards are rolled at build time from the seed and the unlock set; the ticket machine price and the Warden's trinket choice come from a stream of their own (`seed` + region), so they do not depend on the route taken. Token sources per run: four fixed plinths, two lost trunks, one ticket machine (the booth is gone); `graph.chart` is rolled from the seed alone.
 
 ## Run
-- `G.game.newRun(seed?)` builds the graph and enters the hub. `G.run`: `seed, rng, time, shards, abil, trinkets, spent, beaten, mods, bonusHp, tickets, rooms, over, stats, graph`.
+- `G.game.newRun(seed?, cuts?)` builds the graph and enters the hub; `newRun('1K9Z-5')` takes a run code. **Run code** = seed (base 36) + `-` + one hex digit for the unlocked cuts (bit per cut in pierce, arc, burst, ground order): `G.game.codeOf`, `parseCode`. `newRun` records the unlocked cuts in `run.cuts` (from the save only when none are given) and `G.worldgen.build(seed, cuts)` builds from those alone (`G.items.cutsOverride`; during play `G.items.pool` reads `run.cuts`, never the save). `index.html#CODE` starts that run from the title. `G.run`: `seed, cuts, code, chart, rng, time, shards, abil, trinkets, spent, beaten, mods, bonusHp, tickets, rooms, over, stats, graph`.
 - `G.game.win(run)` (default: `run.beaten.final`) and `G.game.lose(run)` (default: party wipe) are the replaceable rules.
+- Scrip on the floor is collected for the party by `G.combat.leave()` when it leaves a room (`G.rooms.enter`); a new run clears it.
 - Beating a Warden (`G.game.bossBeaten`): `run.beaten[region]`, +1 health pip, +40 scrip, the door opens, a doorway back to the Junction, and three trinket plinths (take one).
 - `G.meta` (localStorage `dryline-meta-v1`): `runs, wins, best, cuts`.
 - Other helpers: `takeItem(p, id)` (returns the swapped-out token when the party is full), `spend(id, owner)`, `addTrinket(id)`, `addMaxPips(n)`, `partyItems()`, `partyClasses()`, `freeSlots()`, `addPlayer(pad)`.
@@ -131,11 +134,11 @@ Copy the structure of `boss_r1.js` (it is commented line by line):
 
 ## Tests
 - `node tools/smoke.mjs` runs every check in `tools/checks/` in headless Chrome against `file://.../index.html` and exits 1 on any failure. `node tools/smoke.mjs <name>` runs one, e.g. `node tools/smoke.mjs punch`.
-- Checks: `load, graph, rooms, walk, fullrun, punch, tokens, beaten, death, soak, coop, systems, enemies, feel, boss_r2, boss_r3, boss_r4, boss_final, screenshots` (the last writes `tools/shots/hub.png` and `boss_r1.png`).
+- Checks: `load, graph, rooms, walk, fullrun, punch, tokens, beaten, death, soak, coop, systems, enemies, feel, boss_r2, boss_r3, boss_r4, boss_final, screenshots` (the last writes `tools/shots/hub.png` and `boss_r1.png`). Added 2026-11-14: `chart`, `run_code`, `pad_scrip`, `fight_len`. Checks that need every cut on every Warden set `G.debug.fullCharts = true` first.
 - `walk`: for 5 seeds, every region's chain from its first room to the arena on the real graph: each main room is crossed left to right with the room validator's route search (`pageTraverse` in tools/checks/rooms.mjs, run on the real node with its exits shut during the search), the bot then leaves through the right edge and must land in the next node; the arena is crossed to the boss door and the fight must start.
 - `fullrun`: for 5 seeds, a whole run on the real graph in god mode: gate from the hub, every main room left by its exit, every doorway entered once and left by its way back, the signal posts taken, each Warden woken and beaten (pip, 40 scrip, three trinket plinths, way back), the Long Clock's health = base less 12% per Warden beaten, the win screen with stats. Every room entered draws one frame (`G.rooms.draw`, `G.hud.draw`) without error, and the same seed twice gives the same graph.
 - A check is `export default async ({ page, shots }) => { ... }`; throw to fail, return a short note to print. It drives the game only through `G.debug` and reads `G.debug.state()` (and public registries such as `G.itemDefs`). Page errors, console errors and `G.errors` fail it.
-- `G.debug`: `newRun(seed)`, `gotoRoom(key)` (node id, template id, region id, or `'kind:region'` such as `'arena:r1'`), `give(itemId, playerIndex)`, `unlockAll()`, `setInput(playerIndex, { action: bool })` (held until changed), `step(n)`, `startBoss(regionOrBossId)` (party placed inside, door shut), `state()`, `god(bool)`, `addPlayer()`, plus `place(i, x, y, face)`, `holdBoss(fields | null)` (pins the boss and stops its attacks) and `probe(i)` (`{ wall, gap, onGround }` for bots). Any call that changes the game switches to manual stepping: afterwards only `step(n)` advances it.
+- `G.debug`: `newRun(seed, cuts?)` (a code string works too), `chart(region, cuts)` (replace a region's chart before its fight), `fullCharts` (flag: every region gets all four cuts), `gotoRoom(key)` (node id, template id, region id, or `'kind:region'` such as `'arena:r1'`), `give(itemId, playerIndex)`, `unlockAll()`, `setInput(playerIndex, { action: bool })` (held until changed), `step(n)`, `startBoss(regionOrBossId)` (party placed inside, door shut), `state()`, `god(bool)`, `addPlayer()`, plus `place(i, x, y, face)`, `holdBoss(fields | null)` (pins the boss and stops its attacks) and `probe(i)` (`{ wall, gap, onGround }` for bots). Any call that changes the game switches to manual stepping: afterwards only `step(n)` advances it.
 
 ## Room validator
 Run it on your own rooms before handing them over: `node tools/roomlint.mjs <substring>` (every room whose id contains the substring; no argument = all). One line per room; a failure prints what is wrong and where. `--lint` skips the bot; `--file draft.js` loads an extra script of `G.defineRoom` calls first. It also runs inside `node tools/smoke.mjs rooms` (all rooms, about a second for 15, well under a minute for 50).

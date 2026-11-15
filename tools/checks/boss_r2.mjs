@@ -5,6 +5,7 @@
 // 4. slashes alone kill it (a bot that chases it, and a pinned boss) and it is marked beaten
 // 5. 90 s of random input: no error, NaN or out-of-bounds; then a screenshot to tools/shots/boss_r2.png
 export default async ({ page, shots }) => {
+  await page.evaluate(() => { G.debug.fullCharts = true; });      // these checks use every cut on every Warden
   await page.evaluate(() => {
     window.__setup = (seed, items = []) => {
       const D = G.debug; D.newRun(seed); D.god(true);
@@ -94,7 +95,7 @@ export default async ({ page, shots }) => {
   for (const cls of ['pierce', 'arc', 'burst', 'ground']) {
     const r = res[cls];
     if (!r.sealedOutside) throw new Error(cls + ': slot took a hit outside its exposed state');
-    if (!r.broken || r.state !== 'stagger' || !r.void || r.lost < r.maxHp * 0.2 - 1) throw new Error(cls + ': ' + JSON.stringify(r));
+    if (!r.broken || r.state !== 'stagger' || !r.void || r.lost < r.maxHp * 0.1 - 1) throw new Error(cls + ': ' + JSON.stringify(r));
     if (cls !== 'arc' && r.hits.join() !== '2,1,0') throw new Error(cls + ': hits left ' + r.hits);
   }
 
@@ -136,7 +137,7 @@ export default async ({ page, shots }) => {
   });
   if (!kill.pinned.dead || !kill.pinned.beaten || kill.pinned.fight || kill.pinned.locked) throw new Error('pinned kill: ' + JSON.stringify(kill.pinned));
   if (!kill.bot.dead || !kill.bot.beaten) throw new Error('slash bot did not win in 420 s: ' + JSON.stringify(kill.bot));
-  if (kill.pinned.hp !== 720) throw new Error('hp should be 720');
+  if (kill.pinned.hp !== 960) throw new Error('hp should be 960');
 
   // ---- 5. random input, 90 s, all tokens
   const soak = await page.evaluate(() => {

@@ -14,12 +14,15 @@ const BOUND = new Set(Object.values(KEYS).flat());
 const down = new Set();
 const pads = [{}, {}, {}, {}];        // raw action state per gamepad index
 const padJoin = [false, false, false, false];
+const connected = [false, false, false, false];   // which gamepad indices the browser reports
+let lead = -1;                                      // the gamepad player 1 uses when its pad is 'first'
 const states = new Set();
 
 function raw(s, a) {
   if (s.forced[a]) return true;
   if (s.kb && KEYS[a].some(k => down.has(k))) return true;
   if (s.pad === 'all') return pads.some(p => p[a]);
+  if (s.pad === 'first') return lead >= 0 && !!pads[lead][a];
   return s.pad >= 0 && !!pads[s.pad][a];
 }
 function sync() {
@@ -58,14 +61,18 @@ G.input = {
     try { list = navigator.getGamepads ? Array.from(navigator.getGamepads()) : []; } catch (e) { list = []; }
     for (let i = 0; i < 4; i++) {
       const gp = list[i], was = !!pads[i].jump;
-      if (gp && gp.connected) { readPad(gp, pads[i]); if (Object.values(pads[i]).some(Boolean)) G.input.last = 'gamepad'; } else pads[i] = {};
+      connected[i] = !!(gp && gp.connected);
+      if (connected[i]) { readPad(gp, pads[i]); if (Object.values(pads[i]).some(Boolean)) G.input.last = 'gamepad'; } else pads[i] = {};
       if (pads[i].jump && !was) padJoin[i] = true;
     }
+    // Player 1 takes the first connected controller whatever its index (browsers number them in connection order) and keeps it while it stays.
+    const taken = G.players ? G.players.slice(1).map(p => p.in.pad) : [];
+    if (lead < 0 || !connected[lead] || taken.includes(lead)) lead = connected.findIndex((c, i) => c && !taken.includes(i));
     sync();
   },
   // Index of a gamepad that just pressed Jump and is not used by any player, or -1.
   takeJoin(usedPads) {
-    for (let i = 0; i < 4; i++) if (padJoin[i]) { padJoin[i] = false; if (!usedPads.includes(i)) return i; }
+    for (let i = 0; i < 4; i++) if (padJoin[i]) { padJoin[i] = false; if (!usedPads.includes(i) && i !== lead) return i; }
     return -1;
   },
   endStep() {

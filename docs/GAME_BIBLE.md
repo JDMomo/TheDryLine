@@ -19,9 +19,12 @@ Win: stop the Long Clock. Lose: the whole party is down.
 Vocabulary used in the game's text: token (the item you spend), cut (its class), fare slot (boss weak point), punched (a broken slot), void (a spent token), scrip (currency), Warden (region boss).
 
 ## 3. Decisions the CEO has made (Joseph can overrule any of them)
-- The party shares four token slots (solo carries four; four players carry one each).
+- The party carries three tokens in all (solo carries three; two players 2 and 1; three players one each; four players one each, four in all).
 - A punched token is gone for the rest of the run.
-- A fare slot opens only if the party carries a token of its cut when the fight starts. This is how a boss differs with what you bring.
+- Every run rolls a lock chart from its seed: each Warden has fare slots for only three of the four cuts. Every cut is locked out on at least one Warden, and no two of the four main Wardens share a chart. A locked cut has no slot at all (not drawn, not listed, cannot be punched). The chart is shown on a board in the Junction, on the map and at each gate.
+- A charted fare slot opens only if the party carries a token of its cut when the fight starts. With three tokens and three charted cuts, which Warden gets which token is the run's central decision.
+- A Warden's health grows by 60% for each player beyond the first, decided when its fight starts.
+- A run code (seed plus the set of unlocked cuts, shown on the pause and run-over screens) replays the same world, chart and rewards.
 - Every boss can be beaten with slashes alone. Fare slots are the bonus.
 - The Long Clock is open from the start. Each Warden you beat first weakens it.
 - Rooms are hand-built and shuffled each run; what they hold is rolled each run.
@@ -31,7 +34,7 @@ Vocabulary used in the game's text: token (the item you spend), cut (its class),
 - Browser build (plain JavaScript) for now, so every build is testable and instantly playable.
 
 ## 4. Regions and bosses
-Hub: **The Junction.** A turntable platform with five gates, each showing its boss's sigil. A standpipe (mend fountain). A sign explaining tokens.
+Hub: **The Junction.** A turntable platform with five gates, each showing its boss's sigil. A standpipe (mend fountain). Signs explaining tokens, and the lock chart board (for each region, the three cuts its Warden has slots for this run).
 
 | Slot | Region | Look | Boss | Movement unlock |
 |---|---|---|---|---|
@@ -44,7 +47,7 @@ Hub: **The Junction.** A turntable platform with five gates, each showing its bo
 Each region: 3 main rooms picked from its pool, then the arena. Two doorways along the way lead to branch rooms (rolled from the shared pool), and one leads to the region's trial room, which holds the movement unlock. The final region: 2 main rooms, then the arena.
 
 ### Fare slots (weak points)
-Every boss has four fare slots, one per cut. Three token hits punch a slot: the boss loses 20% of its max health, staggers for 2.6 s, loses or weakens one attack, and the punching token is void.
+Every boss is built with four possible fare slots, one per cut, but in a run only the three cuts on its lock chart exist. Three token hits punch a slot: the boss loses 10% of its max health (three punches: 30%), staggers for 2.6 s, loses or weakens one attack, and the punching token is void. Boss health (set in each boss file) is multiplied by 1 + 0.6 for each player beyond the first when the fight starts. The slot descriptions below list all four; a run uses three.
 
 ### Boss briefs
 **The Tollkeeper (r1).** Exists as the reference boss. A dome-backed, plated toll-engine on legs. Charge, leap with floor shockwaves, spit volley. Slots: Eye (pierce, at eye height on the face; ends the spit), Hump (arc, from above; ends the shockwaves), Belly (burst, only when it rears or leaps; slows the charge), Heel (ground; weakens the leap).
@@ -96,7 +99,7 @@ Every enemy must be readable: a wind-up before anything that hurts, and a clear 
 Tokens are "Mineral + Tool" (Cobalt Awl). Bosses are "The + railway role or creature". Regions are a place on the line. All names original.
 
 ### In-world names for props
-Pedestal: plinth. Chest: lost trunk. Roll shrine: ticket machine. Shop: kiosk. Sacrifice altar: clipping booth. Mend fountain: standpipe. Movement shrine: signal post. Currency: scrip (the code calls it shards).
+Pedestal: plinth. Chest: lost trunk. Roll shrine: ticket machine. Shop: kiosk. Mend fountain: standpipe. Movement shrine: signal post. Currency: scrip (the code calls it shards).
 
 ## 7. Feel targets (from research)
 Change from the prototype: jump buffer 0.10 s; dash cooldown 0.35 s; double jump 600; pogo 590; slash every 0.27 s; invincibility 1.0 s; hit-stop 0.06 s on a landed hit and 0.10 s when hurt. Add: corner correction on jumps and dashes (nudge past a clipped corner by up to 10 px), dash cancels slash recovery, camera look-ahead, hold up or down to pan the camera, quick stop on reversing.
@@ -120,17 +123,18 @@ Rules, from research: slots are few so each pick costs another; every token is u
 | quartz_wake | Quartz Wake | ground | rare | sliding wave | splits in two at each ledge |
 | pumice_crawler | Pumice Crawler | ground | fixed, r1 | slow floor flame that lasts a long time | waits at ledges; press the item button again to send it on |
 
-- The run starts with the four commons and the four fixed tokens in the pool. Each rare is locked until the player has punched one slot of that cut in any run (meta save).
+- The run starts with the four commons and the four fixed tokens in the pool (fixed tokens are placed on their plinths; the rest of the pool feeds the trunks and the ticket machine). Each rare is locked until the player has punched one slot of that cut in any run (meta save).
 - Picking up a token when the party is full swaps it with the selected slot; the old one stays on the plinth.
 
-### Where tokens come from in one run (about 10 candidates for 4 slots)
-- 4 fixed plinths, one per region, each in a guarded branch room (a short platforming or combat test). Always the same token in the same region.
+### Where tokens come from in one run (7 tokens on offer, 3 carried)
+- 4 fixed plinths, one per region (r1 to r4), each in a guarded branch room (a short platforming or combat test). Always the same token in the same region.
 - 2 lost trunks in main rooms; each opens when its room is cleared and holds a random pool token.
-- 2 ticket machines: pay scrip to see three tokens and take one. First roll 30 scrip, then 45, then 60.
-- 1 kiosk: three wares (tokens or trinkets). Tokens 60 scrip, trinkets 40.
-- 1 clipping booth: give up one health pip for the rest of the run to swap a held token for a random one of a cut you choose.
+- 1 ticket machine: pay scrip to see three tickets (tokens first) and keep one. It can be used twice: the first roll costs 30 scrip, the second 45.
+- 1 kiosk: three wares, trinkets only, 40 scrip each. It sells no tokens.
+- No clipping booth (removed; its prop code remains in the engine, unused).
+- Tokens stay unique within a run: a token is on offer in one place only. When the pool runs dry a source offers a trinket or scrip.
 - Standpipes: one in the hub, one before the final arena. Full heal, once each per run.
-- Scrip: enemies drop 2 to 5; a beaten Warden drops 40.
+- Scrip: enemies drop 2 to 5; a beaten Warden drops 40. Scrip left on the floor is collected when the party leaves the room.
 
 ## 9. Trinkets (passive, last the whole run)
 | id | Name | Effect |

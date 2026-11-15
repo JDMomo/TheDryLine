@@ -38,3 +38,29 @@
 ## Open
 - Weak spots: a player cornered between boss and wall cannot hop a wide boss body (r1 charge, r4 spin); fight lengths are simulated, not played by a person; hub, r1 and r4 skies are close in hue; r1's plain bot loses about 1 run in 5.
 - Art pass (player, enemies, bosses, tiles) following docs/ART_GUIDE.md; independent play-through; publishing (the published artifact predates all of this; do not publish until the suite passes).
+
+## Paused by Joseph: 2026-11-14, 12:48 Pacific (usage high)
+- Published build and GitHub (JDMomo/TheDryLine, main, commit 4d99bed) are current: 31 of 31 checks pass.
+- Outside audit ("Second Rail") in /home/claude/audit/: design director done (design/AUDIT.md, bible/01_design.md); technical director done (tech/AUDIT.md, bible/02_tech.md); art, audio and market director (agent aa4d9270a3bedf2ba) was STOPPED part-way: resume it with SendMessage or restart it. Its targets: art/AUDIT.md and bible/03_art_audio_market.md.
+- Not yet done: the CEO's accept / reject / defer decisions on the audits; nothing from the audits has been implemented.
+- Usage rules from Joseph: stop at about 90% of the usage window, never 100%. One worker at a time. No polling loops: start a worker, end the turn, continue when it reports.
+
+## 2026-11-14, design pass: lock chart, scarcity, smaller punches (design engineer)
+Done after the outside design audit (/home/claude/audit/design/AUDIT.md: the token decision was never hard) and the confirmed bugs of the technical audit.
+1. **Lock chart.** `G.worldgen.rollChart(seed)`: each of the five Wardens has fare slots for three of the four cuts. The four main Wardens lock a different cut each (so every cut is locked on at least one Warden and no two charts match); the Long Clock locks a random one. A locked cut has no slot (not built, not drawn, not in the boss bar, not punchable). Shown on a `board` prop in the Junction just right of the party start, on each region's map row ("Lock chart:") and in the gate prompt ("Slots: ...").
+2. **Scarcity.** Party carries 3 tokens (`C.SLOTS`; 2 players 2+1, 3 players 1 each, 4 players 1 each). Sources: four fixed plinths, two lost trunks, one ticket machine (usable twice, 30 then 45; the stand clears and the machine comes back after a ticket is taken). Kiosk sells three trinkets (40 scrip) only. The clipping booth is out of worldgen and the two booth rooms are gone from rooms_shared.js; booth and clip prop code stays in props.js, unused.
+3. **Punch** takes 10% of max hp (`C.BREAK_FRAC`). Stagger and the lost attack unchanged.
+4. **Co-op.** Max hp x (1 + 0.6 per player beyond the first) in `Boss.start()`.
+5. **Bugs.** (a) Scrip on the floor is collected when the party leaves a room (`G.combat.leave`), and a boss dying no longer wipes it. (b) Player 1 uses `pad: 'first'`: the first connected controller at any index; a second controller joins as player 2. (c) A run code (seed + unlocked cuts, e.g. `1K9Z-5`) is recorded at start (`run.cuts`, `run.code`), the world is built from those alone, shown on the pause and run-over screens, and `newRun(code)` / `index.html#CODE` replay the same graph, chart and Warden trinket choice (own stream per region). Not yet covered: enemy behaviour and kill scrip amounts still draw from the shared `run.rng`, so fights are not replays.
+6. Wording: hub signs, tips, the notes under the game, README, bible sections 3, 4, 8, ARCHITECTURE.
+- **Rebalance** (boss hp, fight bot of `bosses_fair`, new check `fight_len`; seconds with slashes alone / with all three charted slots punched at once): Tollkeeper 420 -> 720 (63 / 37), Lamp-Heron 720 -> 960 (87 / 33), Switchman Idol 720 -> 1050 (81 / 33), Gatewhale 500 -> 700 (99 / 58), Long Clock 760 -> 1300 (125 / 71; with all four Wardens beaten, 676 hp: 71 / 31); re-measured 2026-11-14 on seed 77 by `fight_len`. With the old hp the punched fights lasted 16 to 23 s because three punches now cost 30% hp plus 7.8 s of stagger and three lost attacks.
+- New checks: `chart`, `run_code`, `pad_scrip`, `fight_len`. Old checks updated: `punch`, `coop`, `coop_play`, `systems`, `tips`, `tokens_unique`, and the boss checks (they set `G.debug.fullCharts`).
+- Open: nobody has played this; the punched fight times are the bot's lower bound (real punches take time to line up). Ticket machine reuse and hub board placement are untested by a person.
+
+## Paused by Joseph at 90% usage: 2026-11-14, 13:21 Pacific
+- The design engineer (agent a4338200c2fc24bf2) was STOPPED part-way through the "lock chart and scarcity" batch (see the project doc claude/audit-decisions.md, "Accepted now"). The working tree has its uncommitted, unfinished edits: do not publish or push it until that batch is finished and the full suite passes. Resume it with SendMessage, or `git stash` / `git checkout .` to return to commit 4d99bed.
+- Published build and GitHub main are still commit 4d99bed (31 of 31 checks passed).
+
+## 2026-11-14, batch finished and art test (design engineer, second hand-over)
+- The batch above was finished and verified: the full suite passes (see the final line of the run). Board moved to the right of the party start and made smaller so it no longer covers the gate labels.
+- Art test: the owner's watercolor strips (assets/player/idle.png 4 frames, run.png 8 frames, 112 x 96, feet 2 px above the bottom) are drawn for player 1 through new `G.art.drawFrame` (js/core/art.js, loaded in js/art/sprites.js): idle 5 frames per second, run 12 per second, run frame 6 (most stretched) in the air or dashing, scaled to about 60 px tall. The code-drawn body and scarf are hidden while it is on; slash arcs and effects stay. F2 switches it off and on (one line in the notes under the game); missing files fall back to the code-drawn player. New check `art_test`; shot tools/shots/art_test_player.png. The fringe of the cut-out is slightly light on dark floors; otherwise it reads well at game size.

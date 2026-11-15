@@ -1,4 +1,4 @@
-/* Room props. Template character -> prop type (see G.defineRoom):
+/* Room props. Template character -> prop type (see G.defineRoom). The clipping booth (K, booth, clip) is no longer placed in any run; its code stays here unused.
    I plinth (a token or trinket to take; kiosk wares are plinths with a price)   C trunk (lost trunk, opens when the room is clear)
    R ticket (ticket machine)   S plinth with a price (kiosk ware)   K booth (clipping booth)   M post (signal post)
    H standpipe   D door (doorway)   G gate (region gate, hub)   ? sign.   Spawned by other props: clip (a clipping booth choice). */
@@ -22,14 +22,14 @@ function pay(cost) {
 // Remove every other prop of the same group (the choices nobody took).
 function closeGroup(pr) { if (pr.data.group) for (const o of G.rooms.current.props) if (o !== pr && o.data.group === pr.data.group) o.gone = true; }
 function stand(ctx, x, y) { ctx.fillStyle = '#22322e'; ctx.fillRect(x - 16, y - 14, 32, 14); ctx.fillStyle = '#3f6b5a'; ctx.fillRect(x - 19, y - 17, 38, 4); }
-const TICKET_PRICES = [30, 45, 60];       // the first roll of a run costs 30 scrip, the next 45, every later one 60
+const TICKET_PRICES = [30, 45];           // the machine can be used twice: the first roll costs 30 scrip, the second 45
 const ticketCost = () => TICKET_PRICES[Math.min(G.run.tickets, TICKET_PRICES.length - 1)];
 // One line shown the first time a kind of prop is approached (it stops after the player has stood at one for a few seconds).
 const TEACH = {
-  plinth: 'A plinth holds a token. Up takes it; with four held, it swaps with your selected token.',
-  kiosk: 'The kiosk sells tokens and trinkets for scrip. The price is on each ware.',
+  plinth: 'A plinth holds a token. Up takes it; with the party full, it swaps with your selected token.',
+  kiosk: 'The kiosk sells trinkets for scrip. The price is on each ware.',
   trunk: 'A lost trunk opens when the room is clear.',
-  ticket: 'A ticket machine shows three tokens for scrip. Keep one; the rest go void.',
+  ticket: 'The ticket machine shows three tickets for scrip. Keep one; the rest go void. A second roll costs more.',
   booth: 'A clipping booth trades one health pip for a new token of a cut you choose.',
   clip: 'Each cut has a shape and colour. The same shape shows on a Warden\'s fare slot.',
   post: 'A signal post teaches a move. It lasts the whole run.',
@@ -58,6 +58,7 @@ const TYPES = {
         fx.say(G.itemDefs[took].name, old ? 'Swapped for ' + G.itemDefs[old].name + ', which stays on the plinth.' : goodDesc({ item: took }));
       }
       d.price = 0; closeGroup(pr);
+      if (d.group && String(d.group).startsWith('ticket') && !hasGood(d)) pr.gone = true;      // the ticket stand clears, so the machine can come back
 
     },
     prompt(pr) {
@@ -97,20 +98,28 @@ const TYPES = {
       ctx.fillStyle = '#8a6c46'; ctx.fillRect(x - 18, y - 26, 36, 8);
     }
   },
-  ticket: {     // data: { choices: [itemIds], used }. Each roll in a run costs more: 30, 45, 60 ...
+  ticket: {     // data: { choices: [3 loot], next: [3 loot] | null, used, wait }. Two uses per run: 30 scrip, then 45.
+    update(pr) {
+      const d = pr.data;
+      if (!d.wait) return;
+      if (G.rooms.current.props.filter(o => o.data.group === d.wait).length < 3) { d.wait = null; if (d.used) pr.gone = true; }   // a ticket was taken: the stand clears
+    },
     interact(pr) {
       const d = pr.data;
-      if (d.used || !pay(ticketCost())) return;
-      G.run.tickets++; G.run.stats.tickets = (G.run.stats.tickets || 0) + 1; d.used = true; fx.jolt(0.05, 5); fx.ring(pr.x, pr.y - 40, 10, 260, '#f4e6b8', 0.5);
-      d.choices.forEach((o, i) => G.rooms.current.props.push(G.props.make('plinth', pr.x + (i - 1) * 58, pr.y, Object.assign({}, o, { group: 'ticket' + pr.x }))));
-      fx.say('The machine prints three tickets', 'Take one. The others are void.', 2.6); pr.gone = true;
+      if (d.used || d.wait || !pay(ticketCost())) return;
+      G.run.tickets++; G.run.stats.tickets = (G.run.stats.tickets || 0) + 1; fx.jolt(0.05, 5); fx.ring(pr.x, pr.y - 40, 10, 260, '#f4e6b8', 0.5);
+      d.wait = 'ticket' + pr.x + '_' + G.run.tickets;
+      d.choices.forEach((o, i) => G.rooms.current.props.push(G.props.make('plinth', pr.x + (i - 1) * 58, pr.y, Object.assign({}, o, { group: d.wait }))));
+      if (d.next && d.next.length) { d.choices = d.next; d.next = null; } else d.used = true;
+      fx.say('The machine prints three tickets', 'Take one. The others are void.' + (d.used ? '' : ' It can print once more.'), 2.6);
     },
     prompt(pr) {
-      if (pr.data.used) return null;
+      if (pr.data.used || pr.data.wait) return null;
       const c = ticketCost();
-      return ['Ticket machine', 'Shows three tickets, tokens first. You keep one; the rest are void.', 'Up to pay ' + c + ' scrip' + (G.run.shards < c ? ' (you have ' + Math.floor(G.run.shards) + ')' : '')];
+      return ['Ticket machine', 'Shows three tickets, tokens first. You keep one; the rest are void.' + (pr.data.next ? ' Two rolls per run.' : ' Last roll.'), 'Up to pay ' + c + ' scrip' + (G.run.shards < c ? ' (you have ' + Math.floor(G.run.shards) + ')' : '')];
     },
     draw(pr, ctx) {
+      if (pr.data.wait) return;                       // the tickets stand where the machine is
       const x = pr.x, y = pr.y;
       ctx.fillStyle = '#22322e'; ctx.fillRect(x - 14, y - 52, 28, 52); ctx.fillStyle = '#3f6b5a'; ctx.fillRect(x - 18, y - 56, 36, 5);
       ctx.fillStyle = '#f4e6b8'; ctx.fillRect(x - 8, y - 44, 16, 10); ctx.fillStyle = '#0a1110'; ctx.fillRect(x - 6, y - 24, 12, 3);
@@ -214,7 +223,8 @@ const TYPES = {
     interact(pr) { G.rooms.go(G.run.graph.regions[pr.data.region].first, { side: 'left' }); },
     prompt(pr) {
       const r = G.regionDefs[pr.data.region], b = G.bossDefs[r.boss];
-      return [r.name, (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.'), 'Up to enter'];
+      const chart = (G.run.graph.chart || {})[r.id];
+      return [r.name, (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.') + (chart ? ' Slots: ' + chart.map(c => G.CLASSES[c].name).join(', ') + '.' : ''), 'Up to enter'];
     },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y, r = G.regionDefs[pr.data.region], pal = art.palette(pr.data.region), done = G.run.beaten[pr.data.region];
@@ -223,6 +233,20 @@ const TYPES = {
       ctx.save(); ctx.translate(x, y - 104); ctx.rotate(Math.PI / 4); ctx.fillStyle = done ? '#2a2f2d' : pal.accent; ctx.fillRect(-7, -7, 14, 14);
       ctx.fillStyle = done ? '#5c6a63' : pal.sky0; ctx.fillRect(-3, -3, 6, 6); ctx.restore();
       art.label(ctx, r.name, x, y - 126, 12.5, done ? '#9aa89f' : '#e9e2cf');
+    }
+  },
+  board: {      // the lock chart in the Junction: for every region, the three cuts its Warden has a fare slot for this run
+    prompt() { return ['Lock chart', 'Each Warden has three fare slots. A cut not shown is locked out there.', '']; },
+    draw(pr, ctx) {
+      const x = pr.x, y = pr.y, W = 104, rows = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), top = y - 16 - 14 - rows.length * 14;
+      ctx.fillStyle = '#5a4630'; ctx.fillRect(x - W / 2 + 12, y - 16, 4, 16); ctx.fillRect(x + W / 2 - 16, y - 16, 4, 16);
+      ctx.fillStyle = '#8a6c46'; ctx.fillRect(x - W / 2, top, W, y - 16 - top); ctx.fillStyle = '#1d1a14'; ctx.fillRect(x - W / 2 + 3, top + 3, W - 6, y - 16 - top - 6);
+      art.label(ctx, 'Lock chart', x, top + 10, 10.5, '#f4e6b8', 'center', C.FONT, 600);
+      rows.forEach((r, i) => {
+        const ry = top + 25 + i * 14, chart = (G.run.graph.chart || {})[r.id] || [], pal = art.palette(r.id);
+        art.label(ctx, r.name, x - W / 2 + 5, ry, 9, G.run.beaten[r.id] ? '#6d6a5c' : pal.accent, 'left');
+        chart.forEach((cut, k) => { ctx.save(); ctx.translate(x + W / 2 - 40 + k * 14, ry); ctx.fillStyle = G.run.beaten[r.id] ? '#4a4a40' : G.CLASSES[cut].color; art.cutShape(ctx, G.CLASSES[cut].shape, 5); ctx.restore(); });
+      });
     }
   },
   sign: {       // data: { text }

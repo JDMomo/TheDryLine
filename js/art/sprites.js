@@ -17,4 +17,15 @@ const load = (key, dir, id) => {
 };
 for (const id of Object.keys(G.itemDefs || {})) load('item_' + id, 'tokens', id);
 for (const id of Object.keys(G.trinketDefs || {})) load('trinket_' + id, 'trinkets', id);
+// Strips: one image holding n frames side by side (frame width = width / n). A missing file leaves G.strips empty: the code-drawn art shows.
+const loadStrip = (key, file, frames) => {
+  const img = new Image();
+  G.spritesPending = (G.spritesPending || 0) + 1;
+  const done = ok => { if (ok && img.naturalWidth > 0) G.strips[key] = { img, frames, fw: img.naturalWidth / frames, fh: img.naturalHeight }; else delete G.strips[key]; G.spritesPending--; };
+  img.onload = () => { (img.decode ? img.decode() : Promise.resolve()).then(() => done(true), () => done(true)); };
+  img.onerror = () => done(false);
+  img.src = 'assets/' + file;
+};
+loadStrip('player_idle', 'player/idle.png', 4);
+loadStrip('player_run', 'player/run.png', 8);
 })();

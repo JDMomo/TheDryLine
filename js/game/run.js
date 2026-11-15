@@ -3,6 +3,7 @@
 'use strict';
 const G = window.G, C = G.C, U = G.util, fx = G.fx;
 const SAVE_KEY = 'dryline-meta-v1';
+const CUT_ORDER = ['pierce', 'arc', 'burst', 'ground'];
 
 // Between runs: runs played, wins, best winning time (s), cuts punched at least once (unlocks rare tokens of that cut),
 // taught (which first-time prop tips have been shown). Reads and writes never throw: without storage the game plays on in memory.
@@ -31,14 +32,29 @@ const game = G.game = {
   win: run => !!run.beaten.final,
   lose: () => G.players.every(p => p.down),
 
-  newRun(seed) {
+  // A run code is the whole recipe for a world: the seed (base 36) and the unlocked cuts (one hex digit, a bit per cut in CUT_ORDER),
+  // e.g. '1K9Z-5'. The same code gives the same graph, lock chart and token and trinket rewards on any save and by any route.
+  codeOf(seed, cuts) { return (seed >>> 0).toString(36).toUpperCase() + '-' + CUT_ORDER.reduce((m, c, i) => m | (cuts.includes(c) ? 1 << i : 0), 0).toString(16).toUpperCase(); },
+  parseCode(text) {
+    const m = /^\s*#?([0-9A-Z]{1,7})-([0-9A-F])\s*$/i.exec(String(text));
+    if (!m) return null;
+    const seed = parseInt(m[1], 36) >>> 0, mask = parseInt(m[2], 16);
+    return { seed, cuts: CUT_ORDER.filter((c, i) => mask & (1 << i)) };
+  },
+  // newRun(), newRun(seed) (the unlocked cuts are taken from the save now), newRun(seed, cuts) or newRun('1K9Z-5').
+  newRun(seed, cuts) {
+    if (typeof seed === 'string') { const c = game.parseCode(seed); if (c) ({ seed, cuts } = c); else { G.fail('bad run code: ' + seed); seed = null; } }
     if (seed === undefined || seed === null) seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
-    const run = G.run = { seed, rng: U.makeRng((seed ^ 0x9e3779b9) >>> 0), time: 0, shards: 0, abil: {}, trinkets: [], spent: [], beaten: {},
+    seed = seed >>> 0;
+    cuts = CUT_ORDER.filter(c => (cuts || G.meta.cuts).includes(c));       // recorded now: the world never reads the save again
+    const run = G.run = { seed, cuts, code: game.codeOf(seed, cuts), rng: U.makeRng((seed ^ 0x9e3779b9) >>> 0), time: 0, shards: 0, abil: {}, trinkets: [], spent: [], beaten: {},
       mods: G.baseMods(), bonusHp: 0, tickets: 0, rooms: {}, over: null, overT: 0, stats: { hits: 0, breaks: 0, kills: 0 }, graph: null,
       punchLog: [], unlocked: [] };
     for (const id in G.abilityDefs) run.abil[id] = false;
-    run.graph = G.worldgen.build(seed);
-    if (!G.players.length) game.addPlayer(0);
+    run.graph = G.worldgen.build(seed, cuts);
+    run.chart = run.graph.chart;
+    G.combat.clear(); G.rooms.current = null;                       // nothing of the last run (shots, scrip) comes along
+    if (!G.players.length) game.addPlayer('first');
     for (const p of G.players) { p.items = []; p.sel = 0; p.hp = p.maxHp; p.glow = 0; p.down = false; }
     game.reslot();
     G.rooms.trans = null;
@@ -49,16 +65,17 @@ const game = G.game = {
   // Player 1 gets the keyboard as well as its gamepad. Returns the new player, or null if the party is full.
   addPlayer(pad = -1) {
     if (G.players.length >= 4) return null;
-    const p = new G.Player(G.players.length, G.input.makeState({ kb: !G.players.length, pad }));
+    const p = new G.Player(G.players.length, G.input.makeState({ kb: !G.players.length, pad: G.players.length ? pad : (pad === -1 ? -1 : 'first') }));
     G.players.push(p); game.reslot();
     const lead = G.players[0];
-    if (p !== lead && G.rooms.current) { p.hp = p.maxHp; p.place(lead.x, lead.y, lead.face); fx.say('Player ' + (p.index + 1) + ' joined', 'The party shares four token slots.', 2.4); }
+    if (p !== lead && G.rooms.current) { p.hp = p.maxHp; p.place(lead.x, lead.y, lead.face); fx.say('Player ' + (p.index + 1) + ' joined', 'The party carries three tokens in all.', 2.4); }
     return p;
   },
-  // Four slots in total: floor(4 / n) each, the remainder to player 1. Tokens are dealt back out in order.
+  // Three slots in total (1 player: 3, 2: 2 and 1, 3: 1 each); a fourth player brings a slot of their own (1 each, 4 in all).
+  // Tokens are dealt back out in order.
   reslot() {
-    const n = G.players.length, each = Math.floor(C.SLOTS / n), all = G.players.flatMap(p => p.items);
-    G.players.forEach((p, i) => { p.slots = each + (i === 0 ? C.SLOTS - each * n : 0); p.items = []; p.sel = 0; });
+    const n = G.players.length, each = Math.max(1, Math.floor(C.SLOTS / n)), all = G.players.flatMap(p => p.items);
+    G.players.forEach((p, i) => { p.slots = each + (i === 0 ? Math.max(0, C.SLOTS - each * n) : 0); p.items = []; p.sel = 0; });
     for (const id of all) { const p = G.players.find(q => q.items.length < q.slots); if (p) p.items.push(id); }
   },
   partyItems() { return G.players.flatMap(p => p.items); },
@@ -119,7 +136,9 @@ const game = G.game = {
     run.shards += C.WARDEN_SCRIP;
     fx.floatText(boss.x, boss.y - boss.h - 20, '+' + C.WARDEN_SCRIP + ' scrip', '#fff3c4');
     const mid = (room.def.floorX[0] + room.def.floorX[1]) / 2, picks = [];
-    for (let i = 0; i < 3; i++) { const t = G.trinkets.roll(run.rng, picks); if (t) picks.push(t); }
+    // The choice comes from its own stream (seed + region), so a seed offers the same three whatever else happened in the run.
+    const loot = U.makeRng((run.seed ^ 0x5bd1e995 ^ [...boss.region].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7)) >>> 0);
+    for (let i = 0; i < 3; i++) { const t = G.trinkets.roll(loot, picks); if (t) picks.push(t); }
     picks.forEach((t, i) => room.props.push(G.props.make('plinth', mid + (i - 1) * 58, boss.floor, { trinket: t, group: 'reward' })));
   },
   // Token slots (cut and name) the party holds, for the map and screens.

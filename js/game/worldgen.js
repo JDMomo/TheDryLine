@@ -29,10 +29,11 @@ function draw(rng, pool, n) {
 }
 
 // What the hub's three signs say (the first teaching a new player: what tokens are, void, open gates).
-const HUB_SIGNS = ['A token has a cut: pierce, arc, burst or ground. The party carries four.',
-  'Tokens come from guarded plinths, lost trunks, ticket machines, the kiosk and the clipping booth.',
-  'Punch a Warden\'s fare slot with a token of its cut. A punched token is void.',
+const HUB_SIGNS = ['A token has a cut: pierce, arc, burst or ground. The party carries three.',
+  'Tokens come from four guarded plinths, two lost trunks and one ticket machine. The kiosk sells trinkets.',
+  'Each Warden has three fare slots, shown on the lock chart board. Punch one with a token of its cut; the token is void.',
   'Every gate is open. Go in any order.'];
+const CUTS = ['pierce', 'arc', 'burst', 'ground'];
 
 // Roll what every marker of a node holds. content[i] belongs to roomDef.marks[i]; doors and gates are set before this runs.
 // Sources the bible limits (trunks, machines, kiosk, booth, standpipes, loose plinths) are rolled here and then trimmed to the
@@ -61,7 +62,7 @@ function fillContent(node, region, rng, used, ctx) {
     else if (m.ch === 'B') c = { type: 'boss', id: region.boss };
     else if (m.ch === 'P') c = { type: 'start' };
     else if (m.ch === 'H') c = { type: 'standpipe', data: {} };
-    else if (m.ch === 'K') c = { type: 'booth', data: {} };
+    // K (clipping booth) markers are left empty: the booth is no longer part of a run (its prop code stays in props.js, unused).
     else if (m.ch === 'M') c = region.ability ? { type: 'post', data: { abil: region.ability } } : null;
     else if (m.ch === '?') c = { type: 'sign', data: { text: signs[signN++] || '' } };
     else if (m.ch === 'C') c = { type: 'trunk', data: {} };                 // what they hold is drawn by balance() once the counts are trimmed
@@ -109,11 +110,18 @@ function lootData(rng, used) {
   const t = trinketFor(rng, used);
   return t ? { trinket: t } : { scrip: FILLER_SCRIP };
 }
-// One kiosk ware: a trinket for 40 scrip, or a token for 60 (the price is then adjusted by mods.shopCost when it is shown).
-function ware(rng, used, token) {
-  let t = rng.chance(0.4) ? trinketFor(rng, used) : null, id = t ? null : token();
-  if (!t && !id) t = trinketFor(rng, used);              // no token left: a trinket (a kiosk does not sell scrip for scrip)
-  return t ? { type: 'plinth', data: { trinket: t, price: 40 } } : id ? { type: 'plinth', data: { item: id, price: 60 } } : null;
+// One kiosk ware: a trinket for 40 scrip (the price is adjusted by mods.shopCost when it is shown). The kiosk sells no tokens.
+function ware(rng, used) {
+  const t = trinketFor(rng, used);
+  return t ? { type: 'plinth', data: { trinket: t, price: 40 } } : null;
+}
+/* The lock chart: for every region's Warden, the three cuts that have a fare slot this run (the fourth is locked out). Rolled from the
+   seed alone. The first four regions lock a different cut each (so every cut is locked on at least one Warden and no two Wardens
+   share a chart); the rest lock a random cut. Returns { regionId: [cut, cut, cut] }, cuts in CUTS order. */
+function rollChart(seed, regions) {
+  const rng = U.makeRng((seed ^ 0x4c0c4a27) >>> 0), perm = rng.shuffle(CUTS.slice()), chart = {};
+  regions.forEach((r, i) => { const locked = i < CUTS.length ? perm[i] : rng.pick(CUTS); chart[r.id] = CUTS.filter(c => c !== locked); });
+  return chart;
 }
 
 // ---- Placing extra props the templates did not provide (so every run has exactly the sources the bible lists) ----
@@ -159,12 +167,9 @@ function balance(graph, rng, used, ctx) {
   entries('C', 'trunk').filter(e => kind(e.n) !== 'main').forEach(strip);
   const trunks = keep(entries('C', 'trunk'), 2);
   place('trunk', () => ({}), 1, 3, 2 - trunks.length);
-  // ticket machines: exactly 2
-  const machines = keep(entries('R', 'ticket'), 2);
-  place('ticket', () => ({ choices: [] }), 2, 4, 2 - machines.length);
-  // clipping booth: exactly 1
-  const booths = keep(entries('K', 'booth'), 1);
-  place('booth', () => ({}), 3, 4, 1 - booths.length);
+  // ticket machine: exactly 1 (it can be used twice: 30 scrip, then 45)
+  const machines = keep(entries('R', 'ticket'), 1);
+  place('ticket', () => ({ choices: [] }), 2, 4, 1 - machines.length);
   // kiosk: exactly 1 room with exactly 3 wares
   const wares = entries('S', 'plinth'), rooms = [...new Set(wares.map(e => e.n))];
   if (rooms.length) {
@@ -193,24 +198,21 @@ function balance(graph, rng, used, ctx) {
     if (!entries('I', 'plinth').some(e => e.n === n) && !addExtra(n, 'plinth', Object.assign(fixedOrRandom(G.regionDefs[n.region], rng, used), { locked: true }), 1, 3, rng)) warn.push('no room for the plinth in ' + id);
   }
   // What the sources hold is drawn only now that the counts are final, so tokens are not wasted on sources that were trimmed away.
-  // Order: the trunks, then the ticket machines a slot at a time (every machine gets its first pick before any gets its second), then the kiosk.
+  // Order: the trunks, the ticket machine's first three, the kiosk (trinkets), then the machine's second three.
   const all = type => nodes.flatMap(n => G.worldgen.contents(n).filter(c => c.type === type));
   for (const c of all('trunk')) Object.assign(c.data, lootData(rng, used));
   const machinesNow = all('ticket');
-  for (let k = 0; k < 3; k++) {
-    for (const c of machinesNow) c.data.choices.push(lootData(rng, used));
-    if (k === 0) for (const c of all('booth')) {          // the clipping booth keeps up to two tokens back, so it can swap (when the pool allows)
-      c.data.stock = [];
-      for (let j = 0; j < 2; j++) { const id = G.items.roll(rng, used); if (id) { used.push(id); c.data.stock.push(id); } }
-    }
-  }
+  for (let k = 0; k < 3; k++) for (const c of machinesNow) c.data.choices.push(lootData(rng, used));
   for (const c of all('plinth').filter(c => c.data.ware)) {
-    const w = ware(rng, used, token);
+    const w = ware(rng, used);
     if (w) { delete c.data.ware; Object.assign(c.data, w.data); } else warn.push('kiosk ware empty');
   }
+  for (const c of machinesNow) { c.data.next = []; for (let k = 0; k < 3; k++) c.data.next.push(lootData(rng, used)); }
   // the hub's three signs
   const hub = graph.nodes[graph.hub], hubDef = G.roomDefs[hub.def], pc = (hubDef.marks.find(m => m.ch === 'P') || { c: 14 }).c;
   for (let k = hub.signsPlaced || 0; k < HUB_SIGNS.length; k++) if (!addExtra(hub, 'sign', { text: HUB_SIGNS[k] }, 0, 1, rng, pc)) warn.push('no room for hub sign ' + (k + 1));
+  // the lock chart board stands behind the party's start, between the gates
+  (hub.extras || (hub.extras = [])).push({ type: 'board', data: {}, c: 17, r: 14, x: 17 * T + T / 2, y: 15 * T });
   return warn;
 }
 
@@ -236,11 +238,17 @@ G.worldgen = {
      node = { id, def (room template id), region, exits: { left, right }, content: [per marker], seen, parent (branch rooms) }
      exits.left / exits.right = { to: nodeId, entry }. Per region: `length` main rooms left to right, then the arena; the
      main rooms' doorways lead to the trial room, the region's own branch room (its guarded plinth) and shared branch rooms. */
-  build(seed) {
+  build(seed, cuts) {
+    // The world is built from the seed and the unlocked cuts only (cuts: the cuts whose rare tokens are in the pool; default: the save's).
+    G.items.cutsOverride = cuts || G.meta.cuts;
+    try { return G.worldgen.build0(seed); } finally { G.items.cutsOverride = null; }
+  },
+  rollChart(seed) { return rollChart(seed, Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate)); },
+  build0(seed) {
     const rng = U.makeRng(seed), nodes = {}, regions = {}, warnings = [], ctx = { own: new Set() };
     const used = Object.values(G.regionDefs).map(r => r.fixedItem).filter(id => id && G.itemDefs[id]);   // fixed tokens are placed first: nothing else draws them
     // Still needed across the whole run (bible section 8): used to prefer shared branch rooms that hold a source we lack.
-    const need = { R: 2, S: 1, K: 1 };
+    const need = { R: 1, S: 1 };
     const srcs = d => { const o = {}; for (const m of d.marks) if (need[m.ch] !== undefined) o[m.ch] = 1; return o; };
     const take = d => { for (const k in srcs(d)) need[k]--; };
     const tier = d => { const s = Object.keys(srcs(d)); return s.some(k => need[k] <= 0) ? 2 : s.length ? 0 : 1; };
@@ -306,7 +314,7 @@ G.worldgen = {
     });
     ctx.first = null;
     fillContent(hub, {}, rng, used, ctx);
-    const graph = { seed, hub: hub.id, nodes, regions, warnings, claimed: used };
+    const graph = { seed, hub: hub.id, nodes, regions, warnings, claimed: used, chart: G.worldgen.rollChart(seed) };
     warnings.push(...balance(graph, rng, used, ctx));
     return graph;
   },

@@ -1,6 +1,7 @@
 // The Long Clock (boss id long_clock, arena room final_arena): attacks, fare slots, Warden bonuses, slashes alone, a soak, two screenshots.
 // Until regions.js points final at long_clock and the final pool, the check patches the run's final arena node itself (setup below).
 export default async ({ page, shots }) => {
+  await page.evaluate(() => { G.debug.fullCharts = true; });      // these checks use every cut on every Warden
   await page.evaluate(() => {
     const D = G.debug;
     // A fresh run with the final arena node set to the Long Clock; the fight is started with the party inside the door.
@@ -28,7 +29,7 @@ export default async ({ page, shots }) => {
   });
   if (!defs.room || defs.room.kind !== 'arena' || defs.room.region !== 'final' || defs.room.cols !== 30 || defs.room.rows !== 17) throw new Error('arena room: ' + JSON.stringify(defs.room));
   if (defs.room.doorCol !== 3 || defs.room.floorX[0] !== 128 || defs.room.floorX[1] !== 928) throw new Error('arena door/floor: ' + JSON.stringify(defs.room));
-  if (!defs.boss || defs.boss.hp !== 760 || defs.boss.spots.join() !== 'pierce,arc,burst,ground') throw new Error('boss def: ' + JSON.stringify(defs.boss));
+  if (!defs.boss || defs.boss.hp !== 1300 || defs.boss.spots.join() !== 'pierce,arc,burst,ground') throw new Error('boss def: ' + JSON.stringify(defs.boss));
 
   // ---- 1. every attack state in 150 s of play, both phases; tells last 0.45 s or more; at most three crabs; every slot exposed at some time
   const cov = await page.evaluate(() => {
@@ -36,7 +37,7 @@ export default async ({ page, shots }) => {
     const need = ['ringTell', 'ring', 'handsTell', 'hands', 'rainTell', 'rain', 'windTell', 'wind', 'recover', 'transition'];
     const seen = {}, seen2 = {}, exposed = {}, entered = {}, minDur = {}, bad = [];
     let prev = '', since = 0, maxCrabs = 0, p2Armed = 0, openT = 0, armT = 0, hpAtP2 = null, t0 = G.time;
-    T.slasher(b);
+    T.slasher(b); b.maxHp = b.hp = 760;               // coverage needs both phases inside 150 s, not the tuned health (fight_len measures that)
     for (let i = 0; i < 150 * 120; i++) {
       const slashing = b.hp > b.maxHp * 0.12;
       D.setInput(0, { attack: slashing && i % 40 < 2 && b.state !== 'intro' });
@@ -96,7 +97,7 @@ export default async ({ page, shots }) => {
     if (!r.open) throw new Error(c.cls + ': slot not open with its token');
     if (r.idleHp !== 3 || (r.wrongSideHp !== undefined && r.wrongSideHp !== 3)) throw new Error(c.cls + ': slot took a hit when it should be closed: ' + JSON.stringify(r));
     if (r.hits.join() !== '2,1,0' || !r.broken) throw new Error(c.cls + ': hits left ' + r.hits + ', broken ' + r.broken);
-    if (r.lost < r.max * 0.2 - 0.01 || !r.void) throw new Error(c.cls + ': ' + JSON.stringify(r));
+    if (r.lost < r.max * 0.1 - 0.01 || !r.void) throw new Error(c.cls + ': ' + JSON.stringify(r));
     punched.push(c.cls);
   }
 
@@ -123,9 +124,9 @@ export default async ({ page, shots }) => {
       rain: [run([], 'rainTell', 3.6).n, run(['r3'], 'rainTell', 3.6).n],
       crabs: [run([], 'windTell', 3).crabs, run(['r4'], 'windTell', 3).crabs] };
   });
-  if (Math.abs(w.base.hp - 760) > 1e-6) throw new Error('base health ' + w.base.hp);
-  if (Math.abs(w.all.hp - 760 * 0.52) > 1e-6 || Math.abs(w.all.hp0 - w.all.hp) > 1e-6) throw new Error('four Wardens: health ' + w.all.hp + ', wanted ' + 760 * 0.52);
-  for (const r of ['r1', 'r2', 'r3', 'r4']) if (Math.abs(w.one[r].hp - 760 * 0.88) > 1e-6) throw new Error(r + ' alone should take 12%: ' + w.one[r].hp);
+  if (Math.abs(w.base.hp - 1300) > 1e-6) throw new Error('base health ' + w.base.hp);
+  if (Math.abs(w.all.hp - 1300 * 0.52) > 1e-6 || Math.abs(w.all.hp0 - w.all.hp) > 1e-6) throw new Error('four Wardens: health ' + w.all.hp + ', wanted ' + 1300 * 0.52);
+  for (const r of ['r1', 'r2', 'r3', 'r4']) if (Math.abs(w.one[r].hp - 1300 * 0.88) > 1e-6) throw new Error(r + ' alone should take 12%: ' + w.one[r].hp);
   if (!(w.ring[1] < w.ring[0] * 0.8)) throw new Error('r1 should slow the floor rings: ' + w.ring);
   if (!(w.hand[1] < w.hand[0] * 0.8)) throw new Error('r2 should slow the steam hands: ' + w.hand);
   if (!(w.rain[1] < w.rain[0] * 0.75)) throw new Error('r3 should thin the spark rain: ' + w.rain);

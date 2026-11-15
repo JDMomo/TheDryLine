@@ -3,7 +3,9 @@
 A 2D action platformer for 1 to 4 local players, written in plain JavaScript for the browser. No build step and no dependencies.
 
 ## Play
-Open `index.html` in a browser. Keyboard: arrows or WASD to move, Z or Space to jump, X or J to slash, C, K or Shift to dash, V or L to use a token, Q or E to switch token, F to mend, Up at doors and props, Tab for the map, Esc to pause. Controllers work too; players 2 to 4 join with a controller.
+Open `index.html` in a browser. Keyboard: arrows or WASD to move, Z or Space to jump, X or J to slash, C, K or Shift to dash, V or L to use a token, Q or E to switch token, F to mend, Up at doors and props, Tab for the map, Esc to pause. Controllers work too (player 1 uses the first connected controller, whatever its number); players 2 to 4 join with a controller.
+
+Rules in short: the party carries three tokens (four with four players). Each Warden has three fare slots, chosen per run by a lock chart (board in the Junction, map, gates); the fourth cut has none. A slot opens only if you carry a token of its cut when the fight starts; three hits punch it (10% of the Warden's health, a stagger, one attack lost, token void). Each extra player adds 60% to a Warden's health. Tokens come from four guarded plinths, two lost trunks and one ticket machine (30, then 45 scrip); the kiosk sells trinkets only. The pause and run-over screens show a run code; opening the page as `index.html#CODE` replays that world, chart and rewards.
 
 ## State of this snapshot (14 November 2026)
 - All 31 automated checks pass, including a scripted full run from the hub to the last boss, a room validator, boss fairness bots, co-op and performance checks.

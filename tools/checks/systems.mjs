@@ -1,5 +1,5 @@
 // Run systems against bible section 8 and 6: token sources per run (30 seeds), prices, buying from a ticket machine and the kiosk,
-// the clipping booth, standpipes, swapping on a full party, a Warden's rewards, first-time tips, the pause menu, the meta save
+// (the clipping booth is gone from runs), standpipes, swapping on a full party, a Warden's rewards, first-time tips, the pause menu, the meta save
 // across a real reload, and everything still working when localStorage throws.
 export default async ({ page }) => {
   // ---- 1. sources per run, 30 seeds ----
@@ -20,9 +20,11 @@ export default async ({ page }) => {
         if (g.nodes[f.node].region !== r.id) fail('plinth of ' + r.id + ' is in another region');
       }
       if (c.trunks !== 2 || c.trunksInMain !== 2) fail('trunks ' + c.trunks + ' (' + c.trunksInMain + ' in main rooms)');
-      if (c.tickets !== 2) fail('ticket machines ' + c.tickets);
+      if (c.tickets !== 1) fail('ticket machines ' + c.tickets);
       if (c.kioskRooms !== 1 || c.kioskWares !== 3) fail('kiosk rooms ' + c.kioskRooms + ', wares ' + c.kioskWares);
-      if (c.booths !== 1) fail('booths ' + c.booths);
+      if (c.booths !== 0) fail('booths ' + c.booths);
+      if (Object.values(G.roomDefs).some(d => d.marks.some(m => m.ch === 'K'))) fail('a room template still has a booth marker');
+      for (const n of Object.values(g.nodes)) for (const k of G.worldgen.contents(n)) if (k.type === 'plinth' && k.data.price && !k.data.trinket) fail('the kiosk sells a token');
       if (c.loosePlinths !== 0) fail('loose plinths ' + c.loosePlinths);
       if (c.signs < 3) fail('hub signs ' + c.signs);
       const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), last = g.regions[order[order.length - 1].id], pre = g.nodes[last.arena].exits.left.to;
@@ -30,7 +32,7 @@ export default async ({ page }) => {
       if ([...c.standpipes].sort().join() !== [g.hub, pipe].sort().join()) fail('standpipes in ' + c.standpipes + ', wanted ' + g.hub + ' and ' + pipe);
       if (pipe !== pre && g.nodes[pipe].parent !== pre) fail('the standpipe room of the Terminus does not hang off the room before the arena');
       if (G.roomDefs[g.nodes[pre].def].kind !== 'main') fail('the room before the last arena is not a main room');
-      for (const n of Object.values(g.nodes)) for (const k of G.worldgen.contents(n)) if (k.type === 'plinth' && k.data.price && k.data.price !== (k.data.trinket ? 40 : 60)) fail('kiosk price ' + k.data.price);
+      for (const n of Object.values(g.nodes)) for (const k of G.worldgen.contents(n)) if (k.type === 'plinth' && k.data.price && k.data.price !== 40) fail('kiosk price ' + k.data.price);
       if (JSON.stringify(G.worldgen.census(G.worldgen.build(seed))) !== JSON.stringify(G.worldgen.census(G.worldgen.build(seed)))) fail('not repeatable');
     }
     return bad;
@@ -48,7 +50,7 @@ export default async ({ page }) => {
     D.newRun(9); D.god(true);
 
     // ticket machines: 30 then 45 then 60, shown before paying; three plinths appear; taking one removes the rest
-    const m = nodeWith('ticket'); ok(m.length === 2, 'two ticket machine rooms');
+    const m = nodeWith('ticket'); ok(m.length === 1, 'one ticket machine room');
     G.run.shards = 500; D.gotoRoom(m[0].id);
     let mach = props('ticket')[0]; at(mach);
     ok(/30/.test(G.rooms.propNear(G.players[0]).prompt(G.players[0])[2]), 'first ticket price is shown (30)');
@@ -59,18 +61,20 @@ export default async ({ page }) => {
     use(choice);
     ok(!choice.data.item || D.state().players[0].items.includes(choice.data.item), 'the chosen ticket token was taken');
     ok(props('plinth').filter(p => p.data.group && p.data.item).length === 0, 'the other tickets are void');
-    G.run.tickets = 1; D.gotoRoom(m[1].id); mach = props('ticket')[0]; at(mach);
+    // the machine comes back once a ticket is taken (its stand clears), asks 45 for its second roll, and is gone after that
+    D.step(5); mach = props('ticket')[0]; ok(!!mach, 'the machine is back after a ticket was taken'); at(mach);
     ok(/45/.test(G.rooms.propNear(G.players[0]).prompt(G.players[0])[2]), 'second ticket price is shown (45)');
-    G.run.tickets = 2; ok(/60/.test(G.rooms.propNear(G.players[0]).prompt(G.players[0])[2]), 'third ticket price is shown (60)');
-    G.run.tickets = 1; const s1 = G.run.shards; tap('interact'); out.ticket2 = s1 - G.run.shards; ok(out.ticket2 === 45, 'second ticket costs 45, cost ' + out.ticket2);
-    G.run.shards = 5; G.run.tickets = 0; D.gotoRoom(m[0].id); const left = props('ticket');   // already used machine is gone; poor player cannot buy at the other
-    G.run.shards = 5; D.gotoRoom(m[1].id);
+    const s1 = G.run.shards; tap('interact'); out.ticket2 = s1 - G.run.shards; ok(out.ticket2 === 45, 'second ticket costs 45, cost ' + out.ticket2);
+    ok(props('plinth').filter(p => p.data.group).length === 3, 'three more tickets printed');
+    use(props('plinth').filter(p => p.data.group)[0]); D.step(5);
+    ok(props('ticket').length === 0, 'the machine is gone after two rolls');
 
     // kiosk: three wares, price shown, trinket modifier applied, buying takes the ware
     D.newRun(11); D.god(true); G.run.shards = 400;
     const k = nodeWith('plinth').find(n => G.worldgen.contents(n).filter(c => c.type === 'plinth' && c.data.price).length);
     D.gotoRoom(k.id);
     const wares = props('plinth').filter(p => p.data.price); ok(wares.length === 3, 'kiosk shows three wares');
+    ok(wares.every(w => w.data.trinket && !w.data.item), 'the kiosk sells trinkets only');
     const tokenWare = wares.find(w => w.data.item), trinketWare = wares.find(w => w.data.trinket);
     for (const w of [tokenWare, trinketWare]) if (w) {
       at(w); const pr = G.rooms.propNear(G.players[0]), price = w.data.price, before = G.run.shards;
@@ -84,22 +88,6 @@ export default async ({ page }) => {
     G.run.shards = 0; const w4 = props('plinth').find(p => p.data.price && (p.data.item || p.data.trinket));
     if (w4) { at(w4); tap('interact'); ok(G.run.shards === 0 && !G.run.trinkets.includes(w4.data.trinket), 'cannot buy without scrip'); }
 
-    // clipping booth: costs one pip, player chooses a cut, selected token becomes another of that cut
-    D.newRun(12); D.god(true); D.give('cobalt_awl'); D.give('cinder_bell');
-    const b = nodeWith('booth')[0]; D.gotoRoom(b.id);
-    const booth = props('booth')[0]; at(booth);
-    ok(/pip/.test(G.rooms.propNear(G.players[0]).prompt(G.players[0]).join(' ')), 'booth shows its price (a health pip)');
-    const hp0 = D.state().players[0].maxHp; D.state().players[0].items; const sel = G.players[0].items[G.players[0].sel], selCls = G.itemDefs[sel].cls;
-    if (!(G.rooms.current.props.find(q => q.type === 'booth').data.stock || []).length) { const spare = G.items.pool().find(id => !G.players[0].items.includes(id) && !G.run.spent.includes(id) && G.itemDefs[id].cls !== selCls); G.rooms.current.props.find(q => q.type === 'booth').data.stock = [spare]; }   // the pool is spent by now: the booth is dry, so give it one to swap
-    tap('interact'); const clips = props('clip'); ok(clips.length === 4, 'booth offers four cuts, got ' + clips.length);
-    
-    const stock = G.rooms.current.props.find(q => q.type === 'booth').data.stock || [], cut = ['arc', 'ground', 'pierce', 'burst'].find(c => c !== selCls && G.game.spareTokens(c, stock).length > 0) || 'arc'; use(clips.find(c => c.data.cls === cut));
-    const neu = G.players[0].items[G.players[0].sel];
-    ok(G.itemDefs[neu].cls === cut && neu !== sel, 'booth swapped to a token of the chosen cut: ' + sel + ' -> ' + neu);
-    ok(D.state().players[0].maxHp === hp0 - 1, 'booth cost one max pip');
-    ok(props('clip').length === 0 && props('booth').length === 1, 'booth offer closes');
-    out.booth = sel + ' -> ' + neu;
-
     // standpipes: heal fully once, in the hub and before the final arena
     D.newRun(13); D.god(true);
     const order = Object.values(G.regionDefs).sort((a, b2) => a.gate - b2.gate), last = G.run.graph.regions[order[order.length - 1].id], pre = G.run.graph.nodes[last.arena].exits.left.to;
@@ -111,7 +99,7 @@ export default async ({ page }) => {
 
     // swapping on a full party: the old token stays on the plinth
     D.newRun(14); D.god(true); G.run.shards = 500;
-    for (const t of ['cobalt_awl', 'ochre_ladle', 'cinder_bell', 'basalt_roller']) D.give(t);
+    for (const t of ['cobalt_awl', 'ochre_ladle', 'cinder_bell']) D.give(t);
     ok(G.game.freeSlots() === 0, 'party is full');
     const pl = G.players[0], oldTok = pl.items[pl.sel];
     D.gotoRoom(nodeWith('ticket')[0].id); tap2(); function tap2() { at(props('ticket')[0]); tap('interact'); }
@@ -119,7 +107,7 @@ export default async ({ page }) => {
     at(pick);
     ok(/swap/i.test((G.rooms.propNear(G.players[0]) || { prompt: () => ['', '', ''] }).prompt(G.players[0])[2] || ''), 'full-party plinth says it will swap');
     use(pick);
-    ok(pl.items.length === 4 && pl.items[pl.sel] === pick.data.item, 'swap put the new token in the selected slot');
+    ok(pl.items.length === 3 && pl.items[pl.sel] === pick.data.item, 'swap put the new token in the selected slot');
     const left2 = props('plinth').find(p => p.x === pick.x);
     ok(left2 && left2.data.item === oldTok, 'old token stayed on the plinth (' + oldTok + ')');
     out.swap = oldTok + ' <-> ' + pick.data.item;
@@ -133,8 +121,8 @@ export default async ({ page }) => {
     D.newRun(16); G.meta.taught = {};
     const signs = props('sign').map(s => s.data.text); ok(signs.length >= 3, 'three hub signs, got ' + signs.length);
     ok(/token/i.test(signs.join(' ')) && /void/i.test(signs.join(' ')) && /gate/i.test(signs.join(' ')), 'signs cover tokens, void and open gates');
-    D.gotoRoom(nodeWith('booth')[0].id); const bt = props('booth')[0]; ok(!!G.props.tip(G.rooms.current.props.find(p => p.type === 'booth')), 'a first-time tip shows');
-    at(bt); D.step(120 * 4); ok(!G.props.tip(G.rooms.current.props.find(p => p.type === 'booth')) && G.meta.taught.booth, 'the tip stops after a few seconds');
+    D.gotoRoom(nodeWith('ticket')[0].id); const bt = props('ticket')[0]; ok(!!G.props.tip(G.rooms.current.props.find(p => p.type === 'ticket')), 'a first-time tip shows');
+    at(bt); D.step(120 * 4); ok(!G.props.tip(G.rooms.current.props.find(p => p.type === 'ticket')) && G.meta.taught.ticket, 'the tip stops after a few seconds');
 
     out.fail = fail; return out;
   });
@@ -162,7 +150,9 @@ export default async ({ page }) => {
     const rares = Object.values(G.itemDefs).filter(d => d.rarity === 'rare' && d.cls === 'pierce').map(d => d.id);
     ok(rares.every(id => !G.items.pool().includes(id)), 'rare pierce tokens are locked at first');
     G.game.punched('pierce');
-    ok(G.meta.cuts.includes('pierce') && rares.every(id => G.items.pool().includes(id) && G.run.unlocked.includes(id)), 'punching a pierce slot unlocks its rare tokens and lists them');
+    ok(G.meta.cuts.includes('pierce') && rares.every(id => G.run.unlocked.includes(id)), 'punching a pierce slot unlocks its rare tokens and lists them');
+    ok(rares.every(id => !G.items.pool().includes(id)), 'the running world keeps the unlock set it started with');
+    D.newRun(21); ok(rares.every(id => G.items.pool().includes(id)), 'the next run has the rare tokens'); G.run.unlocked.length = 0; G.game.punched('pierce'); G.run.unlocked.push(...rares);
     G.game.punched('pierce'); ok(G.run.unlocked.length === rares.length, 'a cut unlocks once');
     // pause menu: down, jump, jump restarts the same seed
     const seed = G.run.seed; D.step(5); G.state = 'pause'; G.menus.open(); D.step(2);
@@ -182,11 +172,11 @@ export default async ({ page }) => {
   if (ui.fail.length) throw new Error(ui.fail.join(' | '));
 
   // meta save across a real reload
-  await page.evaluate(() => { G.meta.cuts = ['burst']; G.meta.runs = 7; G.meta.taught = { booth: true }; G.game.saveMeta(); });
+  await page.evaluate(() => { G.meta.cuts = ['burst']; G.meta.runs = 7; G.meta.taught = { ticket: true }; G.game.saveMeta(); });
   await page.reload();
   await page.waitForFunction(() => window.G && window.G.debug);
   const reloaded = await page.evaluate(() => ({ cuts: G.meta.cuts, runs: G.meta.runs, taught: G.meta.taught, pool: G.items.pool().filter(id => G.itemDefs[id].rarity === 'rare').map(id => G.itemDefs[id].cls) }));
-  if (reloaded.cuts.join() !== 'burst' || reloaded.runs !== 7 || !reloaded.taught.booth) throw new Error('meta did not survive a reload: ' + JSON.stringify(reloaded));
+  if (reloaded.cuts.join() !== 'burst' || reloaded.runs !== 7 || !reloaded.taught.ticket) throw new Error('meta did not survive a reload: ' + JSON.stringify(reloaded));
   if (reloaded.pool.some(c => c !== 'burst')) throw new Error('rare tokens of unpunched cuts are in the pool after reload: ' + reloaded.pool);
   // a damaged save and a wrong-shaped save are ignored, not fatal
   const damaged = await page.evaluate(() => {
@@ -220,5 +210,5 @@ export default async ({ page }) => {
     return fail;
   });
   if (noStore.length) throw new Error(noStore.join(' | '));
-  return '30 seeds; ticket 30/45, booth, kiosk, standpipes, swap, Warden reward, meta reload, blocked storage';
+  return '30 seeds; ticket 30/45, kiosk, standpipes, swap, Warden reward, meta reload, blocked storage';
 };

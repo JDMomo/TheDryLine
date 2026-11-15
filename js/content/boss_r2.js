@@ -60,7 +60,7 @@ function chooseAttack(b) {
 }
 
 G.defineBoss({
-  id: 'lamp_heron', name: 'The Lamp-Heron', hp: 720, w: 70, h: BODY_H, contact: false,
+  id: 'lamp_heron', name: 'The Lamp-Heron', hp: 960, w: 70, h: BODY_H, contact: false,
 
   spots: {
     pierce: { name: 'Lamp', local: dyn(b => b.hx + 4, b => b.hy), r: 17,

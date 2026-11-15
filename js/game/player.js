@@ -1,5 +1,5 @@
 /* G.Player: movement, slashing, mending, token use. Feel is identical to reference/prototype.html.
-   Abilities are shared by the party (G.run.abil). Each player owns some of the party's four token slots (p.slots). */
+   Abilities are shared by the party (G.run.abil). Each player owns some of the party's three token slots (p.slots; four players: one each). */
 (() => {
 'use strict';
 const G = window.G, C = G.C, M = C.MOVE, T = C.T, U = G.util, fx = G.fx, tiles = G.tiles;
@@ -231,6 +231,15 @@ function cloak(ctx, alpha, color) {
 G.art.define('player', (ctx, o) => {
   const p = o.p, base = p.down ? 0.55 : (p.inv > 0 && Math.floor(G.time * 22) % 2 ? 0.45 : 1);
   ctx.globalAlpha = base;
+  // Watercolor test (F2 toggles; player 1 only): strips replace the code-drawn body and scarf. Missing files fall through to the code-drawn player.
+  if (G.artTest && p.index === 0 && G.art.hasStrip('player_idle') && G.art.hasStrip('player_run')) {
+    const o2 = { x: p.x, y: p.y, face: p.face, h: 96 * 60 / 67, foot: 2 };            // the figure is 67 px tall in a 96 px frame: scale it to about 60
+    const moving = p.onGround && Math.abs(p.vx) > 40 && !p.down;
+    if (p.dashT > 0 || (!p.onGround && !p.down)) G.art.drawFrame('player_run', ctx, 6, o2);        // the most stretched frame
+    else if (moving) G.art.drawFrame('player_run', ctx, G.time * 12, o2);
+    else G.art.drawFrame('player_idle', ctx, G.time * 5, o2);
+    ctx.globalAlpha = 1; return;
+  }
   ctx.strokeStyle = '#62d2b4'; ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ctx.beginPath(); ctx.moveTo(p.scarf[0].x, p.scarf[0].y); for (let i = 1; i < p.scarf.length; i++) ctx.lineTo(p.scarf[i].x, p.scarf[i].y); ctx.stroke();
   let sx = 1 + p.squash * 0.25, sy = 1 - p.squash * 0.25;

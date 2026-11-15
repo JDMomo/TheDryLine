@@ -31,7 +31,10 @@ class Boss {
     Object.assign(this, { def, id: def.id, region, x, y, floor: y, vx: 0, vy: 0, face: -1, hp: def.hp, maxHp: def.hp, w: def.w, h: def.h,
       state: 'sleep', t: 0, flash: 0, sealedT: 0, flags: {}, held: null,
       minX: limits.x0 + def.w / 2 + 13, maxX: limits.x1 - def.w / 2 - 13 });
-    this.spots = Object.keys(def.spots).map(cls => ({ def: def.spots[cls], cls, hp: C.SPOT_HP, open: false, broken: false, flash: 0 }));
+    // Only the cuts on this run's lock chart have a fare slot at all (the fourth is not drawn, not listed, cannot be punched).
+    const chart = G.run && G.run.graph && G.run.graph.chart && G.run.graph.chart[region];
+    this.chart = chart ? chart.slice() : Object.keys(def.spots);
+    this.spots = Object.keys(def.spots).filter(cls => this.chart.includes(cls)).map(cls => ({ def: def.spots[cls], cls, hp: C.SPOT_HP, open: false, broken: false, flash: 0 }));
     if (def.init) def.init(this);
   }
   get rage() { return this.hp < this.maxHp / 2; }
@@ -66,7 +69,7 @@ class Boss {
     }
     return null;
   }
-  // A token hit on a fare slot. The third hit punches it: 20% of max hp, a stagger, onBreak, and the punching token is void.
+  // A token hit on a fare slot. The third hit punches it: 10% of max hp, a stagger, onBreak, and the punching token is void.
   hitSpot(sp, st) {
     const q = this.spotPos(sp), col = G.CLASSES[sp.cls].color;
     if (!sp.open) {
@@ -87,12 +90,15 @@ class Boss {
 
   // The fight begins: a fare slot opens only if the party carries a token of its cut.
   start() {
+    // Co-op: +60% max hp for each player beyond the first, decided now (this.scale remembers what is already applied).
+    const f = 1 + C.COOP_HP * Math.max(0, G.players.length - 1);
+    this.maxHp = this.maxHp / (this.scale || 1) * f; this.hp = this.maxHp; this.scale = f;
     const have = G.game.partyClasses();
     for (const sp of this.spots) sp.open = have.has(sp.cls);
     const open = this.spots.filter(s => s.open).map(s => s.def.name);
     this.set('intro', 1.0); fx.jolt(0, 10);
     if (open.length) G.tips.fire('fare');
-    fx.say(this.def.name, open.length ? 'Fare slots open: ' + open.join(', ') + '.' : 'No token carried. Every fare slot is sealed.', 3.5);
+    fx.say(this.def.name, open.length ? 'Fare slots open: ' + open.join(', ') + '.' : 'No token of its three cuts carried. Every fare slot is sealed.', 3.5);
   }
   update(dt) {
     this.flash -= dt; this.sealedT -= dt;
@@ -113,7 +119,7 @@ class Boss {
     if (this.hp <= 0) {
       this.hp = 0; this.set('dead', 0); fx.jolt(0.25, 18);
       fx.spark(this.x, this.y - this.h / 2, 80, '#f4e6b8', 620, 1.2); fx.ring(this.x, this.y - this.h / 2, 20, 700, '#fff3c4', 0.6);
-      G.combat.clear();
+      G.combat.clear(true);
       G.game.bossBeaten(this);
     }
   }

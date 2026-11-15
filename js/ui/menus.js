@@ -39,7 +39,7 @@ G.menus = {
       else if (!menu.confirm) menu.confirm = true;
       else {
         menu.confirm = false;
-        if (menu.sel === 1) { G.game.newRun(G.run.seed); G.state = 'play'; }
+        if (menu.sel === 1) { G.game.newRun(G.run.code); G.state = 'play'; }
         else { G.state = 'title'; }
       }
     }
@@ -54,7 +54,7 @@ G.menus = {
     table(ctx, KEYBOARD, 170, 188, 'Keyboard (player 1)');
     table(ctx, GAMEPAD, 520, 188, 'Gamepad');
     art.label(ctx, 'Players 2 to 4: plug in a controller and press A (Jump) on it while the party is at the Junction.', W / 2, 402, 13, '#e9e2cf');
-    art.label(ctx, 'The party shares four token slots. Every Warden is open from the start; a punched token is void.', W / 2, 426, 13, '#9aa89f');
+    art.label(ctx, 'The party carries three tokens. Each Warden has three fare slots, set by the lock chart; a punched token is void.', W / 2, 426, 13, '#9aa89f');
     const m = G.meta;
     art.label(ctx, 'Runs ' + m.runs + '   ·   Wins ' + m.wins + (m.best !== null ? '   ·   Best ' + clock(m.best) : '') + '   ·   Cuts punched ' + m.cuts.length + ' of 4', W / 2, H - 40, 13, '#9aa89f');
   },
@@ -67,12 +67,12 @@ G.menus = {
       if (on) { ctx.fillStyle = 'rgba(233,162,59,0.18)'; ctx.fillRect(W / 2 - 150, y - 15, 300, 30); ctx.strokeStyle = '#e9a23b'; ctx.lineWidth = 1.5; ctx.strokeRect(W / 2 - 150, y - 15, 300, 30); }
       art.label(ctx, (on ? '> ' : '') + t + (on ? ' <' : ''), W / 2, y, 17, on ? '#fff3c4' : '#9aa89f', 'center', C.FONT, on ? 600 : 500);
     });
-    const warn = menu.confirm ? (menu.sel === 1 ? 'Restart this seed from the start? ' : 'Quit to the title? This run is lost. ') + N('confirm') + ' again to confirm, ' + N('pause') + ' to cancel' : '';
+    const warn = menu.confirm ? (menu.sel === 1 ? 'Restart this run code from the start? ' : 'Quit to the title? This run is lost. ') + N('confirm') + ' again to confirm, ' + N('pause') + ' to cancel' : '';
     if (warn) art.label(ctx, warn, W / 2, top + 80 + items.length * 34 + 6, 13.5, '#e9a23b', 'center', C.FONT, 600);
     table(ctx, KEYBOARD, 170, top + 196, 'Keyboard');
     table(ctx, GAMEPAD, 520, top + 196, 'Gamepad');
     art.label(ctx, 'Menu: ' + N('choose') + ' to choose, ' + N('confirm') + ' to confirm, ' + N('pause') + ' to resume', W / 2, top + 400, 12.5, '#9aa89f');
-    art.label(ctx, 'Seed ' + G.run.seed + '   ·   Time ' + clock(G.run.time) + '   ·   ' + Math.floor(G.run.shards) + ' scrip', W / 2, top + 422, 13, '#e9e2cf');
+    art.label(ctx, 'Run code ' + G.run.code + '   ·   Time ' + clock(G.run.time) + '   ·   ' + Math.floor(G.run.shards) + ' scrip', W / 2, top + 422, 13, '#e9e2cf');
   },
   over(ctx) {
     const run = G.run, won = run.over === 'win', log = run.punchLog || [];
@@ -98,7 +98,7 @@ G.menus = {
     const un = (run.unlocked || []).map(tokenName);
     if (un.length) line('New tokens unlocked: ' + un.join(', '), '#e9a23b');
     else line('Punch a fare slot of a cut for the first time to unlock its rare tokens.', '#9aa89f', 12.5);
-    art.label(ctx, 'Seed ' + run.seed, W / 2, y + 8, 14, '#9aa89f');
+    art.label(ctx, 'Run code ' + run.code, W / 2, y + 8, 14, '#9aa89f');
     art.label(ctx, 'Press Jump for a new run', W / 2, y + 38, 14, '#e9e2cf');
   }
 };

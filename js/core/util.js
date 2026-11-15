@@ -7,10 +7,12 @@ G.C = {
   W: 960, H: 544, T: 32, CW: 30, CH: 17, STEP: 1 / 120,
   FONT: '"IBM Plex Sans", system-ui, sans-serif',
   DISPLAY: '"Spectral SC", Georgia, serif',
-  SLOTS: 4,            // party token slots in total
+  SLOTS: 3,            // party token slots in total (1 player: 3; 2: 2 + 1; 3: 1 each; 4: 1 each, 4 in all)
   BASE_HP: 5,
   SPOT_HP: 3,          // token hits needed to punch a fare slot
-  BREAK_FRAC: 0.2,     // share of max hp a boss loses when a fare slot is punched
+  BREAK_FRAC: 0.1,     // share of max hp a boss loses when a fare slot is punched
+  COOP_HP: 0.6,        // a boss gains this share of its max hp for each player beyond the first (decided when the fight starts)
+  CHART_SLOTS: 3,      // fare slots a boss has in a run: the cuts on its lock chart
   STAGGER: 2.6,        // seconds a boss staggers after a punch
   BOSS_GRACE: 1.5,     // seconds a Warden waits after its intro before its first attack
   KILL_MEND: 7,        // mend gauge (of 33 per pip) a player gains when an enemy dies near them

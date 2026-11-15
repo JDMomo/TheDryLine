@@ -4,12 +4,15 @@
 'use strict';
 const G = window.G, C = G.C, T = C.T;
 
-G.sprites = {};                       // id -> HTMLImageElement | HTMLCanvasElement (filled by the art pass)
+G.sprites = {};
+G.strips = {};                        // id -> { img, frames, fw, fh }: multi-frame strips (the player's watercolor test)
+G.artTest = true;                     // F2 switches the watercolor player test on and off                       // id -> HTMLImageElement | HTMLCanvasElement (filled by the art pass)
 const painters = {};
 const BASE_PALETTE = {
   sky0: '#0d1a19', sky1: '#152825', sky2: '#0c1514', far: '#11201e', near: '#0e1a18',
   tile: '#060b0b', side: '#1c2c29', edge: '#3f6b5a', edgeHi: '#6fa08a', accent: '#d9c5a0', spike: '#c9c2ae'
 };
+addEventListener('keydown', e => { if (e.code === 'F2' && !e.repeat) { e.preventDefault(); G.artTest = !G.artTest; } });
 const hash1 = (i, s) => Math.abs(Math.sin(i * 12.9898 + s) * 43758.5453) % 1;
 
 const art = G.art = {
@@ -26,6 +29,18 @@ const art = G.art = {
     }
     if (painters[id]) { painters[id](ctx, opts); return true; }
     return false;
+  },
+  // Multi-frame strips: G.strips[id] = { img, frames, fw, fh } (frames side by side, each facing right). The art pass fills it, see js/art/sprites.js.
+  hasStrip(id) { return !!G.strips[id]; },
+  // Draw frame n (wraps) of a strip with its bottom centre on opts.x, opts.y; opts.face < 0 flips it; opts.h scales it to that many pixels tall
+  // (opts.foot: source pixels between the figure's feet and the frame bottom, so the feet land on y). Returns false if the strip is not loaded.
+  drawFrame(id, ctx, n, opts = {}) {
+    const st = G.strips[id];
+    if (!st) return false;
+    const k = opts.h ? opts.h / st.fh : 1, f = ((Math.floor(n) % st.frames) + st.frames) % st.frames;
+    ctx.save(); ctx.translate(opts.x || 0, opts.y || 0); if (opts.face < 0) ctx.scale(-1, 1);
+    ctx.drawImage(st.img, f * st.fw, 0, st.fw, st.fh, -st.fw * k / 2, -st.fh * k + (opts.foot || 0) * k, st.fw * k, st.fh * k);
+    ctx.restore(); return true;
   },
   // Region colours: { sky0, sky1, sky2, far, near, tile, side, edge, edgeHi, accent, spike }; a region's palette overrides the base.
   palette(regionId) {

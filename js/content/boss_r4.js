@@ -80,7 +80,7 @@ function clearCrates(b) {
 }
 
 G.defineBoss({
-  id: 'gatewhale', name: 'The Gatewhale', hp: 500, w: 150, h: 84,
+  id: 'gatewhale', name: 'The Gatewhale', hp: 700, w: 150, h: 84,
 
   spots: {
     arc: { name: 'Blowhole Valve', local: [-10, -108], r: 17,

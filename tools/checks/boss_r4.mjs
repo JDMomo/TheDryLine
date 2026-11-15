@@ -3,6 +3,7 @@
 const TOKENS = { pierce: 'cobalt_awl', arc: 'ochre_ladle', burst: 'cinder_bell', ground: 'basalt_roller' };
 
 export default async ({ page, shots }) => {
+  await page.evaluate(() => { G.debug.fullCharts = true; });      // these checks use every cut on every Warden
   const notes = [];
 
   // 1. attack coverage and wind-up lengths over 120 s (rage included: the boss is wounded for the second minute)
@@ -54,7 +55,7 @@ export default async ({ page, shots }) => {
     }, [cut, TOKENS[cut], aim[cut]]);
     if (!r.open) throw new Error(cut + ': the slot did not open with the token');
     if (!r.hits || r.hits.join() !== '2,1,0' || !r.broken) throw new Error(cut + ': ' + JSON.stringify(r));
-    if (r.lost < r.maxHp * 0.2 - 0.01 || !r.void) throw new Error(cut + ': ' + JSON.stringify(r));
+    if (r.lost < r.maxHp * 0.1 - 0.01 || !r.void) throw new Error(cut + ': ' + JSON.stringify(r));
     notes.push(cut + '@' + r.at);
   }
 

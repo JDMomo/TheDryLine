@@ -16,12 +16,13 @@
 'use strict';
 const G = window.G, U = G.util, fx = G.fx;
 
-const HP = 760, BODY_W = 190, BODY_H = 230;
+const HP = 1300, BODY_W = 190, BODY_H = 230;
 const HUB_Y = -150, HAND_LEN = 270, HAND_A0 = 82 * Math.PI / 180, HAND_A1 = -6 * Math.PI / 180, HAND_LAG = 0.8;
 const PEND_L = 410, PEND_R = 28, PEND_A = 0.7, PEND_P = 3.4, PEND_TOP = 40;
 const ATTACKS = ['rings', 'hands', 'rain', 'wind'];
 const ARMOURED = { ringTell: 1, ring: 1, handsTell: 1, hands: 1, rainTell: 1, rain: 1 };
 const INK = '#0a0b1a', I0 = '#171a3e', I1 = '#232865', I2 = '#3a418f', I3 = '#7c84e0', WHITE = '#f4f1e8', LAMP = '#f4e6b8', WARN = '#b8482f';
+const ventBroken = b => b.spots.some(s => s.cls === 'pierce' && s.broken);   // the vent slot may be locked out of this run's chart: then it is never broken
 let cur = null;                                                      // the live boss (there is only ever one), for the vent slot's position
 
 // ---------------------------------------------------------------- set-up that depends on the run
@@ -145,7 +146,7 @@ G.defineBoss({
     b.ringN = 0; b.ringT = 0; b.hT = 0; b.rainLeft = 0; b.rainT = 0; b.pt = 0; b.pa = 0; b.sway = 0;
     setup(b);
     const baseStart = G.Boss.prototype.start, baseDamage = G.Boss.prototype.damage;
-    b.start = function () { setup(this); cur = this; baseStart.call(this); };
+    b.start = function () { setup(this); this.scale = 1; cur = this; baseStart.call(this); };
     // Shutters: while it attacks, slashes and token body hits do 30%.
     b.damage = function (d) {
       baseDamage.call(this, ARMOURED[this.state] ? d * 0.3 : d);
@@ -257,8 +258,8 @@ G.defineBoss({
     ctx.strokeStyle = armoured ? I2 : I0; ctx.lineWidth = 3; ctx.beginPath();                      // shutter plates close while it attacks
     for (const y of [-212, -194, -64, -50]) { ctx.moveTo(-76, y); ctx.lineTo(armoured ? -50 : -68, y); ctx.moveTo(76, y); ctx.lineTo(armoured ? 50 : 68, y); }
     ctx.stroke();
-    if (!b.spots[0].broken && !b.ventOpen) { ctx.fillStyle = '#586068'; ctx.fillRect(b.ventSide * 100 - 12, -132, 24, 24); }   // shutter over the closed vent
-    if (b.ventOpen && !b.spots[0].broken) { ctx.globalAlpha = a0 * 0.6; ctx.fillStyle = '#dfe6ff'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(b.ventSide * (118 + k * 9 + (G.time * 40 + k * 15) % 14), -120 - k * 7, 6 + k, 0, 6.283); ctx.fill(); } ctx.globalAlpha = a0; }
+    if (!ventBroken(b) && !b.ventOpen) { ctx.fillStyle = '#586068'; ctx.fillRect(b.ventSide * 100 - 12, -132, 24, 24); }   // shutter over the closed vent
+    if (b.ventOpen && !ventBroken(b)) { ctx.globalAlpha = a0 * 0.6; ctx.fillStyle = '#dfe6ff'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(b.ventSide * (118 + k * 9 + (G.time * 40 + k * 15) % 14), -120 - k * 7, 6 + k, 0, 6.283); ctx.fill(); } ctx.globalAlpha = a0; }
     // 11 bell housing (swings while it chimes)
     ctx.save(); ctx.translate(0, -232); ctx.rotate(Math.sin(G.time * 14) * 0.12 * b.sway);
     shape(hit ? WHITE : '#d5d9f5', () => { ctx.moveTo(-42, 0); ctx.quadraticCurveTo(-42, -44, 0, -46); ctx.quadraticCurveTo(42, -44, 42, 0); ctx.closePath(); });

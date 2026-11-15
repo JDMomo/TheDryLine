@@ -1,6 +1,7 @@
 // Take the token from r1's guarded plinth (clearing its guards first). Then, for each of the four cuts, land three hits
-// with that cut's baseline token on the Tollkeeper's fare slot. The slot is punched, the boss loses 20% of its hp and staggers, the token is void.
+// with that cut's baseline token on the Tollkeeper's fare slot. The slot is punched, the boss loses 10% of its hp and staggers, the token is void.
 export default async ({ page }) => {
+  await page.evaluate(() => { G.debug.fullCharts = true; });      // these checks use every cut on every Warden
   const res = await page.evaluate(() => {
     const D = G.debug, out = {}, run = n => D.step(n);
     const tap = (action, n = 1) => { D.setInput(0, { [action]: true }); run(n); D.setInput(0, { [action]: false }); run(1); };
@@ -40,7 +41,7 @@ export default async ({ page }) => {
   for (const c of cuts) {
     const r = res[c];
     if (r.hits.join() !== '2,1,0' || !r.broken) throw new Error(c + ': hits left after each shot ' + r.hits + ', broken ' + r.broken);
-    if (r.lost < r.maxHp * 0.2 || r.state !== 'stagger' || !r.void) throw new Error(c + ': ' + JSON.stringify(r));
+    if (r.lost < r.maxHp * 0.1 - 0.01 || r.state !== 'stagger' || !r.void) throw new Error(c + ': ' + JSON.stringify(r));
   }
   return cuts.map(c => res[c].id).join(', ');
 };

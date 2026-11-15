@@ -130,7 +130,7 @@ function blob(ctx, x, y, w, h, r, fill) {
 function disc(ctx, x, y, r, fill) { ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke(); }
 
 G.defineBoss({
-  id: 'switchman_idol', name: 'The Switchman Idol', hp: 720, w: 64, h: 152, contact: false,
+  id: 'switchman_idol', name: 'The Switchman Idol', hp: 1050, w: 64, h: 152, contact: false,
 
   spots: {
     pierce: { name: 'Top Lens', local: [22, -130], r: 18, exposed: b => b.sig && b.lie < 0.02,

@@ -6,7 +6,7 @@ export default async ({ page }) => {
     const hold = (a, on) => { G.input.any.forced[a] = on; G.input.sync(); };
     const press = a => { hold(a, true); D.step(1); hold(a, false); D.step(2); };
     const open = () => { G.state = 'play'; hold('pause', true); D.step(1); hold('pause', false); D.step(2); };
-    D.newRun(5); D.step(30);
+    G.artTest = false; D.newRun(5); D.step(30);
     const seed = G.run.seed, M = G.menus.menu;
     ok(JSON.stringify(G.menus.items) === JSON.stringify(['Resume', 'Restart run', 'Quit to title']), 'menu entries: ' + G.menus.items);
     open(); ok(G.state === 'pause' && M.sel === 0 && !M.confirm, 'pause opens on Resume');

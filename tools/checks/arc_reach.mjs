@@ -4,6 +4,7 @@ const ARC = ['ochre_ladle', 'sulphur_kettle', 'chalk_skipstone'];
 const BOSSES = ['r1', 'r2', 'r3', 'r4', 'final'];
 const NEAR = 220;          // the slot is reachable from a standing spot at most this far (horizontally) from it
 export default async ({ page }) => {
+  await page.evaluate(() => { G.debug.fullCharts = true; });      // these checks use every cut on every Warden
   // 1. how the Ladle lands on flat ground, per aim
   const lob = await page.evaluate(() => {
     const D = G.debug, out = {};

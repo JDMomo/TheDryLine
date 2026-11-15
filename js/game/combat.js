@@ -87,7 +87,10 @@ const combat = G.combat = {
     const n = Math.min(12, total), each = total / Math.max(1, n);
     for (let i = 0; i < n; i++) pickups.push({ x, y: y - 8, w: 8, h: 8, vx: U.rnd(-160, 160), vy: U.rnd(-380, -160), value: each, life: 14 });
   },
-  clear() { shots.length = 0; pickups.length = 0; },
+  // keepPickups: leave scrip on the floor (a boss dying wipes shots only).
+  clear(keepPickups) { shots.length = 0; if (!keepPickups) pickups.length = 0; },
+  // The party leaves a room: scrip still on the floor is collected for it, so nothing is lost by walking out.
+  leave() { let n = 0; for (const k of pickups) n += k.value; pickups.length = 0; shots.length = 0; if (n && G.run) G.run.shards += n; return n; },
 
   update(dt) {
     // Tokens a player carries may have tick(player, dt) for a timer that runs while held (e.g. standing still).
