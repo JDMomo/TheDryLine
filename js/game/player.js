@@ -34,6 +34,8 @@ class Player {
     for (const s of this.scarf) { s.x = x; s.y = y - 30; }
   }
 
+  // A downed player gets back up with hp health (a new room, a standpipe). Plays the revive strip.
+  revive(hp) { if (this.down) this.reviveAt = G.time; this.down = false; this.hp = hp; }
   hurt(fromX) {
     if (this.inv > 0 || this.down || G.debug.godMode) return false;
     this.hp--; this.inv = M.INV; this.stun = 0.22; this.vx = (this.x < fromX ? -1 : 1) * 260 * G.run.mods.knockback; this.vy = -420;
@@ -103,7 +105,13 @@ class Player {
     if (p.dashT > 0) {
       p.dashT -= dt; p.vx = p.dashDir * M.DASH_V; p.vy = 0;
       p.ghostT -= dt;
-      if (p.ghostT <= 0) { p.ghostT = 0.028; const f = p.face; fx.ghost(p.x, p.y, 0.22, (ctx, a) => { ctx.scale(f * 1.3, 0.8); cloak(ctx, a, '#62d2b4'); }); }
+      if (p.ghostT <= 0) {
+        p.ghostT = 0.028; const f = p.face;
+        if (stripsOn(p)) {                                              // watercolor player: the current dash frame as a faint silhouette
+          const [name, frame] = pickStrip(p), id = G.art.hasStrip('player_' + name) ? 'player_' + name : 'player_idle', col = p.color;
+          fx.ghost(p.x, p.y, 0.22, (ctx, a) => G.art.drawSilhouette(id, ctx, frame, { x: 0, y: 0, face: f, h: 68, foot: 4, color: col, alpha: a * 0.7 }));
+        } else fx.ghost(p.x, p.y, 0.22, (ctx, a) => { ctx.scale(f * 1.3, 0.8); cloak(ctx, a, '#62d2b4'); });
+      }
       if (p.dashT <= 0) p.vx = p.dashDir * run * (ax === p.dashDir ? 1 : 0.35);
     } else {
       if (p.onGround && ax && p.vx * ax < 0 && p.wlock <= 0 && p.stun <= 0) p.vx = ax * Math.min(Math.abs(p.vx), run * M.QUICK_TURN);   // quick stop: turn at once
@@ -181,7 +189,7 @@ class Player {
     if (pressed.cycle && p.items.length > 1) p.sel = (p.sel + 1) % p.items.length;
     if (p.sel >= p.items.length) p.sel = 0;
     if (canAct && pressed.item && p.items.length && p.itemCd <= 0) p.useItem();
-    if (canAct && pressed.interact && p.onGround) { const pr = G.rooms.propNear(p); if (pr) pr.interact(p); }
+    if (canAct && pressed.interact && p.onGround) { const pr = G.rooms.propNear(p); if (pr) { pr.interact(p); p.interactAt = G.time; } }
   }
 
   draw(ctx, dt) {
@@ -227,10 +235,13 @@ function cloak(ctx, alpha, color) {
   ctx.globalAlpha = 1;
 }
 
+// The watercolor strips are on (F2) and the idle and run strips are loaded: every player uses them (players 2 to 4 wear a coloured marker over the head).
+const stripsOn = p => !!(G.artTest && G.art.hasStrip('player_idle') && G.art.hasStrip('player_run'));
 // Which watercolor strip and frame shows the player's current state. Order matters: the first match wins.
 function pickStrip(p) {
   const t = G.time, since = at => (at === undefined ? 9 : t - at), step = (e, dur, n) => Math.min(n - 1, Math.floor(e / dur * n));
   if (p.down) return ['ko', step(since(p.downAt), 0.5, 4)];
+  const rev = since(p.reviveAt); if (rev < 0.5) return ['revive', step(rev, 0.5, 4)];            // just got back up
   const hurtFor = p.inv > 0 ? (M.INV || 1) - p.inv : 9;
   if (hurtFor >= 0 && hurtFor < 0.3 && p.stun > 0) return ['hurt', step(hurtFor, 0.3, 4)];
   if (p.slash) {
@@ -241,6 +252,7 @@ function pickStrip(p) {
   }
   const cast = since(p.castAt);
   if (cast < 0.32 && p.castCls) { const n = p.castCls === 'ground' ? 4 : 6; return [p.castCls, 1 + step(cast, 0.32, n - 1)]; }
+  const use = since(p.interactAt); if (use < 0.4 && p.onGround && Math.abs(p.vx) < 40) return ['interact', step(use, 0.4, 4)];     // used a prop
   if (p.dashT > 0) return ['dash', 1 + step(1 - p.dashT / (M.DASH_T || 0.155), 1, 2)];
   if (p.charge > 0.2) return ['heavy', Math.floor(t * 6) % 2];
   if (p.healT > 0) return ['mend', t * 5];
@@ -255,14 +267,21 @@ function pickStrip(p) {
   return ['idle', t * 5];
 }
 
+G.pickStrip = pickStrip;                           // (for the art_test check)
+
 // Procedural painter for the player. opts.p is the Player.
 G.art.define('player', (ctx, o) => {
   const p = o.p, base = p.down ? 0.55 : (p.inv > 0 && Math.floor(G.time * 22) % 2 ? 0.45 : 1);
   ctx.globalAlpha = base;
   // Watercolor player (F2 toggles; player 1 only): strips replace the code-drawn body and scarf. Missing files fall through to the code-drawn player.
-  if (G.artTest && p.index === 0 && G.art.hasStrip('player_idle') && G.art.hasStrip('player_run')) {
+  if (stripsOn(p)) {
     const [name, frame] = pickStrip(p);
     G.art.drawFrame(G.art.hasStrip('player_' + name) ? 'player_' + name : 'player_idle', ctx, frame, { x: p.x, y: p.y, face: p.face, h: 68, foot: 4 });
+    if (p.index > 0 && !p.down) {                                                  // players 2 to 4: a small marker in their colour above the head
+      const my = p.y - 68 - 12 + Math.sin(G.time * 4 + p.index) * 1.5;
+      ctx.globalAlpha = 1; ctx.fillStyle = p.color; ctx.strokeStyle = '#0a1110'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x - 6, my - 6); ctx.lineTo(p.x + 6, my - 6); ctx.lineTo(p.x, my + 4); ctx.closePath(); ctx.stroke(); ctx.fill();
+    }
     ctx.globalAlpha = 1; return;
   }
   ctx.strokeStyle = '#62d2b4'; ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';

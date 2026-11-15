@@ -6,7 +6,7 @@ const calm = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-mo
 const parts = [], floaters = [];
 
 const fx = G.fx = {
-  parts, floaters, hitstop: 0, shake: 0, banner: null,
+  parts, floaters, hitstop: 0, shake: 0, banner: null, stampNow: null,
   spark(x, y, n, color, spd = 260, life = 0.35, grav = 600, size = 3) {
     for (let i = 0; i < n && parts.length < 800; i++) {
       const a = rnd(0, 6.283), s = rnd(spd * 0.3, spd);
@@ -21,6 +21,8 @@ const fx = G.fx = {
   // paint(ctx, alpha) draws a fading after-image at 0,0
   ghost(x, y, life, paint) { parts.push({ paint, x, y, life, max: life, vx: 0, vy: 0, grav: 0 }); },
   floatText(x, y, text, color) { floaters.push({ x, y, text, color, t: 1 }); },
+  // A short stamp for a graded fight: lines = ['BEATEN', 'PAR', 'CLEAN'], note = one line under it.
+  stamp(lines, note = '', t = 4.2) { fx.stampNow = { lines, note, t, max: t }; },
   say(a, b, t = 3.2) { fx.banner = { a, b, t, max: t }; },
   jolt(stop, sh) { fx.hitstop = Math.max(fx.hitstop, stop); if (!calm) fx.shake = Math.max(fx.shake, sh); },
   clear() { parts.length = 0; floaters.length = 0; },
@@ -32,6 +34,7 @@ const fx = G.fx = {
     }
     for (let i = floaters.length - 1; i >= 0; i--) { const f = floaters[i]; f.t -= dt; f.y -= 30 * dt; if (f.t <= 0) floaters.splice(i, 1); }
     if (fx.banner) { fx.banner.t -= dt; if (fx.banner.t <= 0) fx.banner = null; }
+    if (fx.stampNow) { fx.stampNow.t -= dt; if (fx.stampNow.t <= 0) fx.stampNow = null; }
     fx.shake = Math.max(0, fx.shake - dt * 40);
   },
   // World-space layer; call with the camera transform applied.

@@ -76,7 +76,7 @@ G.menus = {
   },
   over(ctx) {
     const run = G.run, won = run.over === 'win', log = run.punchLog || [];
-    const shown = Math.min(5, log.length), ph = 76 + 72 + 20 * shown + (log.length > 5 ? 24 : 0) + 28 + 24 + 70, top = (H - ph) / 2;
+    const shown = Math.min(5, log.length), nGraded = Object.keys(run.grades || {}).length, ph = 76 + 72 + 22 * nGraded + 20 * shown + (log.length > 5 ? 24 : 0) + 28 + 24 + 70, top = (H - ph) / 2;
     ctx.fillStyle = 'rgba(6,11,11,0.72)'; ctx.fillRect(0, 0, W, H); panel(ctx, 700, ph);
     art.label(ctx, won ? G.title.winText : G.title.loseText, W / 2, top + 36, 30, won ? '#e9a23b' : '#e9e2cf', 'center', C.DISPLAY, 600);
     const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), fallen = order.filter(r => run.beaten[r.id]);
@@ -85,6 +85,11 @@ G.menus = {
     const line = (t, col = '#e9e2cf', size = 14.5) => { art.label(ctx, t, W / 2, y, size, col); y += 24; };
     line('Time ' + clock(run.time) + '   ·   Scrip ' + Math.floor(run.shards) + '   ·   Hits taken ' + run.stats.hits);
     line('Wardens beaten ' + fallen.length + ' of ' + order.length + (names.length ? ': ' + names.join(', ') : ''));
+    for (const r of fallen) {                                   // each boss's grade: Beaten, Par (under its par time), Clean (no hits taken)
+      const g = (run.grades || {})[r.id], b = G.bossDefs[r.boss];
+      if (!g) continue;
+      art.label(ctx, (b ? b.name : r.name) + ':  ' + G.game.gradeText(g) + '  (' + clock(g.time) + (g.parTime ? ', par ' + clock(g.parTime) : '') + ')', W / 2, y, 13, g.clean ? '#fff3c4' : '#e9e2cf'); y += 22;
+    }
     line('Tokens punched ' + log.length + (log.length ? '' : ' (every fare slot stayed shut)'));
     log.slice(0, 5).forEach(l => {
       const r = G.regionDefs[l.region];

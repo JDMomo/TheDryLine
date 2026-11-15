@@ -41,9 +41,11 @@ function sigil(ctx, x, y, color, done) {
 // Parts describing one side room: letter, name, then what it holds (or a question mark).
 function sideRoom(run, bn, letter) {
   const def = G.roomDefs[bn.def], slate = !!run.mods.revealMap, parts = [{ text: letter + ' ', color: '#e9a23b' }];
-  if (!bn.seen && !slate) return parts.concat({ text: '? not yet entered', color: '#5c6a63' });
+  const needs = G.worldgen.needsText(bn.def);                                 // a guarded room names the move it needs before the player walks in
+  if (!bn.seen && !slate) return parts.concat({ text: '? not yet entered', color: '#5c6a63' }, needs ? { text: '  (needs ' + needs + ')', color: '#e9a23b' } : { text: '' });
   parts.push({ text: (def.label || 'Side room') + (bn.seen ? '' : ' (not entered)') + ': ', color: '#9aa89f' });
   const all = G.worldgen.describe(bn), held = all.filter(h => h.text !== def.label);
+  if (needs) parts.splice(2, 0, { text: '[needs ' + needs + '] ', color: '#e9a23b' });
   if (!all.length) parts.push({ text: 'nothing left', color: '#5c6a63' });
   else if (!held.length) parts.pop(), parts.push({ text: (def.label || 'Side room') + (bn.seen ? '' : ' (not entered)'), color: '#e9e2cf' });
   held.forEach((h, i) => { if (i) parts.push({ text: ', ', color: '#9aa89f' }); if (h.cut) parts.push({ cut: h.cut }); parts.push({ text: h.text }); });
@@ -83,6 +85,8 @@ G.map = {
       art.label(ctx, reg.name, 24, y + 14, 14, pal.accent, 'left', C.FONT, 600);
       art.label(ctx, 'Warden: ' + (boss ? boss.name : '?'), 24, y + 32, 11.5, done ? '#5c6a63' : '#e9e2cf', 'left');
       art.label(ctx, done ? 'Fallen' : 'Waits down the line', 24, y + 48, 11.5, done ? '#5c6a63' : '#9aa89f', 'left');
+      const gr = (run.grades || {})[reg.id];
+      if (gr) art.label(ctx, 'Grade: ' + G.game.gradeText(gr), 24, y + 63, 11.5, gr.clean ? '#fff3c4' : '#e9a23b', 'left', C.FONT, 600);
 
       const chain = g.nodes.filter(id => !graph.nodes[id].parent);
       let mainN = 0;
@@ -98,6 +102,10 @@ G.map = {
           box(ctx, x + k * 24, y - 1, 20, 13, bn, bn.id === here, known ? letter : '?');
         });
       });
+      if (reg.id === 'final') {                                // what the Long Clock will borrow, shown before the player commits
+        const bs = G.game.borrows(run);
+        inline(ctx, [{ text: 'Borrows: ', color: '#9aa89f' }].concat(bs.length ? bs.map((x, i) => ({ text: (i ? ', ' : '') + x.short + ' (' + x.warden + ')', color: '#e9a23b' })) : [{ text: 'nothing, every Warden has fallen', color: '#5c6a63' }]), X0 + 290, y + 25, W - 10, 10.5);
+      }
       // what each side room holds
       const sides = g.nodes.filter(b => graph.nodes[b].parent && (graph.nodes[graph.nodes[b].parent].seen || run.mods.revealMap));
       const letters = g.nodes.filter(q => graph.nodes[q].parent), pieces = sides.map(b => sideRoom(run, graph.nodes[b], String.fromCharCode(65 + letters.indexOf(b))));

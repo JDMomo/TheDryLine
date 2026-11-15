@@ -99,17 +99,21 @@ export default async ({ page }) => {
 
     // swapping on a full party: the old token stays on the plinth
     D.newRun(14); D.god(true); G.run.shards = 500;
+    const pl = G.players[0];
     for (const t of ['cobalt_awl', 'ochre_ladle', 'cinder_bell']) D.give(t);
     ok(G.game.freeSlots() === 0, 'party is full');
-    const pl = G.players[0], oldTok = pl.items[pl.sel];
     D.gotoRoom(nodeWith('ticket')[0].id); tap2(); function tap2() { at(props('ticket')[0]); tap('interact'); }
+    const offered = props('plinth').map(p => p.data.item).filter(Boolean);
+    const spare = ['basalt_roller', 'cobalt_awl', 'ochre_ladle', 'cinder_bell', 'sulphur_kettle', 'chalk_skipstone'].filter(t => !offered.includes(t));
+    pl.items = pl.items.map(t => offered.includes(t) ? spare.shift() : t);        // a held copy would block the swap ("the party already carries one")
+    const oldTok = pl.items[pl.sel];
     const pick = props('plinth').filter(p => p.data.group && p.data.item)[0] || props('plinth').filter(p => p.data.group)[0];
     at(pick);
     ok(/swap/i.test((G.rooms.propNear(G.players[0]) || { prompt: () => ['', '', ''] }).prompt(G.players[0])[2] || ''), 'full-party plinth says it will swap');
     use(pick);
     ok(pl.items.length === 3 && pl.items[pl.sel] === pick.data.item, 'swap put the new token in the selected slot');
     const left2 = props('plinth').find(p => p.x === pick.x);
-    ok(left2 && left2.data.item === oldTok, 'old token stayed on the plinth (' + oldTok + ')');
+    ok(left2 && left2.data.item === oldTok, 'old token stayed on the plinth (' + oldTok + ') ' + JSON.stringify(props('plinth').map(p => [p.x, p.data.item])) + ' pickx ' + pick.x + ' items ' + JSON.stringify(pl.items));
     out.swap = oldTok + ' <-> ' + pick.data.item;
 
     // lost trunk: opens when the room is clear

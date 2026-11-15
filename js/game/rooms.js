@@ -4,7 +4,7 @@
 const G = window.G, C = G.C, T = C.T, U = G.util, fx = G.fx, tiles = G.tiles, art = G.art;
 G.roomDefs = {};
 
-const MARKS = 'EFLICRSKMHDBG?P';
+const MARKS = 'EFLICRSKMHDBG?PX';
 const KINDS = ['hub', 'main', 'branch', 'trial', 'arena'];
 const EXIT_ROWS = [12, 13, 14];       // rows of the bottom screen cell that are open on a side exit (the floor is row 15)
 
@@ -18,6 +18,7 @@ const EXIT_ROWS = [12, 13, 14];       // rows of the bottom screen cell that are
      E  ground enemy   F  flying enemy   L  ceiling enemy (hangs from the ceiling above it)   I  plinth (token)    C  lost trunk (opens when the room is clear)
      R  ticket machine (needs 2 free tiles each side)        S  kiosk ware (priced plinth)       K  clipping booth (needs 3 free tiles each side)
      M  signal post    H  standpipe      D  doorway           B  boss (arena)    G  region gate (hub)    ?  sign (text from signs[])    P  party start (hub)
+     X  cracked barrier (branch rooms): a wall three tiles tall standing on the tile below the marker; only a heavy cut breaks it
    A marker stands on the tile below it: put it in the empty tile directly above a floor.
    Side exits: 'main' rooms are open (.) on both the left and right edge at rows 12 to 14 of the bottom cell; 'arena' rooms on the left edge only.
    'branch' and 'trial' rooms have exactly one D (the way back) and closed edges.
@@ -100,7 +101,7 @@ const rooms = G.rooms = {
       if (i >= 0 && room.def.marks[i]) ({ x, y } = markPos(room.def.marks[i]));
     }
     G.players.forEach((p, k) => {
-      if (p.down && G.players.some(q => !q.down)) { p.down = false; p.hp = 1; }   // co-op revive on entering a room
+      if (p.down && G.players.some(q => !q.down)) p.revive(1);   // co-op revive on entering a room
       p.place(x - face * k * 14, y, face); p.inv = 0.5;
     });
     if (!node.seen) {

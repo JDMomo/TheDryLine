@@ -120,6 +120,16 @@ G.hud = {
       if (n.b) art.label(ctx, n.b, W / 2, 152, 14, '#e9e2cf');
       ctx.globalAlpha = 1;
     }
+    if (fx.stampNow) {                                                  // the grade stamp of a fight that just ended
+      const st = fx.stampNow, k = U.clamp((st.max - st.t) / 0.18, 0, 1), fade = U.clamp(st.t * 2, 0, 1), txt = st.lines.join('   ·   ');
+      ctx.save(); ctx.globalAlpha = fade * k; ctx.translate(W / 2, 250); ctx.rotate(-0.06); ctx.scale(1 + (1 - k) * 0.5, 1 + (1 - k) * 0.5);
+      ctx.font = '700 30px ' + C.DISPLAY; const w = Math.max(220, ctx.measureText(txt).width + 44);
+      ctx.fillStyle = 'rgba(6,11,11,0.55)'; ctx.fillRect(-w / 2, -30, w, st.note ? 80 : 60);
+      ctx.strokeStyle = '#d9603a'; ctx.lineWidth = 4; ctx.strokeRect(-w / 2, -30, w, st.note ? 80 : 60); ctx.strokeRect(-w / 2 + 6, -24, w - 12, st.note ? 68 : 48);
+      art.label(ctx, txt, 0, 0, 30, '#e9663f', 'center', C.DISPLAY, 700);
+      if (st.note) art.label(ctx, st.note, 0, 34, 13, '#e9e2cf');
+      ctx.restore();
+    }
     const tr = G.rooms.trans;
     if (tr) { ctx.fillStyle = 'rgba(4,8,8,' + U.clamp(tr.phase === 'out' ? 1 - tr.t / 0.16 : tr.t / 0.16, 0, 1) + ')'; ctx.fillRect(0, 0, W, H); }
   }

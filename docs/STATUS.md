@@ -69,3 +69,10 @@ Done after the outside design audit (/home/claude/audit/design/AUDIT.md: the tok
 - Joseph generated 19 Wanderer animation sheets with ChatGPT from the sprite prompt pack (docs/art/SPRITE_PROMPT_PACK.md). tools/art/cut_wanderer.py cuts them into uniform strips (192 x 136 cells at twice game scale) in assets/player/.
 - js/game/player.js pickStrip() chooses the strip and frame for each state: idle, run, jump, land, double jump, dash, wall slide, side and down slash, heavy charge and cut, the four token casts, mend, hurt, down. F2 switches back to the code-drawn player. Players 2 to 4 are still code-drawn.
 - Not used yet: revive, interact. Missing from the set: an upward slash (the side slash stands in). The dash afterimage is still the old code-drawn shape.
+
+## 2026-11-14, borrowing Long Clock, grades, guarded rooms (design engineer)
+- Long Clock: hp fixed at 1100; for each Warden not beaten it borrows one attack (Tollkeeper: floor shockwave pair; Lamp-Heron: floor lamp beam; Switchman Idol: signal rings at 3 heights; Gatewhale: crates standing as pillars). Gate label and map show "Borrows: ...". Slash-only bot (fight_len): 120 s with 0 Wardens beaten, 114 s with 2, 103 s with 4.
+- Grades Beaten / Par / Clean per fight (par per boss in its definition); Clean refunds a punched token (party slot or arena plinth); stamp at fight end; grades on map, over and win screens.
+- Guarded rooms: r2 needs Dash, r3 Wall Grip, r4 Double Jump, r1 Heavy Cut (new X cracked-barrier marker, `crack` prop). Validator checks both directions (reachable with, not without). Map and doorway prompt show the need.
+- Hub board moved onto the wall clear of the gate; new checks `unlocks`, `hub_layout`, `grades`. Art: dash silhouette, revive and interact strips, coloured marker and strips for players 2 to 4.
+- Open: a tip for grades or cracked barriers was not added to G.tips.

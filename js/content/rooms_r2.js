@@ -95,13 +95,16 @@ function exits(g, left, right) {
     signs: ['Mind the chimney: it has no shelves.', 'Hold toward the wall to cling, press Jump to climb.'] });
 })();
 
-// Gull Roost (branch): crabs and gulls guard the plinth beyond two spike strips and a coral step.
+// Gull Roost (branch, needs Dash): two coral heads stand seven tiles above a spiked drop, nine tiles apart. The party arrives on the left head,
+// the plinth is on the right one. A plain jump carries about six tiles, so only a jump with a dash in mid-air makes it. A fall costs a pip and
+// returns the player to the edge; the far wall is far too tall to bounce or climb out of.
 (() => {
   const g = blank(1, 1);
-  put(g, 15, 9, 12, '^'); put(g, 15, 16, 19, '^'); fill(g, 12, 14, 24, 28, '#');
-  mark(g, 14, 3, 'D'); mark(g, 11, 26, 'I');
-  mark(g, 14, 14, 'E'); mark(g, 14, 22, 'E'); mark(g, 8, 11, 'F'); mark(g, 7, 18, 'F');
-  G.defineRoom({ id: 'r2_hold', region: 'r2', kind: 'branch', label: 'Gull roost', map: done(g) });
+  fill(g, 8, 14, 1, 11, '#'); fill(g, 8, 14, 21, 28, '#');                    // the two heads: tops at row 8, gap in columns 12 to 20
+  put(g, 14, 12, 20, '^');
+  mark(g, 7, 6, 'D'); mark(g, 7, 26, 'I');
+  mark(g, 7, 3, 'E'); mark(g, 7, 24, 'E');
+  G.defineRoom({ id: 'r2_hold', region: 'r2', kind: 'branch', label: 'Gull roost', needs: ['dash'], map: done(g) });
 })();
 
 // The Lamp-Heron's arena: one screen. A hall (columns 0 to 2), the boss door (column 3, solid down to row 11, open at rows 12 to 14),

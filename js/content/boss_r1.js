@@ -59,7 +59,7 @@ const paintWave = (ctx, s) => {
 };
 
 G.defineBoss({
-  id: 'tollkeeper', name: 'The Tollkeeper', hp: 720, w: 124, h: 100,
+  id: 'tollkeeper', name: 'The Tollkeeper', hp: 720, par: 76, w: 124, h: 100,
 
   spots: {
     pierce: { name: 'Eye', local: [66, -68], r: 15,

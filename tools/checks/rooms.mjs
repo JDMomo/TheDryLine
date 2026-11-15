@@ -2,8 +2,8 @@
    Lint runs in Node on the template text. The traversal runs inside the page: it drives player 1 only through G.debug
    (newRun, gotoRoom, setInput, step, place, probe) and searches over short input segments (beam search). Documented in docs/ARCHITECTURE.md. */
 
-const CHARS = '#.^=EFLICRSKMHDBG?P';
-const GROUND = 'EICRSKMHDBGP?';         // markers that stand on the tile below them
+const CHARS = '#.^=EFLICRSKMHDBG?PX';
+const GROUND = 'EICRSKMHDBGP?X';         // markers that stand on the tile below them
 const TARGETS = 'ICRSKMH';              // things a bot must be able to walk up to in branch and trial rooms
 const EXIT_ROWS = [12, 13, 14];
 const CW = 30, CH = 17;
@@ -22,7 +22,7 @@ export function lintRoom(r, abilityIds) {
     for (let c = 0; c < cols; c++) {
       const ch = row[c];
       if (!CHARS.includes(ch)) { err.push('unknown character "' + ch + '" at column ' + c + ', row ' + y); out += '.'; }
-      else if ('EFLICRSKMHDBG?P'.includes(ch)) { marks.push({ ch, c, r: y }); out += '.'; } else out += ch;
+      else if ('EFLICRSKMHDBG?PX'.includes(ch)) { marks.push({ ch, c, r: y }); out += '.'; } else out += ch;
     }
     grid.push(out);
   });
@@ -61,6 +61,9 @@ export function lintRoom(r, abilityIds) {
   if (r.kind === 'branch' && !marks.some(m => TARGETS.includes(m.ch))) err.push('branch room has nothing to visit (needs one of ' + TARGETS.split('').join(' ') + ')');
   if (r.kind === 'trial' && count('M') !== 1) err.push('trial room needs exactly one M (signal post), has ' + count('M'));
   if (r.kind !== 'trial' && count('M')) err.push('M (signal post) belongs in a trial room');
+  if (r.kind !== 'branch' && count('X')) err.push('X (cracked barrier) belongs in a branch room, and only a guarded one (it needs heavy)');
+  if (count('X') && !(r.needs || []).includes('heavy')) err.push('a room with a cracked barrier X must declare needs: [\'heavy\']');
+  if ((r.needs || []).includes('heavy') && !count('X')) err.push('needs heavy, but the room has no cracked barrier X');
   if (r.kind !== 'arena' && B) err.push('B (boss) outside an arena');
   if (r.kind !== 'hub') { if (count('G')) err.push('G (region gate) outside the hub'); if (count('P')) err.push('P (party start) outside the hub'); }
   if (r.kind === 'hub' && count('P') !== 1) err.push('the hub needs exactly one P');
@@ -124,6 +127,8 @@ export function lintRoom(r, abilityIds) {
     else {
       const bad = r.needs.filter(a => !abilityIds.includes(a));
       if (bad.length) err.push('needs lists unknown abilities: ' + bad.join(', ') + ' (known: ' + abilityIds.join(', ') + ')');
+      if (r.needs.length && !marks.some(m => m.ch === 'I')) err.push('a guarded room (needs) must hold a plinth I: that is what the ability guards');
+      if (r.needs.length && r.needs.length !== 1) err.push('a guarded room needs exactly one ability (the ring of unlocks gives one per region)');
       if (r.needs.length && r.kind !== 'branch') err.push(r.kind + ' rooms must be doable with base moves; remove needs: ' + r.needs.join(', '));
     }
   }
@@ -145,7 +150,7 @@ export function pageTraverse(spec) {
   const region = G.regionDefs[def.region] ? def.region : 'r1';
   const mpos = m => ({ x: m.c * T + T / 2, y: (m.r + 1) * T });
   const P = () => G.players[0];
-  if (!spec.nodeId) G.run.graph.nodes[nid] = { id: nid, def: spec.id, region, exits: {}, content: marks.map(() => ({ type: 'start' })), seen: true, parent: null };
+  if (!spec.nodeId) G.run.graph.nodes[nid] = { id: nid, def: spec.id, region, exits: {}, content: marks.map(m => m.ch === 'X' ? { type: 'crack', data: {} } : { type: 'start' }), seen: true, parent: null };
 
   // --- jobs
   const jobs = [];
@@ -235,6 +240,8 @@ export function pageTraverse(spec) {
     setAbil();
     const p = P(); p.hp = p.maxHp; p.down = false; p.inv = 0; p.stun = 0; p.dashCd = 0;
     G.run.rooms[nid].enemies.length = 0;
+    // Heavy Cut is modelled as "can break cracked barriers" (the bot has no heavy slash; the unlocks check drives a real one)
+    if (abil.includes('heavy')) for (const pr of G.run.rooms[nid].props) if (pr.type === 'crack') G.props.TYPES.crack.hit(pr, true);
   };
   // run one segment; returns 'win' | 'dead' | 'ok'
   const runSeg = (a, job, hp0) => {
@@ -309,6 +316,18 @@ export function pageTraverse(spec) {
       if (st === 'win') found = seq;
     }
 
+    // 1b. with Dash: a scripted opening (run n0 segments, jump n1, wait n2, dash once, run on). The beam search's distance heuristic crowds out
+    // the one narrow flight that works (the greedy jumps that hug the far wall score better), so this pass tries the family directly.
+    if (!found && abil.includes('dash')) {
+      const dir = goalX(job) > P().x ? 1 : -1;
+      for (let n0 = 0; n0 <= 16 && !found; n0++) for (let n1 = 3; n1 <= 7 && !found; n1++) for (let n2 = 0; n2 <= 5 && !found; n2++) {
+        fresh(job); const seq = [], hp0 = P().hp; let st = 'ok';
+        const push = (a, n) => { for (let i = 0; i < n && st === 'ok'; i++) { seq.push(a); st = runSeg(a, job, hp0); used += L; } };
+        push(act(dir, 0, 0), n0); push(act(dir, 1, 0), n1); push(act(dir, 0, 0), n2); push(act(dir, 0, 2), 1); push(act(dir, 0, 0), 45);
+        if (st === 'win') found = seq;
+      }
+    }
+
     // 2. randomized beam search over segments
     if (!found) {
       fresh(job);
@@ -381,6 +400,12 @@ export async function runRooms(page, opts = {}) {
     if (walk && !err.length && r.kind !== 'hub') {
       const spec = { id: r.id, abil: r.kind === 'branch' ? (r.needs || []) : [], budget, seg: opts.seg, beam: opts.beam, strict: !!opts.strict && r.kind === 'main' };
       res.jobs = await page.evaluate(pageTraverse, spec);
+      // the other direction of the rule: a guarded room's plinth must be UNREACHABLE without its ability (nothing but base moves)
+      if (r.kind === 'branch' && (r.needs || []).length) {
+        res.negative = await page.evaluate(pageTraverse, Object.assign({}, spec, { abil: [], budget: Math.min(budget, 250000), only: 'doorway to I' }));
+        res.negative = res.negative.filter(j => j.name.startsWith('doorway to I'));
+        res.negFail = res.negative.length ? res.negative.filter(j => j.ok).map(j => j.name + ' was reached with base moves only') : ['no plinth job ran'];
+      }
       // the beam search can be trapped by its distance heuristic (a ledge directly under the goal): retry a failed job once with a 3x wider beam
       for (let i = 0; i < res.jobs.length; i++) if (!res.jobs[i].ok) {
         const again = await page.evaluate(pageTraverse, Object.assign({}, spec, { only: res.jobs[i].name, beam: (opts.beam || 36) * 3 }));
@@ -394,7 +419,7 @@ export async function runRooms(page, opts = {}) {
   return out;
 }
 
-export const okRoom = r => !r.lint.length && r.jobs.every(j => j.ok);
+export const okRoom = r => !r.lint.length && r.jobs.every(j => j.ok) && !(r.negFail && r.negFail.length);
 export function formatRoom(r) {
   const head = (okRoom(r) ? 'PASS ' : 'FAIL ') + r.id.padEnd(18) + r.kind.padEnd(7);
   const parts = r.jobs.length ? r.jobs.map(j => (j.ok ? 'ok ' : 'FAILED ') + j.name + (j.ok ? ' ' + j.ms.toFixed(0) + 'ms' + (j.bounce ? ' (uses a down-slash bounce)' : '') : '')).join('; ') : (r.lint.length ? '' : (r.kind === 'hub' ? 'lint only' : 'lint only'));
@@ -402,6 +427,7 @@ export function formatRoom(r) {
   for (const m of r.lint) s += '\n      lint error: ' + m;
   for (const m of r.warn) s += '\n      warning: ' + m;
   for (const j of r.jobs) if (!j.ok) s += '\n      ' + j.name + ': ' + j.msg;
+  if (r.negative) s += '\n      without ' + (r.needsText || 'its ability') + ': ' + (r.negFail.length ? 'FAILED: ' + r.negFail.join('; ') : 'plinth unreachable, as it should be (' + r.negative.map(j => j.ms.toFixed(0) + ' ms').join(', ') + ')');
   return s;
 }
 

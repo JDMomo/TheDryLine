@@ -42,6 +42,22 @@ const art = G.art = {
     ctx.drawImage(st.img, f * st.fw, 0, st.fw, st.fh, -st.fw * k / 2, -st.fh * k + (opts.foot || 0) * k, st.fw * k, st.fh * k);
     ctx.restore(); return true;
   },
+  // A frame of a strip as a one-colour silhouette (cached per strip, frame and colour), drawn like drawFrame; opts.color, opts.alpha.
+  drawSilhouette(id, ctx, n, opts = {}) {
+    const st = G.strips[id];
+    if (!st) return false;
+    const f = ((Math.floor(n) % st.frames) + st.frames) % st.frames, key = id + ':' + f + ':' + opts.color, cache = (G.art._sil = G.art._sil || {});
+    let cv = cache[key];
+    if (!cv) {
+      cv = cache[key] = document.createElement('canvas'); cv.width = st.fw; cv.height = st.fh;
+      const c = cv.getContext('2d'); c.drawImage(st.img, f * st.fw, 0, st.fw, st.fh, 0, 0, st.fw, st.fh);
+      c.globalCompositeOperation = 'source-in'; c.fillStyle = opts.color || '#fff3c4'; c.fillRect(0, 0, st.fw, st.fh);
+    }
+    const k = opts.h ? opts.h / st.fh : 1;
+    ctx.save(); ctx.globalAlpha = opts.alpha === undefined ? 0.4 : opts.alpha; ctx.translate(opts.x || 0, opts.y || 0); if (opts.face < 0) ctx.scale(-1, 1);
+    ctx.drawImage(cv, -st.fw * k / 2, -st.fh * k + (opts.foot || 0) * k, st.fw * k, st.fh * k);
+    ctx.restore(); return true;
+  },
   // Region colours: { sky0, sky1, sky2, far, near, tile, side, edge, edgeHi, accent, spike }; a region's palette overrides the base.
   palette(regionId) {
     const r = G.regionDefs && G.regionDefs[regionId];

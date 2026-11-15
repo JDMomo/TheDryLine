@@ -3,7 +3,7 @@
 // play), enter every doorway once and come back, take the signal post in each trial room, reach each arena, wake and beat the Warden,
 // check its rewards, take the way back to the hub, and finish with the Terminus.
 // Asserts: no page error (smoke does), every room entered draws one frame without error, each Warden grants a pip, 40 scrip, the
-// three trinket plinths and the way back, the Long Clock's health is its base health less 12% per Warden beaten, the run ends on the
+// three trinket plinths and the way back, the Long Clock's health never depends on the Wardens beaten and it borrows one attack per Warden still alive, every fight is graded, the run ends on the
 // win screen with its stats filled in; and the same seed builds the same graph twice.
 function playSeed(seed) {
   const D = G.debug, T = G.C.T, notes = [], fails = [], fail = m => fails.push('seed ' + seed + ': ' + m);
@@ -72,9 +72,10 @@ function playSeed(seed) {
     D.step(260);
     const b = room().boss, beatenBefore = ['r1', 'r2', 'r3', 'r4'].filter(k => G.run.beaten[k]).length;
     if (reg.id === 'final') {
-      const want = G.bossDefs.long_clock.hp * (1 - 0.12 * beatenBefore);
+      const want = G.bossDefs.long_clock.hp;
       if (Math.abs(b.maxHp - want) > 0.01) fail('the Long Clock has ' + b.maxHp + ' health after ' + beatenBefore + ' Wardens, wanted ' + want);
-      notes.push('clock ' + Math.round(b.maxHp) + ' hp after ' + beatenBefore);
+      if (b.borrowed.length !== 4 - beatenBefore) fail('the Long Clock borrows ' + b.borrowed.length + ' attacks after ' + beatenBefore + ' Wardens, wanted ' + (4 - beatenBefore));
+      notes.push('clock ' + Math.round(b.maxHp) + ' hp, borrows ' + b.borrowed.length);
     }
     b.hp = Math.min(b.hp, 1);
     D.holdBoss({ x: Math.max(b.minX + 140, Math.min(b.maxX - 140, b.x)), y: b.floor, face: b.face });
@@ -100,6 +101,7 @@ function playSeed(seed) {
     }
     // rewards
     const r1 = room(), trin = r1.props.filter(p => p.type === 'plinth' && p.data.trinket && !p.gone), back = r1.props.find(p => p.type === 'door' && p.data.to === g.hub);
+    if (!G.run.grades[reg.id] || G.game.gradeText(G.run.grades[reg.id]).indexOf('Beaten') !== 0) fail(reg.id + ' fight was not graded');
     if (G.players[0].maxHp !== pips0 + 1) fail(reg.id + ' Warden gave ' + (G.players[0].maxHp - pips0) + ' health pips');
     if (G.run.shards < scrip0 + 40) fail(reg.id + ' Warden gave ' + (G.run.shards - scrip0) + ' scrip');
     if (trin.length !== 3) fail(reg.id + ' Warden left ' + trin.length + ' trinket plinths');
@@ -116,16 +118,16 @@ function playSeed(seed) {
 export default async ({ page }) => {
   const out = [];
   for (const seed of [1, 2, 3, 4, 5]) out.push(await page.evaluate(playSeed, seed));
-  // the Long Clock's health follows the Wardens beaten: none, and two
+  // the Long Clock's health does not follow the Wardens beaten (none, one, two): what it borrows does
   const hp = await page.evaluate(() => {
     const D = G.debug, o = [];
     for (const beaten of [[], ['r1'], ['r1', 'r3']]) {
       D.newRun(7); D.god(true); for (const k of beaten) G.run.beaten[k] = true;
-      D.startBoss('final'); o.push([beaten.length, G.rooms.current.boss.maxHp, G.bossDefs.long_clock.hp]);
+      D.startBoss('final'); o.push([beaten.length, G.rooms.current.boss.maxHp, G.bossDefs.long_clock.hp, G.rooms.current.boss.borrowed.length]);
     }
     return o;
   });
-  for (const [n, max, base] of hp) if (Math.abs(max - base * (1 - 0.12 * n)) > 0.01) out.push({ fails: ['Long Clock with ' + n + ' Wardens beaten has ' + max + ' health (base ' + base + ')'] });
+  for (const [n, max, base, bor] of hp) if (Math.abs(max - base) > 0.01 || bor !== 4 - n) out.push({ fails: ['Long Clock with ' + n + ' Wardens beaten has ' + max + ' health (base ' + base + ') and borrows ' + bor] });
   const bad = out.flatMap(o => o.fails);
   if (bad.length) throw new Error(bad.slice(0, 6).join(' | ') + (bad.length > 6 ? ' (+' + (bad.length - 6) + ' more)' : ''));
   return '5 seeds, ' + out.map(o => o.rooms).join('/') + ' rooms entered; ' + out[0].notes;

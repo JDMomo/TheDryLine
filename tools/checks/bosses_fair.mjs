@@ -15,7 +15,7 @@ const BOSSES = {
   r2: { name: 'Lamp-Heron', attacks: { peck: 'peckTell', sweep: 'sweepTell', gust: 'gustTell', fall: 'fallTell' } },
   r3: { name: 'Switchman Idol', attacks: { rings: 'ringTell', geyser: 'geyserTell', lever: 'leverTell', topple: 'toppleTell' } },
   r4: { name: 'Gatewhale', attacks: { roll: 'rollTell', spin: 'spinTell', spawn: 'spawnTell', crates: 'crateTell' } },
-  final: { name: 'Long Clock', attacks: { rings: 'ringTell', hands: 'handsTell', rain: 'rainTell', wind: 'windTell' } }
+  final: { name: 'Long Clock', attacks: { rings: 'ringTell', hands: 'handsTell', rain: 'rainTell', wind: 'windTell', toll: 'tollTell', beam: 'beamTell', sig: 'sigTell', crates: 'crateTell' } }   // toll, beam, sig, crates: borrowed from the Wardens still alive (a run with none beaten borrows all four)
 };
 // States in which the boss is not attacking and can be slashed in peace (its own hazards are over).
 const OPEN = new Set(['idle', 'recover', 'peckStuck', 'peckOut', 'lying', 'rise', 'hop', 'stagger']);

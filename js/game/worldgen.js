@@ -32,7 +32,7 @@ function draw(rng, pool, n) {
 const HUB_SIGNS = ['A token has a cut: pierce, arc, burst or ground. The party carries three.',
   'Tokens come from four guarded plinths, two lost trunks and one ticket machine. The kiosk sells trinkets.',
   'Each Warden has three fare slots, shown on the lock chart board. Punch one with a token of its cut; the token is void.',
-  'Every gate is open. Go in any order.'];
+  'Every gate is open. The Long Clock borrows an attack from each Warden still alive: the Terminus gate lists them. Beat the Wardens first, or go straight there and take the hardest road.'];
 const CUTS = ['pierce', 'arc', 'burst', 'ground'];
 
 // Roll what every marker of a node holds. content[i] belongs to roomDef.marks[i]; doors and gates are set before this runs.
@@ -65,6 +65,7 @@ function fillContent(node, region, rng, used, ctx) {
     // K (clipping booth) markers are left empty: the booth is no longer part of a run (its prop code stays in props.js, unused).
     else if (m.ch === 'M') c = region.ability ? { type: 'post', data: { abil: region.ability } } : null;
     else if (m.ch === '?') c = { type: 'sign', data: { text: signs[signN++] || '' } };
+    else if (m.ch === 'X') c = { type: 'crack', data: {} };
     else if (m.ch === 'C') c = { type: 'trunk', data: {} };                 // what they hold is drawn by balance() once the counts are trimmed
     else if (m.ch === 'I') {
       // Only the region's own branch room holds a plinth (its first one): the region's fixed token, guarded. Others are trimmed.
@@ -212,7 +213,7 @@ function balance(graph, rng, used, ctx) {
   const hub = graph.nodes[graph.hub], hubDef = G.roomDefs[hub.def], pc = (hubDef.marks.find(m => m.ch === 'P') || { c: 14 }).c;
   for (let k = hub.signsPlaced || 0; k < HUB_SIGNS.length; k++) if (!addExtra(hub, 'sign', { text: HUB_SIGNS[k] }, 0, 1, rng, pc)) warn.push('no room for hub sign ' + (k + 1));
   // the lock chart board stands behind the party's start, between the gates
-  (hub.extras || (hub.extras = [])).push({ type: 'board', data: {}, c: 17, r: 14, x: 17 * T + T / 2, y: 15 * T });
+  (hub.extras || (hub.extras = [])).push({ type: 'board', data: {}, c: 17, r: 7, x: 17 * T + T / 2, y: 7 * T + 16 });
   return warn;
 }
 
@@ -306,7 +307,7 @@ G.worldgen = {
         g.nodes.push(b.id); b.parent = slot.node.id;
         if (k < required.length && required[k].own) { ctx.own.add(b.id); g.own = b.id; }
         if (k < required.length && required[k].pipe) g.pipe = b.id;
-        slot.node.content[slot.i] = { type: 'door', data: { to: b.id, entry: { mark: back }, tag: def.kind === 'trial' ? 'Trial' : '', label: def.label || 'Side room' } };
+        slot.node.content[slot.i] = { type: 'door', data: { to: b.id, entry: { mark: back }, tag: def.kind === 'trial' ? 'Trial' : G.worldgen.needsText(def.id) ? 'Needs ' + G.worldgen.needsText(def.id) : '', label: def.label || 'Side room', needs: (def.needs || []).slice() } };
         b.content[back] = { type: 'door', data: { to: slot.node.id, entry: { mark: slot.i }, label: 'Way back' } };
       });
       ctx.first = g.first;
@@ -319,6 +320,8 @@ G.worldgen = {
     return graph;
   },
   /* Everything a node holds as plain { type, data } entries: the template's markers plus the extras placed by balance(). */
+  // The movement unlocks a room declares in `needs` (a guarded branch room), as words: 'Dash', or '' for a room that needs nothing.
+  needsText(defId) { const d = G.roomDefs[defId]; return d && d.needs && d.needs.length ? d.needs.map(a => (G.abilityDefs[a] || { name: a }).name).join(' and ') : ''; },
   contents(node) {
     return node.content.filter(c => c && c.type !== 'enemy' && c.type !== 'boss' && c.type !== 'start').concat((node.extras || []).map(e => ({ type: e.type, data: e.data })));
   },

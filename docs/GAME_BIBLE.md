@@ -26,7 +26,9 @@ Vocabulary used in the game's text: token (the item you spend), cut (its class),
 - A Warden's health grows by 60% for each player beyond the first, decided when its fight starts.
 - A run code (seed plus the set of unlocked cuts, shown on the pause and run-over screens) replays the same world, chart and rewards.
 - Every boss can be beaten with slashes alone. Fare slots are the bonus.
-- The Long Clock is open from the start. Each Warden you beat first weakens it.
+- The Long Clock is open from the start. It never gets weaker: when its fight starts it borrows one extra attack for every Warden not yet beaten (see section 4). Going straight to it is possible and clearly the hardest road.
+- Every boss fight is graded when it ends: Beaten; Par (faster than the boss's par time, about 1.2 times the slash-only bot time); Clean (no player took a hit). A Clean fight refunds one punched token (a free party slot, else a plinth on the arena floor). Grades show as a stamp, on the map and on the run-over and win screens.
+- Each region's guarded room (the fixed token's plinth) needs the movement unlock of the previous region in the ring: Signal Reef's needs Dash (Wreck Quay), Salt Cutting's Wall Grip (Signal Reef), Ticket Hall's Double Jump (Salt Cutting), Wreck Quay's Heavy Cut (Ticket Hall). The doorway and the map name the move. Main and trial rooms still need base moves only.
 - Rooms are hand-built and shuffled each run; what they hold is rolled each run.
 - Movement unlocks are found again each run, always at the same region's signal post.
 - Between runs, feats unlock new tokens into the pool.
@@ -44,6 +46,8 @@ Hub: **The Junction.** A turntable platform with five gates, each showing its bo
 | r4 | Ticket Hall | a buried station hall, booths, turnstiles, stopped clocks; dark green and brass | The Gatewhale | Heavy Cut |
 | final | The Terminus | the buffers at the end of the line, steam and a great clock; night indigo and white | The Long Clock | none |
 
+Each region's guarded room needs the movement unlock of the previous region in the ring (r2: Dash, r3: Wall Grip, r4: Double Jump, r1: Heavy Cut). Rooms: Signal Reef's roost has two coral heads nine tiles apart over a spiked drop (a dash in mid-air crosses); Salt Cutting's plinth stands atop a three-tile chimney nine tiles tall (Wall Grip climbs it); Ticket Hall's stands on a five-tile block (Double Jump clears it); Wreck Quay's lies behind a cracked barrier in a low tunnel that only a heavy cut breaks.
+
 Each region: 3 main rooms picked from its pool, then the arena. Two doorways along the way lead to branch rooms (rolled from the shared pool), and one leads to the region's trial room, which holds the movement unlock. The final region: 2 main rooms, then the arena.
 
 ### Fare slots (weak points)
@@ -58,7 +62,7 @@ Every boss is built with four possible fare slots, one per cut, but in a run onl
 
 **The Gatewhale (r4).** A whale-shaped engine that rides the arena floor on rails. It rolls across the arena (its wheels hurt), drops crates that stay as short-lived pillars, spins up and vents steam in a spiral, and releases up to two small enemies. Slots: Blowhole Valve (arc; on top, from above), Headlamp (pierce; only when it has stopped), Jaw Hinge (burst; when it opens its mouth to release crates or enemies), Wheel Truck (ground; when it has stopped). Punching them: no crates, slower roll, no summons, thinner steam spiral.
 
-**The Long Clock (final).** A giant clock-faced engine fixed in the centre of the arena. Two phases; in the second the pendulum breaks loose and swings across the floor. Attacks: Steam Hands (two sweeping jets, like clock hands, with a clear warning), Spark Rain, Floor Rings (shockwaves along the ground), Wind Up (summons enemies). Slots: Side Vent (pierce; alternates sides), Bell Housing (arc; on top, only while it chimes), Mainspring (burst; when it flares, close range), Base Rail (ground). Each Warden beaten before the fight takes 12% off its health and removes one specific hazard (r1: floor rings are slower; r2: steam hands sweep slower; r3: spark rain is thinner; r4: no summons).
+**The Long Clock (final).** A giant clock-faced engine fixed in the centre of the arena. Two phases; in the second the pendulum breaks loose and swings across the floor. Attacks: Steam Hands (two sweeping jets, like clock hands, with a clear warning), Spark Rain, Floor Rings (shockwaves along the ground), Wind Up (summons enemies). Slots: Side Vent (pierce; alternates sides), Bell Housing (arc; on top, only while it chimes), Mainspring (burst; when it flares, close range), Base Rail (ground). **Borrowed attacks:** when the fight starts it borrows one extra attack for every Warden not yet beaten, mixed into its normal cycle with the same fairness rules (a wind-up of at least 0.45 s, avoidable with base moves plus dash): Tollkeeper alive, a pair of floor shockwaves; Lamp-Heron alive, a lamp beam sweeping along the floor; Switchman Idol alive, signal rings at one of three heights; Gatewhale alive, dropped crates that stand as short-lived pillars. Its health (1100) does not depend on the Wardens beaten. With all four beaten a slash-only bot needs about 103 s; with two alive about 114 s; straight from the hub about 120 s, with every hazard in play. The Terminus gate label in the Junction and the map say what it will borrow ("Borrows: ...") before the party commits.
 
 Beating a Warden gives the party: one more health pip, a choice of one trinket from three, and 40 scrip.
 

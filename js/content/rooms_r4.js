@@ -165,9 +165,10 @@ G.defineRoom({
     '##############################'
   ]
 });
-// Branch: a short combat test before the plinth, with a booth to hop onto.
+// Branch (needs Double Jump): the plinth stands on a block five tiles tall (160 px up). A plain jump rises about 125 px; with the second jump in the
+// air it clears the top with room to spare. No shelves, no walls to climb besides the block itself. Crabs guard the floor.
 G.defineRoom({
-  id: 'r4_vault', region: 'r4', kind: 'branch', label: 'Guarded plinth',
+  id: 'r4_vault', region: 'r4', kind: 'branch', label: 'Guarded plinth', needs: ['double'],
   map: [
     '##############################',
     '#............................#',
@@ -176,14 +177,14 @@ G.defineRoom({
     '#............................#',
     '#............................#',
     '#............................#',
-    '#.............F..............#',
     '#............................#',
     '#............................#',
-    '#............................#',
-    '#............................#',
-    '#.............###............#',
-    '#.............###............#',
-    '#..D......E...###...E..E...I.#',
+    '#.........................I..#',
+    '#.....................########',
+    '#.....................########',
+    '#.....................########',
+    '#.....................########',
+    '#..D....E.....E...E...########',
     '##############################',
     '##############################'
   ]

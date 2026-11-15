@@ -10,7 +10,7 @@ G.defineRoom({
   id: 'junction', region: 'hub', kind: 'hub',
   signs: ['Tokens open a Warden\'s fare slots. Match the shape. The board shows each Warden\'s three.',
     'The party carries three tokens. A punched token is void. Choose where each one goes.',
-    'Every gate is open. The Long Clock is waiting too.'],
+    'Every gate is open. The Long Clock borrows one attack from each Warden still alive; the Terminus gate says which.'],
   map: [
     WALL, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN,
     '#.........==============.....#',

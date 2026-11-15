@@ -6,7 +6,8 @@ const G = window.G, C = G.C, U = G.util, fx = G.fx;
 G.bossDefs = {};
 
 /* G.defineBoss({
-     id, name, hp, w, h,            body box (its feet centre is b.x, b.y)
+     id, name, hp, par, w, h,       par: the time in seconds under which a fight earns the Par grade (about 1.2 x the slash-only bot time of fight_len, one player)
+                                    body box (its feet centre is b.x, b.y)
      spots: { <cut>: { name, local: [x, y], r, exposed(b), accepts(b, strike), onBreak(b), lost } },
                                     fare slots keyed by cut ('pierce' | 'arc' | 'burst' | 'ground'), at most one per cut.
                                     local is in boss space: x forward, y up negative, origin at the feet
@@ -29,7 +30,7 @@ class Boss {
   // limits: { x0, x1 } the open floor of the arena in pixels (set by the room from its boss door and right wall)
   constructor(def, x, y, region, limits) {
     Object.assign(this, { def, id: def.id, region, x, y, floor: y, vx: 0, vy: 0, face: -1, hp: def.hp, maxHp: def.hp, w: def.w, h: def.h,
-      state: 'sleep', t: 0, flash: 0, sealedT: 0, flags: {}, held: null,
+      state: 'sleep', t: 0, clock: 0, hits0: 0, spent0: 0, flash: 0, sealedT: 0, flags: {}, held: null,
       minX: limits.x0 + def.w / 2 + 13, maxX: limits.x1 - def.w / 2 - 13 });
     // Only the cuts on this run's lock chart have a fare slot at all (the fourth is not drawn, not listed, cannot be punched).
     const chart = G.run && G.run.graph && G.run.graph.chart && G.run.graph.chart[region];
@@ -93,6 +94,7 @@ class Boss {
     // Co-op: +60% max hp for each player beyond the first, decided now (this.scale remembers what is already applied).
     const f = 1 + C.COOP_HP * Math.max(0, G.players.length - 1);
     this.maxHp = this.maxHp / (this.scale || 1) * f; this.hp = this.maxHp; this.scale = f;
+    this.clock = 0; this.hits0 = G.run.stats.hits; this.spent0 = G.run.spent.length;      // for the grade: fight time, hits taken, tokens punched
     const have = G.game.partyClasses();
     for (const sp of this.spots) sp.open = have.has(sp.cls);
     const open = this.spots.filter(s => s.open).map(s => s.def.name);
@@ -104,6 +106,7 @@ class Boss {
     this.flash -= dt; this.sealedT -= dt;
     for (const sp of this.spots) sp.flash -= dt;
     if (this.state === 'sleep') return;
+    if (this.state !== 'dead') this.clock += dt;
     this.t -= dt;
     if (this.state === 'dead') return;
     if (this.held) Object.assign(this, this.held);                 // test hook: G.debug.holdBoss

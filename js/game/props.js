@@ -1,7 +1,7 @@
 /* Room props. Template character -> prop type (see G.defineRoom). The clipping booth (K, booth, clip) is no longer placed in any run; its code stays here unused.
    I plinth (a token or trinket to take; kiosk wares are plinths with a price)   C trunk (lost trunk, opens when the room is clear)
    R ticket (ticket machine)   S plinth with a price (kiosk ware)   K booth (clipping booth)   M post (signal post)
-   H standpipe   D door (doorway)   G gate (region gate, hub)   ? sign.   Spawned by other props: clip (a clipping booth choice). */
+   H standpipe   D door (doorway)   G gate (region gate, hub)   ? sign   X crack (cracked barrier).   Spawned by other props: clip (a clipping booth choice). */
 (() => {
 'use strict';
 const G = window.G, C = G.C, U = G.util, fx = G.fx, art = G.art;
@@ -37,6 +37,18 @@ const TEACH = {
   door: 'Doorways lead to side rooms. Every side room has a way back.',
   gate: 'Every gate is open. Each line ends at a Warden.'
 };
+// Layout of the lock chart board (pr.x centre, pr.y bottom edge): panel, and per region the name box and the three cut boxes. Used by draw and by boxes().
+const BOARD_W = 150, BOARD_ROW = 15;
+function boardLayout(pr, ctx) {
+  const rows = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), h = 26 + rows.length * BOARD_ROW + 6, top = pr.y - h, x0 = pr.x - BOARD_W / 2;
+  const out = { x0, x1: x0 + BOARD_W, y0: top, y1: pr.y, rows: [] };
+  rows.forEach((r, i) => {
+    const ry = top + 34 + i * BOARD_ROW; ctx.font = '500 10px ' + C.FONT; const w = ctx.measureText(r.name).width;
+    out.rows.push({ region: r, y: ry, name: { x0: x0 + 8, x1: x0 + 8 + w, y0: ry - 6, y1: ry + 6 },
+      cuts: [0, 1, 2].map(k => { const cx = x0 + BOARD_W - 52 + k * 17; return { cx, x0: cx - 6, x1: cx + 6, y0: ry - 6, y1: ry + 6 }; }) });
+  });
+  return out;
+}
 const teachKey = pr => pr.type === 'plinth' && pr.data.price ? 'kiosk' : pr.type;
 
 /* Each type: draw(pr, ctx); optional update(pr, dt), interact(pr, player), prompt(pr, player) -> [title, line, hint] or null.
@@ -198,7 +210,7 @@ const TYPES = {
       if (pr.data.used) return;
       if (G.players.every(p => !p.down && p.hp >= p.maxHp)) return fx.say('Standpipe', 'Everyone is mended already. Save it.', 2);
       pr.data.used = true;
-      for (const p of G.players) { if (p.down) p.down = false; p.hp = p.maxHp; }
+      for (const p of G.players) { if (p.down) p.revive(p.maxHp); else p.hp = p.maxHp; }
       fx.ring(pr.x, pr.y - 24, 10, 260, '#fff3c4', 0.5); fx.say('Mended', 'The standpipe runs dry.', 2);
     },
     prompt(pr) { return pr.data.used ? null : ['Standpipe', 'Mends the whole party fully. One use per run.', 'Up to drink']; },
@@ -211,7 +223,14 @@ const TYPES = {
   },
   door: {       // data: { to: nodeId, entry, label, tag }
     interact(pr) { G.rooms.go(pr.data.to, pr.data.entry); },
-    prompt(pr) { return [pr.data.label || 'Doorway', '', 'Up to enter']; },
+    prompt(pr) {
+      const need = (pr.data.needs || []).filter(a => G.abilityDefs[a]);
+      if (!need.length) return [pr.data.label || 'Doorway', '', 'Up to enter'];
+      // a guarded room: say which move the plinth needs, and whether the party has it yet (and where it is found)
+      const missing = need.filter(a => !G.run.abil[a]), names = need.map(a => G.abilityDefs[a].name).join(' and ');
+      const where = missing.map(a => { const r = Object.values(G.regionDefs).find(x => x.ability === a); return G.abilityDefs[a].name + (r ? ' is found in ' + r.name : ''); }).join('; ');
+      return [pr.data.label || 'Doorway', 'The plinth here needs ' + names + (missing.length ? '. Not found yet: ' + where + '.' : '. You have it.'), 'Up to enter'];
+    },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y;
       ctx.fillStyle = '#020505'; ctx.beginPath(); ctx.moveTo(x - 17, y); ctx.lineTo(x - 17, y - 40); ctx.quadraticCurveTo(x, y - 62, x + 17, y - 40); ctx.lineTo(x + 17, y); ctx.closePath(); ctx.fill();
@@ -219,12 +238,27 @@ const TYPES = {
       if (pr.data.tag) art.label(ctx, pr.data.tag, x, y - 70, 12, '#9aa89f');
     }
   },
-  gate: {       // hub gate into a region, data: { region }. Shows the region's Warden sigil, dimmed once beaten.
+  gate: {       // hub gate into a region, data: { region }. Shows the region's Warden sigil, dimmed once beaten. The Terminus also shows what the Long Clock will borrow.
     interact(pr) { G.rooms.go(G.run.graph.regions[pr.data.region].first, { side: 'left' }); },
     prompt(pr) {
       const r = G.regionDefs[pr.data.region], b = G.bossDefs[r.boss];
-      const chart = (G.run.graph.chart || {})[r.id];
-      return [r.name, (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.') + (chart ? ' Slots: ' + chart.map(c => G.CLASSES[c].name).join(', ') + '.' : ''), 'Up to enter'];
+      const chart = (G.run.graph.chart || {})[r.id], bor = r.id === 'final' ? G.game.borrows() : null;
+      return [r.name, (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.') + (chart ? ' Slots: ' + chart.map(c => G.CLASSES[c].name).join(', ') + '.' : '')
+        + (bor ? (bor.length ? ' It borrows from each Warden still alive: ' + bor.map(x => x.text + ' (' + x.warden + ')').join('; ') + '.' : ' Every Warden has fallen: it borrows nothing.') : ''), 'Up to enter'];
+    },
+    // the borrow lines above the Terminus gate label ("Borrows: a, b, c", wrapped), shown before the party commits to the fight
+    borrowLines(pr, ctx) {
+      if (pr.data.region !== 'final') return [];
+      const bor = G.game.borrows(), text = bor.length ? 'Borrows: ' + bor.map(x => x.short).join(', ') : 'Borrows nothing';
+      return G.props.wrap(ctx, text, 10.5, 150, 500);
+    },
+    boxes(pr, ctx) {
+      const x = pr.x, y = pr.y, r = G.regionDefs[pr.data.region], out = [{ x0: x - 28, x1: x + 28, y0: y - 94, y1: y, kind: 'body' }, { x0: x - 10, x1: x + 10, y0: y - 114, y1: y - 94, kind: 'body' }];
+      ctx.font = '500 12.5px ' + C.FONT; const w = ctx.measureText(r.name).width;
+      out.push({ x0: x - w / 2, x1: x + w / 2, y0: y - 134, y1: y - 118, kind: 'label', text: r.name });
+      const ls = TYPES.gate.borrowLines(pr, ctx);
+      ls.forEach((t, k) => { ctx.font = '500 10.5px ' + C.FONT; const lw = ctx.measureText(t).width, ly = y - 143 - (ls.length - 1 - k) * 13; out.push({ x0: x - lw / 2, x1: x + lw / 2, y0: ly - 7, y1: ly + 7, kind: 'label', text: t }); });
+      return out;
     },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y, r = G.regionDefs[pr.data.region], pal = art.palette(pr.data.region), done = G.run.beaten[pr.data.region];
@@ -233,20 +267,54 @@ const TYPES = {
       ctx.save(); ctx.translate(x, y - 104); ctx.rotate(Math.PI / 4); ctx.fillStyle = done ? '#2a2f2d' : pal.accent; ctx.fillRect(-7, -7, 14, 14);
       ctx.fillStyle = done ? '#5c6a63' : pal.sky0; ctx.fillRect(-3, -3, 6, 6); ctx.restore();
       art.label(ctx, r.name, x, y - 126, 12.5, done ? '#9aa89f' : '#e9e2cf');
+      const ls = TYPES.gate.borrowLines(pr, ctx);
+      ls.forEach((t, k) => art.label(ctx, t, x, y - 143 - (ls.length - 1 - k) * 13, 10.5, '#e9a23b'));
     }
   },
-  board: {      // the lock chart in the Junction: for every region, the three cuts its Warden has a fare slot for this run
-    prompt() { return ['Lock chart', 'Each Warden has three fare slots. A cut not shown is locked out there.', '']; },
+  board: {      // the lock chart in the Junction, hung on the wall: for every region, the three cuts its Warden has a fare slot for this run. pr.y is its bottom edge.
+    boxes(pr, ctx) {
+      const L = boardLayout(pr, ctx), out = [{ x0: L.x0, x1: L.x1, y0: L.y0, y1: L.y1, kind: 'body' }];
+      for (const r of L.rows) { out.push(Object.assign({ kind: 'label', text: r.region.name }, r.name)); for (const c of r.cuts) out.push(Object.assign({ kind: 'label', text: 'cut' }, c)); }
+      return out;
+    },
     draw(pr, ctx) {
-      const x = pr.x, y = pr.y, W = 104, rows = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), top = y - 16 - 14 - rows.length * 14;
-      ctx.fillStyle = '#5a4630'; ctx.fillRect(x - W / 2 + 12, y - 16, 4, 16); ctx.fillRect(x + W / 2 - 16, y - 16, 4, 16);
-      ctx.fillStyle = '#8a6c46'; ctx.fillRect(x - W / 2, top, W, y - 16 - top); ctx.fillStyle = '#1d1a14'; ctx.fillRect(x - W / 2 + 3, top + 3, W - 6, y - 16 - top - 6);
-      art.label(ctx, 'Lock chart', x, top + 10, 10.5, '#f4e6b8', 'center', C.FONT, 600);
-      rows.forEach((r, i) => {
-        const ry = top + 25 + i * 14, chart = (G.run.graph.chart || {})[r.id] || [], pal = art.palette(r.id);
-        art.label(ctx, r.name, x - W / 2 + 5, ry, 9, G.run.beaten[r.id] ? '#6d6a5c' : pal.accent, 'left');
-        chart.forEach((cut, k) => { ctx.save(); ctx.translate(x + W / 2 - 40 + k * 14, ry); ctx.fillStyle = G.run.beaten[r.id] ? '#4a4a40' : G.CLASSES[cut].color; art.cutShape(ctx, G.CLASSES[cut].shape, 5); ctx.restore(); });
-      });
+      const L = boardLayout(pr, ctx), x = pr.x;
+      ctx.fillStyle = '#5a4630'; ctx.fillRect(x - 54, 32, 3, L.y0 - 32); ctx.fillRect(x + 51, 32, 3, L.y0 - 32);              // hanging cords
+      ctx.fillStyle = '#8a6c46'; ctx.fillRect(L.x0, L.y0, L.x1 - L.x0, L.y1 - L.y0); ctx.fillStyle = '#1d1a14'; ctx.fillRect(L.x0 + 3, L.y0 + 3, L.x1 - L.x0 - 6, L.y1 - L.y0 - 6);
+      art.label(ctx, 'Lock chart', x, L.y0 + 12, 11, '#f4e6b8', 'center', C.FONT, 600);
+      for (const r of L.rows) {
+        const chart = (G.run.graph.chart || {})[r.region.id] || [], pal = art.palette(r.region.id), gone = G.run.beaten[r.region.id];
+        art.label(ctx, r.region.name, r.name.x0, r.y, 10, gone ? '#6d6a5c' : pal.accent, 'left');
+        chart.forEach((cut, k) => { if (!r.cuts[k]) return; ctx.save(); ctx.translate(r.cuts[k].cx, r.y); ctx.fillStyle = gone ? '#4a4a40' : G.CLASSES[cut].color; art.cutShape(ctx, G.CLASSES[cut].shape, 5); ctx.restore(); });
+      }
+    }
+  },
+  crack: {      // cracked barrier (template marker X): a wall three tiles tall on the marker's tile. Only a heavy cut breaks it.
+    rect: pr => ({ x0: pr.x - C.T / 2, x1: pr.x + C.T / 2, y0: pr.y - 3 * C.T, y1: pr.y }),
+    update(pr) {
+      if (pr.gone || pr.data.broken) return;
+      const t = G.tiles, r1 = Math.round(pr.y / C.T) - 1;
+      if (!pr.bl) pr.bl = { c: Math.floor(pr.x / C.T), r0: r1 - 2, r1, on: true };
+      if (!t.blockers.includes(pr.bl)) t.blockers.push(pr.bl);        // blockers are reset whenever a room is entered: put it back
+      if (pr.data.clink > 0) pr.data.clink -= 1 / 120;
+    },
+    // a heavy cut lands on it (called by combat.melee); a plain slash only rings off it
+    hit(pr, heavy) {
+      if (!heavy) { if (!(pr.data.clink > 0)) { pr.data.clink = 1.2; fx.spark(pr.x, pr.y - 48, 6, '#c9c1ae', 180, 0.25); fx.floatText(pr.x, pr.y - 110, 'Cracked: needs a heavy cut', '#c9c1ae'); } return; }
+      const t = G.tiles, j = t.blockers.indexOf(pr.bl);
+      if (j >= 0) t.blockers.splice(j, 1);
+      pr.gone = true; pr.data.broken = true; G.run.stats.cracks = (G.run.stats.cracks || 0) + 1;
+      fx.jolt(0.1, 12); fx.spark(pr.x, pr.y - 48, 40, '#b9ad94', 420, 0.7); fx.dust(pr.x, pr.y, 16); fx.ring(pr.x, pr.y - 48, 10, 320, '#fff3c4', 0.35);
+    },
+    prompt(pr) { return ['Cracked barrier', 'Solid stone, but it is split through. Only a heavy cut breaks it.', G.run.abil.heavy ? 'Hold slash, then release' : 'Heavy Cut is found in Ticket Hall']; },
+    draw(pr, ctx) {
+      const x = pr.x, y = pr.y, w = C.T, h = 3 * C.T;
+      ctx.fillStyle = '#4a4a46'; ctx.fillRect(x - w / 2, y - h, w, h);
+      ctx.fillStyle = '#5d5c55'; ctx.fillRect(x - w / 2 + 2, y - h + 2, w - 4, 10); ctx.fillRect(x - w / 2 + 2, y - 46, w - 4, 10); ctx.fillRect(x - w / 2 + 2, y - 22, w - 4, 10);
+      ctx.strokeStyle = '#14120f'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath();
+      ctx.moveTo(x - 3, y - h); ctx.lineTo(x + 5, y - h + 24); ctx.lineTo(x - 6, y - h + 44); ctx.lineTo(x + 4, y - h + 66); ctx.lineTo(x - 2, y); ctx.stroke();
+      ctx.strokeStyle = '#d9c9a0'; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.55 + 0.25 * Math.sin(G.time * 3); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#14120f'; ctx.lineWidth = 3; ctx.strokeRect(x - w / 2, y - h, w, h);
     }
   },
   sign: {       // data: { text }
@@ -275,6 +343,9 @@ G.props = {
       draw(ctx) { art.draw('prop_' + type, ctx, { x, y, prop: this }) || t.draw(this, ctx); }
     };
   },
+  // Screen boxes a prop covers: [{ x0, y0, x1, y1, kind: 'body' | 'label', text? }] (props without their own boxes() get a generic body box).
+  // Used by the hub_layout check: no prop's box may overlap a gate or another prop's label.
+  boxes(pr, ctx) { const t = TYPES[pr.type]; return t && t.boxes ? t.boxes(pr, ctx) : [{ x0: pr.x - 22, x1: pr.x + 22, y0: pr.y - 60, y1: pr.y, kind: 'body' }]; },
   // Word-wrap text to at most maxW pixels at the given font size (ctx.font is set here). Returns the lines.
   wrap(ctx, text, size, maxW, weight = 500) {
     ctx.font = weight + ' ' + size + 'px ' + C.FONT;

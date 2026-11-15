@@ -29,15 +29,15 @@ export default async ({ page, shots }) => {
   });
   if (!defs.room || defs.room.kind !== 'arena' || defs.room.region !== 'final' || defs.room.cols !== 30 || defs.room.rows !== 17) throw new Error('arena room: ' + JSON.stringify(defs.room));
   if (defs.room.doorCol !== 3 || defs.room.floorX[0] !== 128 || defs.room.floorX[1] !== 928) throw new Error('arena door/floor: ' + JSON.stringify(defs.room));
-  if (!defs.boss || defs.boss.hp !== 1300 || defs.boss.spots.join() !== 'pierce,arc,burst,ground') throw new Error('boss def: ' + JSON.stringify(defs.boss));
+  if (!defs.boss || defs.boss.hp !== 1100 || defs.boss.spots.join() !== 'pierce,arc,burst,ground') throw new Error('boss def: ' + JSON.stringify(defs.boss));
 
   // ---- 1. every attack state in 150 s of play, both phases; tells last 0.45 s or more; at most three crabs; every slot exposed at some time
   const cov = await page.evaluate(() => {
     const D = G.debug, b = T.setup([], ['cobalt_awl', 'ochre_ladle', 'cinder_bell', 'basalt_roller']);
-    const need = ['ringTell', 'ring', 'handsTell', 'hands', 'rainTell', 'rain', 'windTell', 'wind', 'recover', 'transition'];
+    const need = ['ringTell', 'ring', 'handsTell', 'hands', 'rainTell', 'rain', 'windTell', 'wind', 'tollTell', 'toll', 'beamTell', 'beam', 'sigTell', 'sig', 'crateTell', 'crates', 'recover', 'transition'];
     const seen = {}, seen2 = {}, exposed = {}, entered = {}, minDur = {}, bad = [];
     let prev = '', since = 0, maxCrabs = 0, p2Armed = 0, openT = 0, armT = 0, hpAtP2 = null, t0 = G.time;
-    T.slasher(b); b.maxHp = b.hp = 760;               // coverage needs both phases inside 150 s, not the tuned health (fight_len measures that)
+    T.slasher(b); b.maxHp = b.hp = 560;               // coverage needs both phases inside 150 s, not the tuned health (fight_len measures that)
     for (let i = 0; i < 150 * 120; i++) {
       const slashing = b.hp > b.maxHp * 0.12;
       D.setInput(0, { attack: slashing && i % 40 < 2 && b.state !== 'intro' });
@@ -101,36 +101,47 @@ export default async ({ page, shots }) => {
     punched.push(c.cls);
   }
 
-  // ---- 3. Wardens: 12% off the health and one hazard each
+  // ---- 3. borrowed attacks: one per Warden NOT yet beaten; health never changes
   const w = await page.evaluate(() => {
-    const m = b => ({ hp: b.maxHp, hp0: b.hp, mods: Object.assign({}, b.mods) });
-    const base = m(T.setup([])), all = m(T.setup(['r1', 'r2', 'r3', 'r4'])), one = {};
-    for (const r of ['r1', 'r2', 'r3', 'r4']) one[r] = m(T.setup([r]));
-    // behaviour, not just numbers: ring speed, hand speed, spark count, summons
-    const run = (beaten, state, secs, probe) => {
-      const D = G.debug, b = T.setup(beaten); D.step(130); T.slasher(b, 1);
-      let n = 0; const shoot = b.shoot.bind(b); b.shoot = d => { n++; return shoot(d); };
-      b.last = state === 'ringTell' ? 'rings' : ''; b.set(state, 0.05); let v = 0, a0 = null, a1 = null;
-      for (let i = 0; i < secs * 120; i++) {
-        D.step(1);
-        if (probe === 'ring' && !v) { const s = G.shots.find(s => s.rect); if (s) v = Math.abs(s.vx); }
-        if (probe === 'hand' && b.state === 'hands' && b.hands[0] && !b.hands[0].ghost) { if (a0 === null) a0 = [b.hT, b.hands[0].a]; a1 = [b.hT, b.hands[0].a]; }
-      }
-      return { n, v, w: a0 && a1 && (a0[1] - a1[1]) / (a1[0] - a0[0]), crabs: G.rooms.current.enemies.filter(e => e.id === 'ballast_crab').length };
-    };
-    return { base, all, one,
-      ring: [run([], 'ringTell', 2, 'ring').v, run(['r1'], 'ringTell', 2, 'ring').v],
-      hand: [run([], 'handsTell', 3, 'hand').w, run(['r2'], 'handsTell', 3, 'hand').w],
-      rain: [run([], 'rainTell', 3.6).n, run(['r3'], 'rainTell', 3.6).n],
-      crabs: [run([], 'windTell', 3).crabs, run(['r4'], 'windTell', 3).crabs] };
+    const D = G.debug, out = { cfg: {}, beh: {} };
+    const sets = { none: [], r1: ['r1'], r2: ['r2'], r3: ['r3'], r4: ['r4'], two: ['r1', 'r2'], all: ['r1', 'r2', 'r3', 'r4'] };
+    for (const k in sets) { const b = T.setup(sets[k]); out.cfg[k] = { hp: b.maxHp, hp0: b.hp, borrowed: b.borrowed.slice(), attacks: b.attacks.slice(), mods: Object.assign({}, b.mods), shown: G.game.borrows().map(x => x.region) }; }
+    // behaviour of each borrowed attack, launched alone (wind-ups are measured by bosses_fair)
+    const launch = (b, a, state) => { G.run.rng.pick = arr => arr.includes(a) ? a : arr[0]; b.last = ''; b.bag = [a]; b.set('idle', 0); };
+    {   // Tollkeeper: a pair of floor shockwaves, same direction
+      const b = T.setup([], [], true); D.step(130); T.slasher(b, 1); launch(b, 'toll'); let waves = 0, seen = new Set();
+      for (let i = 0; i < 6 * 120; i++) { D.step(1); for (const s of G.shots) if (s.rect && !seen.has(s)) { seen.add(s); waves++; } }
+      out.beh.toll = { waves };
+    }
+    {   // Lamp-Heron: a beam along the floor that hurts a player standing in its way and not one in the air at that moment
+      const b = T.setup([], [], false); D.step(130); D.place(0, b.x + 330, b.floor, -1); const p = G.players[0]; p.hp = 5; launch(b, 'beam'); let x0 = null, x1 = null, hurt = false;
+      for (let i = 0; i < 9 * 120 && b.state !== 'recover'; i++) { D.step(1); if (b.beamX !== null) { if (x0 === null) x0 = b.beamX; x1 = b.beamX; } if (p.hp < 5) { hurt = true; p.hp = 5; } }
+      out.beh.beam = { hurt, swept: x0 !== null && Math.abs(x1 - x0) > 100, state: b.state };
+    }
+    {   // Switchman: four rings, no two in a row at the same height, all at one of the three heights
+      const b = T.setup([], [], true); D.step(130); T.slasher(b, 1); launch(b, 'sig'); const hs = [], seen = new Set();
+      for (let i = 0; i < 8 * 120; i++) { D.step(1); for (const s of G.shots) if (s.cut && !seen.has(s)) { seen.add(s); hs.push(Math.round(b.floor - s.y)); } }
+      out.beh.sig = { hs };
+    }
+    {   // Gatewhale: crates drop, stand as pillars (a blocker) and are gone again
+      const b = T.setup([], [], true); D.step(130); D.place(0, b.x + 330, b.floor, -1); launch(b, 'crates'); const bl0 = G.tiles.blockers.length; let stood = 0, maxBl = 0, gone = false;
+      for (let i = 0; i < 16 * 120; i++) { D.step(1); if (b.crates.some(k => k.st === 'stand')) { stood = Math.max(stood, b.crates.filter(k => k.st === 'stand').length); maxBl = Math.max(maxBl, G.tiles.blockers.length - bl0); } else if (stood && !b.crates.length) { gone = true; break; } }
+      out.beh.crates = { stood, maxBl, gone, left: G.tiles.blockers.length - bl0 };
+    }
+    return out;
   });
-  if (Math.abs(w.base.hp - 1300) > 1e-6) throw new Error('base health ' + w.base.hp);
-  if (Math.abs(w.all.hp - 1300 * 0.52) > 1e-6 || Math.abs(w.all.hp0 - w.all.hp) > 1e-6) throw new Error('four Wardens: health ' + w.all.hp + ', wanted ' + 1300 * 0.52);
-  for (const r of ['r1', 'r2', 'r3', 'r4']) if (Math.abs(w.one[r].hp - 1300 * 0.88) > 1e-6) throw new Error(r + ' alone should take 12%: ' + w.one[r].hp);
-  if (!(w.ring[1] < w.ring[0] * 0.8)) throw new Error('r1 should slow the floor rings: ' + w.ring);
-  if (!(w.hand[1] < w.hand[0] * 0.8)) throw new Error('r2 should slow the steam hands: ' + w.hand);
-  if (!(w.rain[1] < w.rain[0] * 0.75)) throw new Error('r3 should thin the spark rain: ' + w.rain);
-  if (!(w.crabs[0] >= 1 && w.crabs[0] <= 3 && w.crabs[1] === 0)) throw new Error('r4 should end the summons: ' + w.crabs);
+  const need = { none: ['toll', 'beam', 'sig', 'crates'], r1: ['beam', 'sig', 'crates'], r2: ['toll', 'sig', 'crates'], r3: ['toll', 'beam', 'crates'], r4: ['toll', 'beam', 'sig'], two: ['sig', 'crates'], all: [] };
+  for (const k in need) {
+    const c = w.cfg[k];
+    if (Math.abs(c.hp - 1100) > 1e-6 || Math.abs(c.hp0 - c.hp) > 1e-6) throw new Error(k + ': health must not depend on Wardens beaten: ' + c.hp);
+    if (c.borrowed.slice().sort().join() !== need[k].slice().sort().join()) throw new Error(k + ': borrowed ' + c.borrowed + ', wanted ' + need[k]);
+    if (c.attacks.length !== 4 + need[k].length) throw new Error(k + ': attack bag has ' + c.attacks.length + ' attacks');
+    if (c.shown.length !== need[k].length) throw new Error(k + ': G.game.borrows() lists ' + c.shown);
+  }
+  if (w.beh.toll.waves !== 2) throw new Error('the Tollkeeper pair should be two shockwaves: ' + JSON.stringify(w.beh.toll));
+  if (!w.beh.beam.hurt || !w.beh.beam.swept) throw new Error('the lamp beam should sweep the floor and hurt a player standing in it: ' + JSON.stringify(w.beh.beam));
+  if (w.beh.sig.hs.length !== 4 || w.beh.sig.hs.some(h => ![34, 82, 130].includes(h)) || w.beh.sig.hs.some((h, i) => i && h === w.beh.sig.hs[i - 1])) throw new Error('signal rings: ' + JSON.stringify(w.beh.sig));
+  if (!w.beh.crates.stood || !w.beh.crates.maxBl || !w.beh.crates.gone || w.beh.crates.left) throw new Error('crates should stand as pillars and then vanish: ' + JSON.stringify(w.beh.crates));
 
   // ---- 4. the hazards can be avoided with a jump (non-god runs: no hurt allowed). Rings and hands from both sides, then the pendulum.
   const dodge = await page.evaluate(() => {
@@ -144,7 +155,7 @@ export default async ({ page, shots }) => {
           if (p.onGround && jumped < i - 60 && ((b.state === 'ringTell' && b.t < 0.1) || (b.state === 'ring' && b.ringT < 0.09))) { jumped = i; }
         } else {
           for (const h of b.hands) if (!h.ghost && h.s === side && h.a > 0.2 && p.onGround && jumped < i - 100) {
-            const dc = 150 / Math.tan(h.a), vc = 150 * b.mods.handSpeed / Math.sin(h.a) ** 2, ttc = (d - dc) / vc;     // time until the jet reaches us
+            const dc = 150 / Math.tan(h.a), vc = 150 * 0.45 / Math.sin(h.a) ** 2, ttc = (d - dc) / vc;     // time until the jet reaches us
             if (ttc > 0.06 && ttc < 0.24) { jumped = i; D.setInput(0, { [side > 0 ? 'right' : 'left']: true }); }
           }
           if (p.onGround && i - jumped > 8) D.setInput(0, { right: false, left: false });
@@ -233,5 +244,5 @@ export default async ({ page, shots }) => {
   await page.waitForTimeout(150);
   await canvas.screenshot({ path: shots + '/boss_final_2.png' });
 
-  return 'attacks ' + cov.seen.length + '/10 in ' + cov.secs.toFixed(0) + ' s, slots punched ' + punched.join('/') + ', 4 Wardens -> ' + w.all.hp.toFixed(1) + ' hp, slash kill in ' + kill.secs.toFixed(0) + ' s' + (defs.wired === 'long_clock' ? '' : ' (regions.js not wired yet: final boss is ' + defs.wired + ')');
+  return 'attacks ' + cov.seen.length + '/10 in ' + cov.secs.toFixed(0) + ' s, slots punched ' + punched.join('/') + ', hp ' + w.cfg.all.hp + ' whatever the Wardens, slash kill in ' + kill.secs.toFixed(0) + ' s' + (defs.wired === 'long_clock' ? '' : ' (regions.js not wired yet: final boss is ' + defs.wired + ')');
 };

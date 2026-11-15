@@ -90,13 +90,13 @@ const out = g => g.map(r => r.join(''));
   G.defineRoom({ id: 'r3_trial', region: 'r3', kind: 'trial', label: 'Switch tower', map: out(g) });
 }
 
-// Branch: a toad, two spouts and a crab guard a plinth across a spiked pool.
+// Branch (needs Wall Grip): a three tile chimney, nine tiles tall and with no shelves, climbs to the ledge that holds the plinth. A crab guards
+// the ledge, a pair guard the floor. Without Wall Grip the ledge is 9 tiles up: nothing reaches it.
 {
   const g = mk(1, true);
-  fill(g, 15, 15, 10, 17, '^'); fill(g, 13, 15, 13, 15, '#');
-  fill(g, 12, 15, 25, 28, '#');
-  put(g, 14, 2, 'D'); put(g, 14, 8, 'E'); put(g, 12, 14, 'E'); put(g, 14, 20, 'E'); put(g, 14, 23, 'E'); put(g, 11, 27, 'I');
-  G.defineRoom({ id: 'r3_hold', region: 'r3', kind: 'branch', label: 'Brine-bound plinth', map: out(g) });
+  fill(g, 6, 14, 9, 11, '#'); fill(g, 6, 14, 15, 28, '#');          // the chimney is columns 12 to 14; the right ledge is its top
+  put(g, 14, 3, 'D'); put(g, 14, 6, 'E'); put(g, 14, 12, 'E'); put(g, 7, 5, 'F'); put(g, 5, 21, 'E'); put(g, 5, 26, 'I');
+  G.defineRoom({ id: 'r3_hold', region: 'r3', kind: 'branch', label: 'Brine-bound plinth', needs: ['grip'], map: out(g) });
 }
 
 G.defineRoom({

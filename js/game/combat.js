@@ -61,6 +61,10 @@ const combat = G.combat = {
       if (e.dead || s.hit[e.uid] || !U.overlap(rect, e.rect())) continue;
       s.hit[e.uid] = true; e.damage(dmg, p.x); p.slashLanded(s, e.x, e.y - e.h / 2, true);
     }
+    for (const pr of room.props) {                          // a cracked barrier: only a heavy cut breaks it
+      if (pr.type !== 'crack' || pr.gone || s.hit[pr.x + ':' + pr.y]) continue;
+      if (U.overlap(rect, G.props.TYPES.crack.rect(pr))) { s.hit[pr.x + ':' + pr.y] = true; G.props.TYPES.crack.hit(pr, !!s.heavy); }
+    }
     for (let i = shots.length - 1; i >= 0; i--) {
       const h = shots[i];
       if (h.hostile && h.cut && U.circleRect(h.x, h.y, h.r, rect)) { fx.spark(h.x, h.y, 6, '#fff3c4'); shots.splice(i, 1); }

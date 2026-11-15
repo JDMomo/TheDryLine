@@ -4,6 +4,13 @@
 const G = window.G, C = G.C, U = G.util, fx = G.fx;
 const SAVE_KEY = 'dryline-meta-v1';
 const CUT_ORDER = ['pierce', 'arc', 'burst', 'ground'];
+// The attack the Long Clock borrows from each Warden that is still alive when its fight starts.
+const BORROWS = {
+  r1: { attack: 'toll', warden: 'Tollkeeper', short: 'shockwaves', text: 'a pair of floor shockwaves' },
+  r2: { attack: 'beam', warden: 'Lamp-Heron', short: 'lamp beam', text: 'a lamp beam along the floor' },
+  r3: { attack: 'sig', warden: 'Switchman Idol', short: 'signal rings', text: 'signal rings at one of three heights' },
+  r4: { attack: 'crates', warden: 'Gatewhale', short: 'crates', text: 'dropped crates that stand as pillars' }
+};
 
 // Between runs: runs played, wins, best winning time (s), cuts punched at least once (unlocks rare tokens of that cut),
 // taught (which first-time prop tips have been shown). Reads and writes never throw: without storage the game plays on in memory.
@@ -49,7 +56,7 @@ const game = G.game = {
     cuts = CUT_ORDER.filter(c => (cuts || G.meta.cuts).includes(c));       // recorded now: the world never reads the save again
     const run = G.run = { seed, cuts, code: game.codeOf(seed, cuts), rng: U.makeRng((seed ^ 0x9e3779b9) >>> 0), time: 0, shards: 0, abil: {}, trinkets: [], spent: [], beaten: {},
       mods: G.baseMods(), bonusHp: 0, tickets: 0, rooms: {}, over: null, overT: 0, stats: { hits: 0, breaks: 0, kills: 0 }, graph: null,
-      punchLog: [], unlocked: [] };
+      punchLog: [], unlocked: [], grades: {} };
     for (const id in G.abilityDefs) run.abil[id] = false;
     run.graph = G.worldgen.build(seed, cuts);
     run.chart = run.graph.chart;
@@ -77,6 +84,12 @@ const game = G.game = {
     const n = G.players.length, each = Math.max(1, Math.floor(C.SLOTS / n)), all = G.players.flatMap(p => p.items);
     G.players.forEach((p, i) => { p.slots = each + (i === 0 ? Math.max(0, C.SLOTS - each * n) : 0); p.items = []; p.sel = 0; });
     for (const id of all) { const p = G.players.find(q => q.items.length < q.slots); if (p) p.items.push(id); }
+  },
+  // What the Long Clock borrows in this run: one attack for every Warden not yet beaten (shown on the Terminus gate and the map).
+  // `short` is the word on the gate label, `text` the longer line, `attack` the state prefix used in boss_final.js.
+  borrows(run = G.run) {
+    const be = (run && run.beaten) || {};
+    return ['r1', 'r2', 'r3', 'r4'].filter(r => !be[r]).map(r => Object.assign({ region: r }, BORROWS[r]));
   },
   partyItems() { return G.players.flatMap(p => p.items); },
   partyClasses() { return new Set(game.partyItems().map(id => G.itemDefs[id].cls)); },
@@ -127,11 +140,34 @@ const game = G.game = {
     G.run.bonusHp += n;
     for (const p of G.players) if (!p.down) p.hp = U.clamp(p.hp + Math.max(0, n), 1, p.maxHp);
   },
+  // Every boss fight is graded when it ends: Beaten (always), Par (faster than the boss's par time, scaled by the co-op health factor),
+  // Clean (no player took a hit during the fight). A Clean fight refunds one token that was punched in it: back into a free party
+  // slot, or onto the arena floor as a plinth when the party is full. Returns the grade { time, parTime, par, clean, refund, where }.
+  gradeFight(boss, room) {
+    const run = G.run, parTime = (boss.def.par || 0) * (boss.scale || 1);
+    const g = { time: boss.clock, parTime, par: parTime > 0 && boss.clock < parTime, clean: run.stats.hits === boss.hits0, refund: null, where: null };
+    if (g.clean) {
+      const id = run.spent.slice(boss.spent0)[0];
+      if (id) {
+        run.spent.splice(run.spent.indexOf(id), 1); g.refund = id;
+        if (game.freeSlots() > 0) { game.takeItem(G.players.find(p => !p.down) || G.players[0], id); g.where = 'party'; }
+        else {
+          const mid = (room.def.floorX[0] + room.def.floorX[1]) / 2;
+          room.props.push(G.props.make('plinth', mid + 116, boss.floor, { item: id, refund: true })); g.where = 'floor';
+        }
+      }
+    }
+    run.grades[boss.region] = g;
+    fx.stamp(game.gradeText(g).toUpperCase().split(' · '), g.refund ? G.itemDefs[g.refund].name + (g.where === 'party' ? ' comes back to the party' : ' is on the floor') : '');
+    return g;
+  },
+  gradeText(g) { return g ? ['Beaten'].concat(g.par ? ['Par'] : [], g.clean ? ['Clean'] : []).join(' · ') : ''; },
   // A Warden falls: one more health pip, 40 scrip, and a choice of one trinket from three.
   bossBeaten(boss) {
     const room = G.rooms.current, run = G.run;
     run.beaten[boss.region] = true;
     G.rooms.endFight(room);
+    game.gradeFight(boss, room);
     game.addMaxPips(1);
     run.shards += C.WARDEN_SCRIP;
     fx.floatText(boss.x, boss.y - boss.h - 20, '+' + C.WARDEN_SCRIP + ' scrip', '#fff3c4');

@@ -164,19 +164,18 @@ G.defineRoom({
   })
 });
 
-// The region's own branch room: a spiked pit with islands, crabs, a spout and a turnstile guard the plinth.
+// The region's own branch room: the Sealed Cell. Its plinth lies at the end of a low tunnel (3 tiles of headroom, rock above) shut by a
+// cracked barrier. Only a heavy cut (Heavy Cut, found in Ticket Hall's trial) breaks it; there is no way over, under or round.
 G.defineRoom({
-  id: 'r1_hold', region: 'r1', kind: 'branch', label: 'Guarded plinth',
+  id: 'r1_hold', region: 'r1', kind: 'branch', label: 'Sealed cell', needs: ['heavy'],
+  signs: [],
   map: paint(1, true, ({ put, fill }) => {
+    fill(1, 11, 12, 28, '#');                 // rock over the tunnel: rows 12 to 14 are all the headroom there is
     put(14, 3, 'D');
-    put(14, 10, 'E');
-    put(15, 13, '^^^^^^^^^^^^');              // pit, cols 13 to 24
-    put(12, 14, '===');
-    put(12, 19, '===');
-    put(11, 15, 'E');                         // crab on the first island
-    put(11, 20, 'E');
-    fill(11, 14, 26, 28, '#');
-    put(10, 27, 'I');
+    put(14, 7, 'E'); put(14, 10, 'E'); put(6, 8, 'F');
+    put(14, 17, 'X');                         // the cracked barrier, 3 tiles tall (rows 12 to 14)
+    put(14, 22, 'E');                         // a crab inside, which the plinth's guard rule counts
+    put(14, 26, 'I');
   })
 });
 })();
