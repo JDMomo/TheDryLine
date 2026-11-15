@@ -39,7 +39,7 @@ class Player {
     this.hp--; this.inv = M.INV; this.stun = 0.22; this.vx = (this.x < fromX ? -1 : 1) * 260 * G.run.mods.knockback; this.vy = -420;
     this.dashT = 0; this.healT = 0; this.slash = null; this.charge = 0; this.sliding = false; this.jumping = false;
     G.run.stats.hits++; if (this.hp > 0 && this.glow >= M.MEND_COST) G.tips.fire('mend'); fx.jolt(M.STOP_HURT, 10); fx.spark(this.x, this.cy, 14, '#fff3c4', 320, 0.4);
-    if (this.hp <= 0) { this.hp = 0; this.down = true; fx.spark(this.x, this.cy, 40, this.color, 420, 0.8); }
+    if (this.hp <= 0) { this.hp = 0; this.down = true; this.downAt = G.time; fx.spark(this.x, this.cy, 40, this.color, 420, 0.8); }
     return true;
   }
 
@@ -72,7 +72,7 @@ class Player {
   useItem() {
     const def = G.itemDefs[this.items[this.sel]];
     if (!def) return;
-    this.itemCd = def.cd * G.run.mods.itemCd; this.itemCdMax = this.itemCd;
+    this.itemCd = def.cd * G.run.mods.itemCd; this.itemCdMax = this.itemCd; this.castAt = G.time; this.castCls = def.cls;
     def.use(this);
   }
 
@@ -131,7 +131,7 @@ class Player {
           p.vy = -M.WJ_VY; p.vx = -p.wall * M.WJ_VX; p.wlock = M.WJ_LOCK; p.face = -p.wall; p.jumping = p.airJ = true; p.jbuf = 0; p.sliding = false;
           p.squash = -0.6; fx.dust(p.x + p.wall * 10, p.y - 10, 5, -p.wall);
         } else if (abil.double && p.canDouble) {
-          p.vy = -M.DJ_V; p.canDouble = false; p.jumping = p.airJ = true; p.jbuf = 0; p.squash = -0.6;
+          p.vy = -M.DJ_V; p.canDouble = false; p.djAt = G.time; p.jumping = p.airJ = true; p.jbuf = 0; p.squash = -0.6;
           fx.ring(p.x, p.y, 6, 160, '#62d2b4', 0.25); fx.spark(p.x, p.y, 8, '#62d2b4', 160, 0.35, 300);
         }
       }
@@ -227,17 +227,42 @@ function cloak(ctx, alpha, color) {
   ctx.globalAlpha = 1;
 }
 
+// Which watercolor strip and frame shows the player's current state. Order matters: the first match wins.
+function pickStrip(p) {
+  const t = G.time, since = at => (at === undefined ? 9 : t - at), step = (e, dur, n) => Math.min(n - 1, Math.floor(e / dur * n));
+  if (p.down) return ['ko', step(since(p.downAt), 0.5, 4)];
+  const hurtFor = p.inv > 0 ? (M.INV || 1) - p.inv : 9;
+  if (hurtFor >= 0 && hurtFor < 0.3 && p.stun > 0) return ['hurt', step(hurtFor, 0.3, 4)];
+  if (p.slash) {
+    const k = p.slash.t / p.slash.dur;
+    if (p.slash.heavy) return ['heavy', 2 + step(k, 1, 4)];
+    if (p.slash.dir === 'down') return ['slash_down', 1 + step(k, 1, 3)];
+    return ['slash_side', 1 + step(k, 1, 5)];
+  }
+  const cast = since(p.castAt);
+  if (cast < 0.32 && p.castCls) { const n = p.castCls === 'ground' ? 4 : 6; return [p.castCls, 1 + step(cast, 0.32, n - 1)]; }
+  if (p.dashT > 0) return ['dash', 1 + step(1 - p.dashT / (M.DASH_T || 0.155), 1, 2)];
+  if (p.charge > 0.2) return ['heavy', Math.floor(t * 6) % 2];
+  if (p.healT > 0) return ['mend', t * 5];
+  if (p.sliding) return ['wallslide', 1];
+  if (!p.onGround) {
+    const dj = since(p.djAt);
+    if (dj < 0.32) return ['doublejump', step(dj, 0.32, 4)];
+    return ['jump', p.vy < -140 ? 1 : p.vy < 160 ? 2 : 3];
+  }
+  if (Math.abs(p.vx) > 40) return ['run', t * 13];
+  if (p.squash > 0.2) return ['land', 1];
+  return ['idle', t * 5];
+}
+
 // Procedural painter for the player. opts.p is the Player.
 G.art.define('player', (ctx, o) => {
   const p = o.p, base = p.down ? 0.55 : (p.inv > 0 && Math.floor(G.time * 22) % 2 ? 0.45 : 1);
   ctx.globalAlpha = base;
-  // Watercolor test (F2 toggles; player 1 only): strips replace the code-drawn body and scarf. Missing files fall through to the code-drawn player.
+  // Watercolor player (F2 toggles; player 1 only): strips replace the code-drawn body and scarf. Missing files fall through to the code-drawn player.
   if (G.artTest && p.index === 0 && G.art.hasStrip('player_idle') && G.art.hasStrip('player_run')) {
-    const o2 = { x: p.x, y: p.y, face: p.face, h: 96 * 60 / 67, foot: 2 };            // the figure is 67 px tall in a 96 px frame: scale it to about 60
-    const moving = p.onGround && Math.abs(p.vx) > 40 && !p.down;
-    if (p.dashT > 0 || (!p.onGround && !p.down)) G.art.drawFrame('player_run', ctx, 6, o2);        // the most stretched frame
-    else if (moving) G.art.drawFrame('player_run', ctx, G.time * 12, o2);
-    else G.art.drawFrame('player_idle', ctx, G.time * 5, o2);
+    const [name, frame] = pickStrip(p);
+    G.art.drawFrame(G.art.hasStrip('player_' + name) ? 'player_' + name : 'player_idle', ctx, frame, { x: p.x, y: p.y, face: p.face, h: 68, foot: 4 });
     ctx.globalAlpha = 1; return;
   }
   ctx.strokeStyle = '#62d2b4'; ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
