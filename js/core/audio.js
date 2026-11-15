@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 const G = window.G, M = G.music;
-const LOOKAHEAD = 0.14, TICK_MS = 25, VOICE_CAP = 4;
+const LOOKAHEAD = 0.14, TICK_MS = 25, VOICE_CAP = 4, SFX_BOOST = 1.8;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const note = fn => { try { return fn(); } catch (e) { return undefined; } };       // audio must never break the game
@@ -146,7 +146,7 @@ const SFX = {
     N(X, { type: 'highpass', f: 3500, dur: 0.04, vol: 0.28 }); T(X, { type: 'sine', f: 150, f1: 48, dur: 0.22, vol: 0.4 });
     bellTone(X.e, { f: 1568 * X.r, t: X.t + 0.03, vol: 0.2 * X.v, ring: 1.0, dest: X.d }); bellTone(X.e, { f: 2093 * X.r, t: X.t + 0.09, vol: 0.12 * X.v, ring: 0.8, dest: X.d });
   },
-  tokenVoid: X => { [784, 587, 494, 392].forEach((f, i) => T(Object.assign({}, X, { t: X.t + (X.o.delay || 0) + i * 0.1 }), { type: 'triangle', f, dur: 0.22, vol: 0.14, lp: 3000, lp1: 500 })); },
+  tokenVoid: X => { [784, 587, 494, 392].forEach((f, i) => T(Object.assign({}, X, { t: X.t + i * 0.1 }), { type: 'triangle', f, dur: 0.22, vol: 0.14, lp: 3000, lp1: 500 })); },
   pickupScrip: X => { const k = Math.pow(2, (X.o.step || 0) / 12); [1320, 1760].forEach((f, i) => T(Object.assign({}, X, { t: X.t + i * 0.05 }), { type: 'sine', f: f * k, dur: 0.1, vol: 0.12 })); },
   pickupToken: X => { [784, 988, 1175, 988, 1568].forEach((f, i) => bellTone(X.e, { f: f * X.r, t: X.t + i * 0.07, vol: 0.12 * X.v, ring: i === 4 ? 1.2 : 0.5, dest: X.d })); },
   propUse: X => { T(X, { type: 'square', f: 520, dur: 0.03, vol: 0.08, lp: 2000 }); T(X, { type: 'sine', f: 330, f1: 280, dur: 0.1, vol: 0.14 }); },
@@ -167,6 +167,7 @@ const SFX = {
 };
 
 /* ---------------------------------------------------------------- 4. engine */
+const LEVEL = {jump: 4.38, doubleJump: 1.82, land: 2.33, dash: 5.0, slash: 4.38, heavyCut: 2.78, hitEnemy: 4.44, enemyDefeat: 2.81, hurt: 3.67, down: 0.67, revive: 1.33, mend: 0.98, mendTick: 3.75, cutPierce: 4.44, cutArc: 3.33, cutBurst: 1.92, cutGround: 3.08, slotCrack: 2.86, sealed: 4.17, slotPunch: 1.2, tokenVoid: 1.55, pickupScrip: 1.67, pickupToken: 1.15, propUse: 2.5, door: 2.92, bossIntro: 0.87, bossStagger: 1.62, bossDefeat: 1.07, menuMove: 3.33, menuSelect: 1.67, pause: 3.75, unpause: 3.75};   // per-effect trim so every effect peaks near its target at full volume (set by measuring an offline render)
 function makeImpulse(c, secs, decay) {
   const rate = c.sampleRate, n = Math.floor(rate * secs), b = c.createBuffer(2, n, rate);
   for (let ch = 0; ch < 2; ch++) {
@@ -178,7 +179,7 @@ function makeImpulse(c, secs, decay) {
 const unitSteps = (T, unit) => unit === 'bar' ? M.stepsPerBar(T) : M.beatSteps(T);
 
 function createEngine(ctx, opt = {}) {
-  const e = { ctx, waves: {}, noise: null, insts: [], cur: null, vol: { master: 0.8, music: 0.7, sfx: 0.8 }, muted: false, debug: !!opt.debug, log: [], comp: {}, buffers: {}, voices: {}, lastSfx: {}, paused: false };
+  const e = { ctx, waves: {}, noise: null, insts: [], cur: null, vol: Object.assign({ master: 0.9, music: 0.8, sfx: 0.9 }, opt.vol), muted: !!opt.muted, muted: false, debug: !!opt.debug, log: [], comp: {}, buffers: {}, voices: {}, lastSfx: {}, paused: false };
   // buses: music (and its pause filter) and sfx into master, a limiter on the way out
   e.master = gain(ctx, 1); e.limiter = ctx.createDynamicsCompressor();
   if (e.limiter.threshold) { e.limiter.threshold.value = -3; e.limiter.knee.value = 0; e.limiter.ratio.value = 20; e.limiter.attack.value = 0.003; e.limiter.release.value = 0.12; }
@@ -188,9 +189,10 @@ function createEngine(ctx, opt = {}) {
   e.musicRev = { input: gain(ctx, 1) }; const mc = ctx.createConvolver(); mc.buffer = makeImpulse(ctx, 2.8, 3); e.musicRev.input.connect(mc); const mr = gain(ctx, 0.9); mc.connect(mr); mr.connect(e.musicBus);
   e.sfxRev = { input: gain(ctx, 0.25) }; const sc = ctx.createConvolver(); sc.buffer = makeImpulse(ctx, 1.1, 3); e.sfxRev.input.connect(sc); sc.connect(e.sfxBus);
 
+  let first = true;
   e.applyVolumes = () => {
-    const t = ctx.currentTime, v = e.vol;
-    e.master.gain.setTargetAtTime(e.muted ? 0 : 1, t, 0.03); e.musicBus.gain.setTargetAtTime(v.master * v.master * v.music * v.music, t, 0.03); e.sfxBus.gain.setTargetAtTime(v.master * v.master * v.sfx * v.sfx, t, 0.03);
+    const t = ctx.currentTime, v = e.vol, set = (p, x) => { if (first) p.value = x; else p.setTargetAtTime(x, t, 0.03); };
+    set(e.master.gain, e.muted ? 0 : 1); set(e.musicBus.gain, v.master * v.master * v.music * v.music); set(e.sfxBus.gain, v.master * v.master * v.sfx * v.sfx * SFX_BOOST); first = false;
   };
   e.setPaused = (on, light) => {
     if (e.paused === (on ? (light ? 2 : 1) : 0)) return;
@@ -206,7 +208,7 @@ function createEngine(ctx, opt = {}) {
     if (cur && cur.id === id && cur.variant === variant && !cur.stopping) return cur;
     const now = ctx.currentTime, fade = o.fade == null ? 1.5 : o.fade, start = o.at == null ? now + 0.08 : o.at;
     const comp = e.compiled(id), spb = comp.stepsPerBar, stepDur = 60 / T0.bpm / 4;
-    const out = gain(ctx, 1); out.connect(e.musicBus);
+    const out = gain(ctx, 1), trim = gain(ctx, T0.level || 1); out.connect(trim); trim.connect(e.musicBus);
     const dly = { input: gain(ctx, 1) }, dnode = ctx.createDelay(2), fb = gain(ctx, 0.38), dl = filt(ctx, 'lowpass', 2600), dout = gain(ctx, 0.8);
     dnode.delayTime.value = stepDur * 6; dly.input.connect(dnode); dnode.connect(dl); dl.connect(fb); fb.connect(dnode); dl.connect(dout); dout.connect(out);
     const inst = { id, variant, track: T0, comp, spb, stepDur, start, out, dly, nextStep: 0, layers: {}, order: [], stopping: false, ended: false,
@@ -305,7 +307,7 @@ function createEngine(ctx, opt = {}) {
     let d = e.sfxBus; const p = pan(ctx, o.pan);
     if (p) { p.connect(e.sfxBus); d = p; }
     const rs = e.sfxRev.input; if (name === 'door' || name === 'bossIntro' || name === 'bossDefeat' || name === 'slotPunch' || name === 'pickupToken' || name === 'mend') note(() => { const s = gain(ctx, 0.5); d.connect(s); s.connect(rs); });
-    fn({ e, t: (o.at == null ? now : o.at) + 0.005, d, r: o.rate || 1 + (Math.random() - 0.5) * 0.06, v: o.vel == null ? 1 : o.vel, o });
+    fn({ e, t: (o.at == null ? now : o.at) + 0.005 + (o.delay || 0), d, r: o.rate || 1 + (Math.random() - 0.5) * 0.06, v: (o.vel == null ? 1 : o.vel) * (LEVEL[name] || 1), o });
     return true;
   };
   e.dispose = () => { if (e.timer) clearInterval(e.timer); e.timer = null; };
@@ -319,8 +321,7 @@ function createEngine(ctx, opt = {}) {
 function renderOffline(kind, id, seconds, opts) {
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   if (!OAC) return Promise.resolve(null);
-  const rate = 32000, ctx = new OAC(2, Math.floor(rate * seconds), rate), e = createEngine(ctx, { manual: true });
-  e.vol = { master: 1, music: 1, sfx: 1 }; e.applyVolumes();
+  const rate = 32000, ctx = new OAC(2, Math.floor(rate * seconds), rate), e = createEngine(ctx, { manual: true, vol: { master: 1, music: 1, sfx: 1 } });
   if (kind === 'track') { e.play(id, Object.assign({ at: 0, fade: 0 }, opts)); e.tick(seconds); } else e.sfx(id, Object.assign({ at: 0, gap: 0 }, opts));
   return ctx.startRendering().then(buf => {
     let peak = 0, sum = 0, n = 0, last = 0;
@@ -332,7 +333,7 @@ function renderOffline(kind, id, seconds, opts) {
 /* ---------------------------------------------------------------- 5. G.audio */
 const SAVE_KEY = 'dryline-audio-v1';
 const AC = () => window.AudioContext || window.webkitAudioContext;
-let ctx = null, engine = null, unlockTried = false, blurTimer = null, hiddenSusp = false, vols = { master: 0.8, music: 0.7, sfx: 0.8 }, muted = false;
+let ctx = null, engine = null, unlockTried = false, blurTimer = null, hiddenSusp = false, vols = { master: 0.9, music: 0.8, sfx: 0.9 }, muted = false;
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { for (const k of ['master', 'music', 'sfx']) if (typeof s[k] === 'number') vols[k] = clamp(s[k], 0, 1); muted = !!s.muted; } } catch (err) { /* storage unavailable */ }
 const saveVols = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(Object.assign({ muted }, vols))); } catch (err) { /* ignore */ } };
 
@@ -474,7 +475,7 @@ function install() {
     wrap(B, 'update', orig => function () { const s0 = this.state, r = orig.apply(this, arguments); note(() => { if (this.state !== s0) { if (this.state === 'stagger') A.sfx('bossStagger'); else if (this.state === 'dead') A.sfx('bossDefeat'); } }); return r; });
     wrap(B, 'hitSpot', orig => function (sp) {
       const open0 = sp.open, r = orig.apply(this, arguments);
-      note(() => { const pn = panOf(this.x); if (!open0) A.sfx('sealed', { pan: pn }); else if (sp.broken) A.sfx('slotPunch', { pan: pn }); else A.sfx('slotCrack', { pan: pn }); });
+      note(() => { const pn = panOf(this.x); if (!open0) A.sfx('sealed', { pan: pn }); else if (sp.broken) { A.sfx('slotPunch', { pan: pn }); A.sfx('bossStagger', { pan: pn, delay: 0.12 }); } else A.sfx('slotCrack', { pan: pn }); });
       return r;
     });
   }
@@ -532,6 +533,7 @@ function drawSound(ctx2) {
       art.label(ctx2, Math.round(v * 100) + '%', W / 2 + 200, y, 13.5, '#e9e2cf', 'right', C.FONT, 600);
     } else art.label(ctx2, muted ? 'Off (M)' : 'On (M)', W / 2 + 200, y, 13.5, muted ? '#ff9f8a' : '#e9e2cf', 'right', C.FONT, 600);
   });
+  art.label(ctx2, 'Left and Right change a volume. M switches sound off and on anywhere.', W / 2, top + 416, 12.5, '#9aa89f');
   void menu;
 }
 
