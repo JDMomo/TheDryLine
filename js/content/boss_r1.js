@@ -145,6 +145,19 @@ G.defineBoss({
 
   // Boss space, facing right. The fare slots are drawn on top by the base class.
   draw(b, ctx) {
+    const painted = G.strips && G.strips.boss_tollkeeper_states;
+    if (painted && painted.img && painted.fw) {
+      // State art is clean source-of-truth watercolor; the base Boss class has already applied facing and pose().
+      const frame = (b.state === 'stagger' || b.state === 'dead') ? 1 : (b.rage ? 2 : 0);
+      const dw = 176, dh = 103;
+      ctx.drawImage(painted.img, frame * painted.fw, 0, painted.fw, painted.fh, -88, -103, dw, dh);
+      // Preserve the engine's hit confirmation over the painted body.
+      if (b.flash > 0) {
+        ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.58)';
+        ctx.fillRect(-88, -103, dw, dh); ctx.restore();
+      }
+      return;
+    }
     const body = b.flash > 0 ? '#f4efe2' : (b.rage && b.state !== 'dead' ? '#4a3a3c' : '#39444a'), a0 = ctx.globalAlpha;
     ctx.fillStyle = '#1d2428'; for (const lx of [-52, -22, 14, 44]) ctx.fillRect(lx - 7, -16, 14, 16);                      // feet
     ctx.globalAlpha = a0 * 0.85; ctx.fillStyle = '#c9783a'; ctx.beginPath(); ctx.ellipse(8, -10, 46, 12, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = a0;   // furnace belly

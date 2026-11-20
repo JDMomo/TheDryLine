@@ -51,6 +51,8 @@ const loadStrip = (key, file, frames) => {
   img.src = 'assets/' + file;
 };
 // The Wanderer: cut from the owner's watercolor sheets by tools/art (frames are 192 x 136 at twice game scale, feet 4 px above the bottom edge).
+// First production Warden body: three clean concept-sheet states. Attack motion still comes from the boss pose system.
+loadStrip('boss_tollkeeper_states', 'bosses/tollkeeper/states.webp', 3);
 const PLAYER_STRIPS = { arc: 6, burst: 6, dash: 4, doublejump: 4, ground: 4, heavy: 6, hurt: 4, idle: 4, interact: 4, jump: 4, ko: 4, land: 4, mend: 4, pierce: 6, revive: 4, run: 8, slash_down: 4, slash_side: 6, wallslide: 4 };
 for (const name in PLAYER_STRIPS) loadStrip('player_' + name, 'player/' + name + '.png', PLAYER_STRIPS[name]);
 // Enemy skins cut from the owner's sheets by tools/art/cut_set.py (cells at twice game scale, feet 4 px above the bottom edge). Each

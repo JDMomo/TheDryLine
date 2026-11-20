@@ -113,6 +113,8 @@ Bosses are posed by the game, so draw them as separate parts where noted, or as 
 
 **The Tollkeeper (Wreck Quay).** Hitbox 124 x 100. Frame 176 x 128. A dome-backed toll-engine on four short legs, plated like a turtle in overlapping shell plates, with a pale wooden face plate at the front and a furnace glow under its belly. Slate grey shell, bone face plate, rust-orange belly glow.
 
+> **In-game art now:** `assets/bosses/tollkeeper/states.webp` is a clean three-state watercolor strip cut from the dedicated Tollkeeper concept sheet: Normal / Stagger / Enraged. The engine still supplies attack squash/rotation/translation, fare-slot overlays and hit feedback. Dedicated per-attack strips remain a future polish pass rather than using contaminated crops from the concept sheet.
+
 - Animations: idle 2, walk 4, rear up 3 (front lifts, belly shows), charge 2 loop, crouch 2, leap 2, land 2, spit 3, stagger 2, death 6.
 - Fare slot positions: Eye (on the face, pierce), Hump (top of the back, arc), Belly (underside, only visible when reared or leaping, burst), Heel (back foot, ground).
 - Shots: spit glob 20 x 20, 2 frames; floor shockwave 32 x 40, 3 frames, bone white.
