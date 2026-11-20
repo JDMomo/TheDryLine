@@ -63,7 +63,8 @@ const PROP_SPRITE_SIZE = {
   post: [38, 80],
   lamp_decor: [40, 78],
   crate_decor: [62, 110],
-  banner_decor: [44, 116]
+  banner_decor: [44, 116],
+  furnace_decor: [70, 118]
 };
 
 /* Each type: draw(pr, ctx); optional update(pr, dt), interact(pr, player), prompt(pr, player) -> [title, line, hint] or null.
@@ -482,6 +483,19 @@ const TYPES = {
       const x=pr.x,y=pr.y;ctx.save();ctx.globalAlpha=.88;
       ctx.strokeStyle='#3a2d21';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-112);ctx.stroke();
       ctx.fillStyle='#a75c39';ctx.beginPath();ctx.moveTo(x+3,y-103);ctx.lineTo(x+37,y-96);ctx.lineTo(x+33,y-39);ctx.lineTo(x+19,y-48);ctx.lineTo(x+4,y-42);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+  },
+  furnace_decor: {
+    prompt(){ return null; },
+    boxes(){ return []; },
+    draw(pr,ctx){
+      const x=pr.x,y=pr.y;ctx.save();ctx.globalAlpha=.9;
+      ctx.fillStyle='#504b40';ctx.beginPath();ctx.roundRect(x-23,y-72,46,67,15);ctx.fill();
+      ctx.strokeStyle='#1b1814';ctx.lineWidth=3;ctx.stroke();
+      ctx.fillStyle='#d57a36';ctx.beginPath();ctx.roundRect(x-12,y-48,24,30,7);ctx.fill();
+      ctx.fillStyle='#f0ba63';ctx.globalAlpha=.7+.2*Math.sin(G.time*4);ctx.fillRect(x-7,y-43,14,20);
+      ctx.globalAlpha=.85;ctx.fillStyle='#6b6250';ctx.fillRect(x-5,y-91,10,20);
       ctx.restore();
     }
   },

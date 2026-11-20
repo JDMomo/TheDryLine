@@ -33,6 +33,7 @@ loadStatic('prop_post', 'props/signpost.webp');
 loadStatic('prop_lamp_decor', 'props/lamp.webp');
 loadStatic('prop_crate_decor', 'props/crate_barrel.webp');
 loadStatic('prop_banner_decor', 'props/banner.webp');
+loadStatic('prop_furnace_decor', 'props/furnace.webp');
 // Canonical concept-sheet bodies for enemies whose full animation strips are still pending.
 // These are intentionally static production placeholders; combat tells remain dynamic overlays in the enemy definitions.
 loadStatic('enemy_sapper', 'enemies/sapper/static.webp');

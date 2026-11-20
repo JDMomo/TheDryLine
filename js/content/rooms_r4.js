@@ -298,7 +298,7 @@ Object.assign(G.roomDefs.r4_vault,{decor:[{type:'crate_decor',c:5,r:14},{type:'b
 Object.assign(G.roomDefs.r4_concourse,{enemyPlan:['ballast_crab','turnstile','sapper'],
   decor:[{type:'banner_decor',c:5,r:14},{type:'lamp_decor',c:17,r:14},{type:'crate_decor',c:26,r:14},{type:'lamp_decor',c:43,r:14},{type:'banner_decor',c:56,r:14}]});
 Object.assign(G.roomDefs.r4_switchyard,{enemyPlan:['turnstile','handcar','sapper'],flyerPlan:['lamp_wisp'],
-  decor:[{type:'lamp_decor',c:6,r:14},{type:'banner_decor',c:28,r:14},{type:'crate_decor',c:45,r:14},{type:'lamp_decor',c:56,r:14}]});
+  decor:[{type:'lamp_decor',c:6,r:14},{type:'banner_decor',c:28,r:14},{type:'furnace_decor',c:45,r:14},{type:'lamp_decor',c:56,r:14}]});
 Object.assign(G.roomDefs.r4_booths,{enemyPlan:['harvester','turnstile','sapper','harvester'],flyerPlan:['lamp_wisp','lamp_wisp'],
   decor:[{type:'banner_decor',c:7,r:14},{type:'lamp_decor',c:18,r:14},{type:'crate_decor',c:30,r:14},{type:'lamp_decor',c:43,r:14},{type:'banner_decor',c:55,r:14}]});
 Object.assign(G.roomDefs.r4_gateline,{enemyPlan:['turnstile','handcar','sapper'],flyerPlan:['lamp_wisp','lamp_wisp'],

@@ -9,7 +9,7 @@ export default async({page})=>{
     if(!d){bad.push('missing '+id);continue;}
     if(decor.length<2)bad.push(id+' has too little authored decor '+decor.length);
     if(decor.length>6)bad.push(id+' has too much foreground decor '+decor.length);
-    for(const x of decor)if(!['lamp_decor','crate_decor','banner_decor'].includes(x.type))bad.push(id+' unknown decor '+x.type);
+    for(const x of decor)if(!['lamp_decor','crate_decor','banner_decor','furnace_decor'].includes(x.type))bad.push(id+' unknown decor '+x.type);
    }
   }
   G.debug.newRun(2020);G.debug.god(true);
