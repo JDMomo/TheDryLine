@@ -33,6 +33,10 @@ class Enemy {
   // Per-region difficulty (G.defineRegion scale: { hp, aggro }): fewer hit points, a slower tempo (waits, wind-ups and walking are longer
   // by 1 / aggro). The enemy definitions themselves are never edited.
   applyScale(sc) { if (!sc) return; if (sc.hp) this.hp = Math.max(1, Math.round(this.hp * sc.hp)); if (sc.aggro) this.aggro = sc.aggro; }
+  makeElite() {
+    if (this.elite) return;
+    this.elite = true; this.hp = Math.max(this.hp + 6, Math.round(this.hp * 1.45)); this.maxEliteHp = this.hp; this.aggro *= 1.12;
+  }
   rect() { return { x0: this.x - this.w / 2, x1: this.x + this.w / 2, y0: this.y - this.h, y1: this.y }; }
   set(state, t = 0) { if (state !== this.state) { this.prev = this.state; this.sAt = G.time; } this.state = state; this.t = t; this.t0 = t; }
   // Seconds in the current state (for art that plays recovery frames after a state ends) and how far through its timer the state is, 0..1.
@@ -59,7 +63,7 @@ class Enemy {
       let near = null, nd = 420; for (const p of G.players) { if (p.down) continue; const d = Math.hypot(p.x - this.x, p.cy - this.y); if (d < nd) { nd = d; near = p; } }
       if (near && near.glow < 99) { near.glow = Math.min(99, near.glow + C.KILL_MEND); fx.floatText(near.x, near.y - 56, '+mend', '#fff3c4'); }
       const [lo, hi] = this.def.shards;
-      G.combat.dropShards(this.x, this.y - this.h / 2, lo + G.run.rng.int(hi - lo + 1));
+      G.combat.dropShards(this.x, this.y - this.h / 2, lo + G.run.rng.int(hi - lo + 1) + (this.elite ? 2 : 0));
     }
   }
   // The watercolor skin in use right now, or null (art test off, no skin, strips missing).
@@ -96,6 +100,11 @@ class Enemy {
     const skin = this.skin();
     if (skin) this.drawSkin(ctx, skin);
     else G.art.draw('enemy_' + this.id, ctx, { x: this.x, y: this.y, w: this.w, h: this.h, face: this.face, ent: this });
+    if (this.elite && !this.dead) {
+      ctx.save(); ctx.translate(this.x, this.y - this.h - 9); ctx.rotate(Math.PI/4);
+      ctx.fillStyle='#d6b767';ctx.globalAlpha=0.82;ctx.fillRect(-5,-5,10,10);ctx.fillStyle='#4b3519';ctx.fillRect(-2,-2,4,4);
+      ctx.restore();ctx.globalAlpha=1;
+    }
     if (G.debugBoxes) this.drawBox(ctx, skin);
   }
   // Watercolor art (F2): a skin from G.enemySkins replaces the code-drawn enemy. The definition's skinFrame picks strip and frame from the

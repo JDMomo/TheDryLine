@@ -89,7 +89,7 @@ function instance(node) {
   def.marks.forEach((m, i) => {
     const c = node.content[i], { x, y } = markPos(m);
     if (!c) return;
-    if (c.type === 'enemy') { const d = G.enemyDefs[c.id], e = new G.Enemy(d, x, d.flying ? y - 8 : y); e.applyScale((G.regionDefs[node.region] || {}).scale); room.enemies.push(e); }
+    if (c.type === 'enemy') { const d = G.enemyDefs[c.id], e = new G.Enemy(d, x, d.flying ? y - 8 : y); e.applyScale((G.regionDefs[node.region] || {}).scale); if (c.elite) e.makeElite(); room.enemies.push(e); }
     else if (c.type === 'boss') { if (!G.run.beaten[node.region]) room.boss = new G.Boss(G.bossDefs[c.id], x, y, node.region, { x0: def.floorX[0], x1: def.floorX[1] }); }
     else if (c.type !== 'start') room.props.push(G.props.make(c.type, x, y, Object.assign({}, c.data)));
   });

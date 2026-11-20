@@ -98,6 +98,12 @@ function fillContent(node, region, rng, used, ctx) {
     }
   }
 }
+  // One visibly overstamped machine may appear in later main rooms. Never put an elite in the region's onboarding room.
+  if (def.kind === 'main' && node.id !== ctx.first) {
+    const chance = ({ r1:0.06, r2:0.10, r3:0.14, r4:0.18, final:0.24 })[region.id] || 0;
+    const candidates = def.marks.map((m,i)=>i).filter(i=>node.content[i]&&node.content[i].type==='enemy'&&!G.enemyDefs[node.content[i].id].ceiling);
+    if (candidates.length && rng.chance(chance)) node.content[rng.pick(candidates)].elite = true;
+  }
 // Enemies per main room: [min, max] by region (the templates carry the minimum; fillContent trims to the maximum).
 const ENEMY_CAP = { r1: [2, 3], r2: [3, 4], r3: [3, 4], r4: [3, 5], final: [4, 5] };
 // What a guarded plinth holds: the region's fixed token, or (a region without one) whatever the run still has to offer.
