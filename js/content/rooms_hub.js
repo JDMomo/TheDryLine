@@ -16,7 +16,8 @@ for(const c of [8,36,52,84,112]){
   fill(27,28,c-4,c+4,'#');                           // lintel
 }
 // ARRIVAL SHELTER / KEEPER bay.
-fill(26,26,57,72,'#'); fill(27,31,57,58,'#'); fill(27,31,71,72,'#');
+// The uprights stop above walking height: this must read as a canopy, never as a sealed starting box.
+fill(26,26,57,72,'#'); fill(27,29,57,58,'#'); fill(27,29,71,72,'#');
 put(31,61,'P'); put(31,65,'N');
 put(31,46,'?'); put(31,75,'?');
 

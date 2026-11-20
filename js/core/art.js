@@ -43,12 +43,14 @@ function paintedBackdrop(ctx, region, camX) {
   const dw = C.W + 150, dh = C.H + 84;
   const maxShift = dw - C.W, sx = -maxShift * 0.5 - Math.sin(camX * 0.00075) * maxShift * 0.34;
   ctx.save();
-  ctx.globalAlpha = region === 'hub' ? 0.56 : 0.64;
+  // The watercolor plate is the visual foundation, not a barely-visible texture.
+  // Hub is intentionally brightest so the first impression clearly differs from the old procedural backdrop.
+  ctx.globalAlpha = region === 'hub' ? 0.86 : 0.76;
   ctx.drawImage(img, sx, -42, dw, dh);
   const wash = ctx.createLinearGradient(0, 0, 0, C.H);
-  wash.addColorStop(0, 'rgba(5,10,10,0.28)');
-  wash.addColorStop(0.58, 'rgba(4,8,8,0.18)');
-  wash.addColorStop(1, 'rgba(2,5,5,0.56)');
+  wash.addColorStop(0, region === 'hub' ? 'rgba(8,12,11,0.08)' : 'rgba(5,10,10,0.18)');
+  wash.addColorStop(0.58, region === 'hub' ? 'rgba(5,9,8,0.06)' : 'rgba(4,8,8,0.12)');
+  wash.addColorStop(1, region === 'hub' ? 'rgba(2,5,5,0.30)' : 'rgba(2,5,5,0.42)');
   ctx.fillStyle = wash; ctx.fillRect(0, 0, C.W, C.H);
   ctx.restore();
   return true;
