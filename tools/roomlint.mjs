@@ -1,10 +1,10 @@
 /* Room validator for level designers.
-import { launchBrowser } from './lib/browser.mjs';
    node tools/roomlint.mjs <substring>              lint + traversal test for every room whose id contains the substring ('' or no argument: all rooms)
    node tools/roomlint.mjs r2_ --strict            main rooms: run and jump only (no slash, bounce or dash), both directions, every doorway and trunk reached
    node tools/roomlint.mjs r2_ --lint               lint only (no browser bot)
    node tools/roomlint.mjs r2_ --file my_rooms.js   load an extra script of G.defineRoom calls first (e.g. a draft that is not in index.html yet)
    One line per room; failures print what is wrong and where the bot got stuck. Exit code 1 if any room fails. */
+import { launchBrowser } from './lib/browser.mjs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import fs from 'fs';

@@ -1,9 +1,9 @@
 /* Visual sweep: contact sheets of every room (with its real enemies and props from generated worlds) and of every screen.
-import { launchBrowser } from './lib/browser.mjs';
    node tools/sheets.mjs                 writes tools/shots/rooms_<region>.png (half size), tools/shots/screens.png and tools/shots/palettes.png
    node tools/sheets.mjs --full <roomId> writes tools/shots/room_<roomId>.png at full size (use it to look closely)
    node tools/sheets.mjs --screens-full  writes every screen at full size to tools/shots/screen_<name>.png
    Rooms are drawn through the game's own G.rooms.draw, one 960 x 544 cell at a time, so what you see is what a player sees. */
+import { launchBrowser } from './lib/browser.mjs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import fs from 'fs';

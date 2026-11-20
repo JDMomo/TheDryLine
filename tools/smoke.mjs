@@ -1,10 +1,10 @@
 /* Headless smoke test. `node tools/smoke.mjs` runs every check in tools/checks; `node tools/smoke.mjs <name>` runs one.
-import { launchBrowser } from './lib/browser.mjs';
    Each check gets a fresh page of index.html and must drive the game only through G.debug (plus reading the public
    registries such as G.itemDefs). Any page error, console error or G.errors entry fails the check. Exits 1 on failure.
    Options: --serial (one browser, one check at a time), --jobs=N (browsers at once, default 4), --fast (skip checks that export
    `slow = true`: bosses_fair, perf), --bail (stop starting new checks after the first failure; used by tools/mutate.mjs).
    A check may export `shards` (an array of names): it then runs once per shard, in parallel, and receives `shard` in its arguments. */
+import { launchBrowser } from './lib/browser.mjs';
 import { readdirSync } from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
