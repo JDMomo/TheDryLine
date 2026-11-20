@@ -201,7 +201,7 @@ G.defineRoom({
     // Reward alcove and branch doorway are off the safe line rather than on it.
     fill(19,22,25,'='); put(18,23,'C');
     fill(22,4,8,'='); put(21,6,'D');
-    put(28,9,'E'); put(20,18,'F'); put(11,10,'F'); put(5,18,'F');
+    put(29,9,'E'); put(20,18,'F'); put(11,10,'F'); put(5,18,'F');
     G.defineRoom({id:'r2_shaft',region:'r2',kind:'main',h:2,route:['bottom','top'],map:g.map(x=>x.join('')),
       signs:['The lamps above are repeating the same departure code.']});
   }

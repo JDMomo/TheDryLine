@@ -148,4 +148,60 @@ G.defineRoom({
     WALL, WALL
   ]
 });
+
+/* ---------- Authored Salt Cutting campaign spine ---------- */
+(() => {
+  const wide=(id,build,signs=[])=>{
+    const W=60,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+    g[0].fill('#');g[15].fill('#');g[16].fill('#');
+    for(let r=0;r<H;r++)if(r<12||r>14){g[r][0]='#';g[r][W-1]='#';}
+    const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+    const put=(r,c,ch)=>g[r][c]=ch;
+    build({g,fill,put,W,H});
+    G.defineRoom({id,region:'r3',kind:'main',w:2,map:g.map(x=>x.join('')),signs});
+  };
+
+  // 1. Brine Flats — readable introduction to slippery salt. Salt sits over permanent floor, so Wet never creates a death trap.
+  wide('r3_brines',({fill,put})=>{
+    fill(14,14,5,15,'s'); fill(14,14,22,33,'s'); fill(14,14,41,52,'s');
+    fill(12,14,17,19,'#'); fill(13,14,35,37,'#');
+    fill(10,10,9,15,'='); fill(9,9,26,32,'='); fill(10,10,44,50,'=');
+    put(13,12,'E'); put(13,29,'E'); put(13,47,'E');
+    put(14,56,'D'); put(13,5,'?');
+  },['Salt keeps the shape of the vanished sea better than stone does.']);
+
+  // 2. Salt Trestle — low safe salt line, exposed crumble rail above, independent spring survey pocket.
+  wide('r3_trestle',({fill,put})=>{
+    fill(14,14,4,14,'s'); fill(14,14,18,28,'s'); fill(14,14,33,44,'s');
+    fill(13,14,15,17,'#'); fill(13,14,29,31,'#'); fill(13,14,45,47,'#');
+    fill(11,11,7,13,'='); fill(9,9,16,22,'='); fill(10,10,24,25,'c');
+    fill(8,8,28,34,'='); fill(10,10,37,38,'c'); fill(11,11,41,48,'=');
+    put(15,53,'j'); fill(9,9,51,57,'='); put(8,54,'C');
+    put(13,10,'E'); put(13,26,'E'); put(13,42,'E');
+    put(14,56,'D'); put(14,4,'?');
+  },['The old survey rail crosses the cutting where the sea floor cracked first.']);
+
+  // 3. Crystal Terraces — a broad stepped room where low salt and high stable shelves weave around each other.
+  wide('r3_terraces',({fill,put})=>{
+    fill(14,14,5,12,'s'); fill(13,14,16,20,'#'); fill(12,14,24,28,'#'); fill(11,14,32,36,'#'); fill(13,14,42,46,'#');
+    // Crystal-like salt shelves are solid, but each has a stable stone landing beside it.
+    fill(10,10,8,14,'s'); fill(9,9,18,24,'s'); fill(8,8,28,34,'s'); fill(9,9,38,44,'s'); fill(10,10,48,54,'s');
+    fill(11,11,13,16,'='); fill(10,10,23,26,'='); fill(9,9,33,36,'='); fill(10,10,43,46,'=');
+    // Mirage territory: generous recovery floor around every ambush point.
+    put(13,11,'E'); put(12,19,'E'); put(10,35,'E'); put(13,48,'E');
+    put(14,56,'D'); put(13,5,'?');
+  },['Nine days from tide mark to dry rail. The survey crew numbered each new shelf.']);
+
+  // 4. Salt Spire — combines salt footing, crumble transfers and a spring bypass before the Switchman.
+  wide('r3_spire',({fill,put})=>{
+    fill(14,14,4,12,'s'); fill(13,14,15,18,'#'); fill(12,14,22,25,'#'); fill(11,14,29,32,'#'); fill(12,14,36,39,'#'); fill(13,14,44,47,'#');
+    fill(10,10,8,14,'='); fill(8,8,17,23,'='); fill(9,9,25,26,'c'); fill(7,7,30,36,'='); fill(9,9,39,40,'c'); fill(10,10,43,50,'=');
+    put(15,28,'j'); // optional central launch straight to the high line
+    // A dissolvable salt cache is off-route and never required.
+    fill(7,9,52,53,'s'); fill(10,10,51,55,'='); put(9,55,'C');
+    put(13,10,'E'); put(11,24,'E'); put(13,43,'E'); put(8,34,'F');
+    put(14,56,'D'); put(14,5,'?');
+  },['SWITCH APPROACH — route conflict remains unresolved.']);
+})();
+
 })();
