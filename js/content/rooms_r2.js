@@ -42,16 +42,24 @@ function exits(g, left, right) {
   G.defineRoom({ id: 'r2_shelves', region: 'r2', kind: 'main', map: done(g) });
 })();
 
-// The Lamp Shaft: a narrow lit chimney, two cells tall. Climb the alternating shelves to the doorway at the top (the exits are in the bottom hall).
+// The Lamp Shaft: a true two-screen vertical route. It enters from below and leaves through the roof.
+// Alternating shelves make the required climb possible with base movement in either direction; Wall Grip is a faster straight-line option.
+// A branch doorway sits on the left shelf, while the lost trunk is an optional jump into the right-hand maintenance pocket.
 (() => {
-  const g = blank(1, 2), b = 17;
-  fill(g, 1, 27, 1, 9, '#'); fill(g, 1, 27, 20, 28, '#');           // shaft walls above the hall
-  for (const r of [12, 13, 14]) { g[b + r][0] = '.'; g[b + r][29] = '.'; }
-  put(g, 29, 10, 13, '='); put(g, 26, 16, 19, '='); put(g, 23, 10, 13, '='); put(g, 20, 16, 19, '=');
-  put(g, 17, 10, 13, '='); put(g, 14, 16, 19, '='); put(g, 11, 10, 13, '='); put(g, 8, 16, 19, '='); put(g, 5, 10, 13, '=');
-  mark(g, 4, 11, 'D'); mark(g, 4, 13, 'C');
-  mark(g, 22, 11, 'E'); mark(g, 25, 17, 'F'); mark(g, 13, 17, 'F'); mark(g, 31, 24, 'E');
-  G.defineRoom({ id: 'r2_shaft', region: 'r2', kind: 'main', h: 2, map: done(g) });
+  const g = blank(1, 2);
+  fill(g, 1, 31, 1, 5, '#'); fill(g, 1, 31, 24, 28, '#');          // coral walls: broad enough to read as a shaft, room in the middle to cross
+  for (let c = 14; c <= 16; c++) { g[0][c] = '.'; for (let r = 30; r < 34; r++) g[r][c] = '.'; }  // top and bottom route ports
+
+  // Safe stair: every rise is <= 3 tiles. One-way shelves make the downward trip a controlled drop rather than a dead end.
+  for (const [r, c0, c1] of [[29,8,12],[27,15,19],[24,8,12],[21,15,19],[18,8,12],[15,15,19],[12,7,12],[9,15,19],[6,8,12],[3,13,17]])
+    put(g, r, c0, c1, '=');
+
+  // Optional reward pocket: a committed lateral jump off the safe stair, then back.
+  put(g, 18, 19, 23, '='); mark(g, 17, 21, 'C');
+  mark(g, 11, 9, 'D');
+  mark(g, 28, 10, 'E'); mark(g, 23, 17, 'F'); mark(g, 14, 11, 'F'); mark(g, 8, 17, 'F');
+
+  G.defineRoom({ id: 'r2_shaft', region: 'r2', kind: 'main', h: 2, route: ['bottom', 'top'], map: done(g) });
 })();
 
 // The Gull Roost: a bed of spikes under a coral roost where gulls perch; hop the shelves over it. A trunk lies on the roost.

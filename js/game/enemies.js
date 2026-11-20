@@ -81,7 +81,9 @@ class Enemy {
     this.flash -= dt; this.t -= dt * this.aggro; this.kbT -= dt;
     def.update(this, dt);
     if (def.gravity !== false) this.vy = Math.min(this.vy + 1800 * dt, 900);
-    const mvx = this.vx * this.aggro + (this.kbT > 0 ? this.kbV : 0);
+    const surface = this.onGround ? tiles.surfaceUnder(this) : '.', belt = this.onGround ? tiles.conveyor(this) : 0;
+    const terrainMove = surface === 'm' ? 0.65 : 1;
+    const mvx = (this.vx * this.aggro + (this.kbT > 0 ? this.kbV : 0)) * terrainMove + belt * 105;
     if (def.collide !== false) {
       const res = tiles.moveBox(this, mvx * dt, this.vy * dt);
       this.onGround = res.hy === 1; this.hitWall = res.hx; if (res.hy) this.vy = 0;

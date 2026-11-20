@@ -116,6 +116,7 @@ G.defineRoom({
 G.defineRoom({
   id: 'r1_dock', region: 'r1', kind: 'main', w: 2,
   map: paint(2, false, ({ put, fill }) => {
+    put(15, 4, 'mmmmmm');                     // sucking quay mud: safe, but slower than the dry deck
     fill(12, 14, 12, 16, '#');                // first wreck, 3 high
     put(15, 24, '^^^^^^^^^^');                // trench, cols 24 to 33
     fill(12, 14, 21, 23, '#');                // lip before the trench
@@ -125,6 +126,7 @@ G.defineRoom({
     put(7, 29, 'C');
     put(14, 8, 'E');
     put(11, 13, 'E');
+    put(15, 40, 'mmmmmmmm');                  // another muddy low lane; the plank route above stays fast
     put(14, 44, 'E');
     put(14, 52, 'D');
     put(11, 41, '~');

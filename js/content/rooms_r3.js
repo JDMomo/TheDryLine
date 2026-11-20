@@ -37,6 +37,8 @@ const out = g => g.map(r => r.join(''));
 {
   const g = mk(1);
   fill(g, 13, 15, 8, 13, '#'); fill(g, 11, 15, 14, 19, '#');
+  fill(g, 13, 13, 8, 13, 's'); fill(g, 11, 11, 14, 19, 's');       // exposed salt crust: fast but slippery; Wet erodes the top layer
+  fill(g, 15, 15, 3, 7, 's'); fill(g, 15, 15, 24, 27, 's');       // low salt shelves bookend the safer stepped route
   fill(g, 15, 15, 22, 23, '^'); fill(g, 12, 12, 20, 22, '=');   // a step so the 4-tile terrace face can be climbed from the right
   put(g, 10, 15, 'C'); put(g, 12, 10, 'E'); put(g, 10, 18, 'E'); put(g, 14, 21, 'E'); put(g, 14, 27, 'D'); put(g, 2, 7, 'L');
   G.defineRoom({ id: 'r3_terraces', region: 'r3', kind: 'main', map: out(g) });
