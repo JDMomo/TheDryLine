@@ -220,19 +220,26 @@ export function pageTraverse(spec) {
     return dist;
   };
 
-  // --- state snapshot and restore (the engine is deterministic: a player's own numbers are its whole state here)
+  // --- state snapshot and restore. Dynamic terrain (crumble/vent timing) is part of search state too.
   const KEYS = Object.keys(P()).filter(k => typeof P()[k] === 'number' || typeof P()[k] === 'boolean');
   const snap = () => {
     const p = P(), o = {};
     for (const k of KEYS) o[k] = p[k];
     o.slash = p.slash ? JSON.parse(JSON.stringify(p.slash)) : null;
     o.held = Object.assign({}, p.in.held); o.forced = Object.assign({}, p.in.forced);
+    o.time = G.time; o.runTime = G.run.time;
+    o.terrain = JSON.parse(JSON.stringify((G.rooms.current && G.rooms.current.terrain) || { crumble: {} }));
     return o;
   };
   const restore = o => {
     const p = P();
     for (const k of KEYS) p[k] = o[k];
     p.slash = o.slash ? JSON.parse(JSON.stringify(o.slash)) : null;
+    G.time = o.time; G.run.time = o.runTime;
+    if (G.rooms.current) {
+      G.rooms.current.terrain = JSON.parse(JSON.stringify(o.terrain));
+      G.tiles.terrain = G.rooms.current.terrain;
+    }
     for (const a in p.in.pressed) p.in.pressed[a] = false;
     for (const a in p.in.forced) delete p.in.forced[a];
     Object.assign(p.in.forced, o.forced); Object.assign(p.in.held, o.held);
@@ -258,6 +265,7 @@ export function pageTraverse(spec) {
     setAbil();
     const p = P(); p.hp = p.maxHp; p.down = false; p.inv = 0; p.stun = 0; p.dashCd = 0;
     G.run.rooms[nid].enemies.length = 0;
+    G.run.rooms[nid].terrain = { crumble: {} }; G.tiles.terrain = G.run.rooms[nid].terrain;
     // Heavy Cut is modelled as "can break cracked barriers" (the bot has no heavy slash; the unlocks check drives a real one)
     if (abil.includes('heavy')) for (const pr of G.run.rooms[nid].props) if (pr.type === 'crack') G.props.TYPES.crack.hit(pr, true);
   };
