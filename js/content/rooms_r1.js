@@ -64,34 +64,63 @@ G.defineRoom({
   })
 });
 
-// 3. A turnstile corridor: low roof, a threshold block to jump, shields facing you.
+// 3. Arrival Gangway — authored onboarding, two screens wide.
+// SCREEN 1 is intentionally calm: room to move, a one-tile hop, then one readable Strider in open ground.
+// SCREEN 2 introduces Wreck Quay's route language: mud is the slow safe floor while a short upper plank line stays clean.
+// No spike pit, no crumble, no spring and no mandatory side room: the player learns the verbs before the line asks for execution.
 G.defineRoom({
-  id: 'r1_gangway', region: 'r1', kind: 'main',
-  map: paint(1, false, ({ put, fill }) => {
-    fill(1, 9, 1, 28, '#');                   // roof of the corridor (rows 10 to 14 stay open)
-    fill(14, 14, 14, 15, '#');                // onboarding threshold: one-tile hop under the low roof
-    put(14, 10, 'E');
-    put(14, 19, 'E');
+  id: 'r1_gangway', region: 'r1', kind: 'main', w: 2,
+  signs: ['WRECK QUAY — PASSENGER PRIORITY. Freight markings remain beneath the evacuation chalk.'],
+  map: paint(2, false, ({ put, fill }) => {
+    // Arrival shelter: a low but generous roof frames the first twenty tiles without restricting the jump arc.
+    fill(2, 6, 3, 17, '#');
+    put(10, 5, '===========');                 // old awning/catwalk; optional, not required
+    fill(14, 14, 18, 19, '#');                // first one-tile threshold
+    put(14, 11, '?');
+
+    // First enemy gets a whole flat lane to itself. Intro rules force this to the basic Strider job.
     put(14, 23, 'E');
-    put(14, 27, 'D');
-    put(14, 10, '~');
+
+    // First regional terrain lesson: the floor remains safe, mud merely slows.
+    put(15, 28, 'mmmmmmmm');
+    put(11, 29, '======');                    // clean upper bypass
+    fill(13, 14, 38, 40, '#');                // wreck rib step to/down from upper route
+
+    // Second encounter only after the player has crossed the terrain lesson.
+    put(14, 43, 'E');
+    put(10, 42, '========');                  // observation plank / readable upper line
+    fill(13, 14, 52, 54, '#');                // broken buffer before the exit
   })
 });
 
-// 4. A climb over a wreck: up the stern, along the deck under a high plank, down the bow.
+// 4. Beached Deck — a two-screen ship-hull landmark.
+// The base route climbs onto the broken deck, crosses the open hold, then descends the bow.
+// A continuous upper mast/plank route is faster and carries the signal-trial doorway; falling from it returns to the safe deck.
 G.defineRoom({
-  id: 'r1_wreck', region: 'r1', kind: 'main',
-  map: paint(1, false, ({ put, fill }) => {
-    fill(13, 14, 7, 9, '#');                  // stern step, 2 high
-    fill(11, 14, 10, 19, '#');                // deck, 4 high (a jump from the stern step)
-    put(8, 13, '====');                       // plank above the deck
-    put(7, 15, 'C');
-    put(10, 12, 'E');                         // crab on the deck
-    fill(13, 14, 20, 22, '#');                // bow step, 2 high
-    put(14, 15, '~');
-    put(14, 25, 'E');
-    put(12, 24, '~');
-    put(14, 27, 'D');
+  id: 'r1_wreck', region: 'r1', kind: 'main', w: 2,
+  map: paint(2, false, ({ put, fill }) => {
+    // Stern ascent and broad deck: chunky ship silhouette, not a scatter of unrelated boxes.
+    fill(13, 14, 7, 10, '#');
+    fill(11, 14, 11, 18, '#');
+    fill(12, 14, 19, 34, '#');
+    fill(13, 14, 35, 38, '#');
+
+    // Open hold cut through the deck; safe floor remains below.
+    fill(12, 14, 24, 28, '.');
+    put(14, 26, 'E');
+
+    // Mast / upper traverse. Every gap is a plain running jump; falling returns to deck or floor.
+    put(8, 13, '======');
+    put(6, 21, '======');
+    put(8, 29, '======');
+    put(7, 34, 'D');                          // signal-mast access: authored parent for Dash trial
+    put(9, 38, '======');
+
+    // Bow descent and final open fight lane.
+    fill(12, 14, 42, 46, '#');
+    fill(14, 14, 47, 49, '#');
+    put(14, 45, 'E');
+    put(14, 53, 'E');
   })
 });
 
