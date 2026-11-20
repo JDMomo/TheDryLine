@@ -178,7 +178,7 @@ window.PT = (() => {
       let pastTake = e.dir > 0 ? p.x >= takeX - 3 : e.dir < 0 ? p.x <= takeX + 3 : Math.abs(dx) < 8;
       const K = PT.K; if (!K.app || Math.abs(K.app.x - p.x) > 2) K.app = { x: p.x, t: G.time }; else if (G.time - K.app.t > 0.5) pastTake = true;
       if (!pastTake || Math.abs(p.x - from.x) > 18) { face(dx); return 'approach'; }
-      PT.K.prog = { kind: 'jump', t0: G.time, hold: e.hold, air: e.air, dir: e.dir, ek: e.ek, expect: tx, x0: p.x, vx0: p.vx, take: takeX }; hold('jump'); if (e.dir) hold(e.dir < 0 ? 'left' : 'right'); PT.log.jumps++; return 'jump';
+      PT.K.prog = { kind: 'jump', t0: G.time, hold: Math.abs(tx.x - p.x) >= 90 ? Math.max(e.hold * 1.4, 0.33) : e.hold, air: e.air, dir: e.dir, ek: e.ek, expect: tx, x0: p.x, vx0: p.vx, take: takeX }; hold('jump'); if (e.dir) hold(e.dir < 0 ? 'left' : 'right'); PT.log.jumps++; return 'jump';
     }
     // fall: walk off the edge
     PT.K.prog = { kind: 'fall', t0: G.time, hold: 0, air: e.air, dir: e.dir, ek: e.ek, expect: tx }; face(e.dir); return 'fall';
@@ -524,11 +524,6 @@ window.PT = (() => {
     return danger;
   }
   function navigate(S, rk, mis, foeList, p, now) {
-    // Arriving through a bottom port puts the player over a hole in the floor: step sideways onto the nearest floor, as a person would.
-    if (!p.onGround && G.run.time - rk.enter < 1.6 && G.rooms.current.def.route && G.rooms.current.def.route[0] === 'bottom' && p.y > G.rooms.current.rows * T - 190) {
-      let bd = 0, bs = 0; for (const sd of [-1, 1]) for (let d = 16; d < 300; d += 16) if (G.tiles.solid(Math.floor((p.x + sd * d) / T), Math.floor((p.y + 20) / T)) || G.tiles.solid(Math.floor((p.x + sd * d) / T), Math.floor((p.y - 8) / T))) { if (!bs || d < bd) { bd = d; bs = sd; } break; }
-      hold(bs < 0 ? 'left' : 'right'); hold('jump'); return 'arrive:bottom';
-    }
     if (mis.hunt) {
       const f = foeList.slice().sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
       if (f) {
@@ -545,8 +540,8 @@ window.PT = (() => {
       const q = mis.portal, R = G.rooms.current, cols = R.cols, rows = R.rows;
       const inside = n => typeof n !== 'string' && (q.side === 'left' ? n.c <= 1 && n.r >= q.from - 1 && n.r <= q.to + 1 : q.side === 'right' ? n.c >= cols - 2 && n.r >= q.from - 1 && n.r <= q.to + 1 : q.side === 'top' ? n.r <= 4 && n.c >= q.from - 1 && n.c <= q.to + 1 : n.r >= rows - 5 && n.c >= q.from && n.c <= q.to);
       r = follow(inside, 'portal');
-      if (q.side === 'top' && Math.abs(p.x - ((q.from + q.to) / 2 * T + T / 2)) < 70 && p.y < 230) { if (p.onGround) { if (!PT.K.jT || now - PT.K.jT > 0.5) { tap('jump', 0.25); PT.K.jT = now; } hold('up'); } else { hold('jump'); hold('up'); } const mid = (q.from + q.to) / 2 * T + T / 2; if (Math.abs(p.x - mid) > 14) hold(p.x < mid ? 'right' : 'left'); }
-      if (r === 'there' || r === 'nopath') { if (q.side === 'left') hold('left'); else if (q.side === 'right') hold('right'); else if (q.side === 'top') { hold('up'); hold('jump'); const mid = (q.from + q.to) / 2 * T + T / 2; if (Math.abs(p.x - mid) > 14) hold(p.x < mid ? 'right' : 'left'); } else { const mid = (q.from + q.to) / 2 * T + T / 2; if (Math.abs(p.x - mid) > 20) hold(p.x < mid ? 'right' : 'left'); else hold('down'); } }
+      if (q.side === 'top' && Math.abs(p.x - ((q.from + q.to) / 2 * T + T / 2)) < 70 && p.y < 230) { if (p.onGround) { if (Math.floor(G.time / 0.35) % 2 === 0) hold('jump'); hold('up'); } else { hold('jump'); hold('up'); } const mid = (q.from + q.to) / 2 * T + T / 2; if (Math.abs(p.x - mid) > 14) hold(p.x < mid ? 'right' : 'left'); }
+      if (r === 'there' || r === 'nopath') { if (q.side === 'left') hold('left'); else if (q.side === 'right') hold('right'); else if (q.side === 'top') { hold('up'); const mid = (q.from + q.to) / 2 * T + T / 2; if (Math.abs(p.x - mid) > 14) hold(p.x < mid ? 'right' : 'left'); } else { const mid = (q.from + q.to) / 2 * T + T / 2; if (Math.abs(p.x - mid) > 20) hold(p.x < mid ? 'right' : 'left'); else hold('down'); } }
     } else if (mis.exit) {
       r = follow(goalExit(mis.exit), 'exit');
       if (r === 'there') holdExit(mis.exit);
@@ -568,6 +563,7 @@ window.PT = (() => {
     }
     if (r === 'nopath' || r === 'nonode') {
       PT.K.noTarget++;
+      if (mis.pr) { rk.tries = rk.tries || {}; rk.tries[mis.pr.k] = (rk.tries[mis.pr.k] || 0) + 0.05; }
       if (PT.K.noTarget > 40) { ev('no_path', { why: mis.why, at: [Math.round(p.x), Math.round(p.y)] }); PT.K.noTarget = 0; wiggle(p); }
     } else PT.K.noTarget = 0;
     return 'nav:' + (mis.why || '') + ':' + r;

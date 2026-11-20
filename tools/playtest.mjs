@@ -60,6 +60,13 @@ async function worker() {
     await page.evaluate(AUDIO_SAMPLER);
     await page.click('#start'); await sleep(300);
     await page.keyboard.press('KeyX'); await sleep(300);
+    if (args.start) {                                  // coverage setup (not input): begin in a region's first room (the Junction routes are tested separately with --region and no --start)
+      result.started = await page.evaluate(reg => { const f = G.run.graph.regions[reg].first; G.rooms.trans = null; G.rooms.enter(f, { side: 'left' }); return f; }, args.start);
+      await sleep(400);
+    }
+    if (args.give) {                                   // coverage setup (not input): carry one token per cut of a Warden's chart, to fight it armed
+      result.gave = await page.evaluate(reg => { const ch = G.run.chart[reg] || [], got = []; for (const cut of ch) { const id = Object.keys(G.itemDefs).find(k => G.itemDefs[k].cls === cut && !G.players[0].items.includes(k)); if (id && G.players[0].items.length < G.players[0].slots) { G.game.takeItem(G.players[0], id); got.push(id); } } return { chart: ch, got }; }, args.give === true ? (args.region || 'final') : args.give);
+    }
     result.startState = await page.evaluate(() => G.state);
     result.code = await page.evaluate(() => G.run && G.run.code);
     const held = new Set(); let lastStuckAt = -99, nDeaths = 0, last = {}, lastShot = 0, ticks = 0;
@@ -77,6 +84,7 @@ async function worker() {
       if (r.shot) await shot(r.shot);
       if (r.deaths > nDeaths) { nDeaths = r.deaths; await shot(`death${nDeaths}`); }
       if (r.stuck && r.rt - lastStuckAt > 12) { lastStuckAt = r.rt; const info = await page.evaluate(() => { const p = G.players[0]; return { room: G.rooms.current.id, def: G.rooms.current.def.id, x: Math.round(p.x), y: Math.round(p.y), onGround: p.onGround, mission: PT.mis && PT.mis.why, note: PT.lastNote, at: PT.mis && PT.mis.x !== undefined ? [Math.round(PT.mis.x), Math.round(PT.mis.y)] : null }; }); await page.evaluate(i => PT.log.stuck.push(Object.assign({ t: +G.run.time.toFixed(1), for: Math.round(PT.stuckFor) }, i)), info); await shot(`stuck${(await page.evaluate(() => PT.log.stuck.length))}`); }
+      if (args.leave && ticks % 30 === 0) { const rg = await page.evaluate(() => G.rooms.current.region); if (rg !== 'hub') { end = 'left-hub:' + rg; await shot('left_hub_' + rg); break; } }
       if (r.done) { end = r.over === 'win' ? 'win' : 'dead'; break; }
       if (r.state === 'over') { end = 'dead'; break; }
       if (r.rt > maxGame) { end = 'game-timeout'; break; }
