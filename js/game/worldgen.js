@@ -211,13 +211,19 @@ function balance(graph, rng, used, ctx) {
     const home = mains().find(n => spotsFor(n, 1, 2).length >= 6);
     for (let k = 0; k < 3; k++) if (!home || !addExtra(home, 'plinth', { ware: true }, 1, 2, rng)) { warn.push('kiosk ware missing'); break; }
   }
-  // standpipes: exactly 2, in the hub and in the last main room before the final arena
+  // Campaign service stops are authored pacing beats, not random economy sources.
+  // Keep the Junction, every declared region.serviceAt room, and the existing pre-Terminus stop.
+  // Regions without an authored sequence still fall back to the old generated-layout behaviour.
   const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), last = order.length && graph.regions[order[order.length - 1].id];
   const lastMain = last && graph.nodes[last.arena].exits.left && graph.nodes[last.arena].exits.left.to;
-  const wanted = [graph.hub, last && last.pipe ? last.pipe : lastMain];
+  const serviceNodes = order.flatMap(region => {
+    if (!region.serviceAt || !graph.regions[region.id]) return [];
+    const id = graph.regions[region.id].nodes.find(id => graph.nodes[id] && graph.nodes[id].def === region.serviceAt);
+    return id ? [id] : [];
+  });
+  const wanted = [...new Set([graph.hub, ...serviceNodes, last && last.pipe ? last.pipe : lastMain].filter(Boolean))];
   entries('H', 'standpipe').filter(e => !wanted.includes(e.n.id)).forEach(strip);
   for (const id of wanted) {
-    if (!id) continue;
     const n = graph.nodes[id];
     if (!entries('H', 'standpipe').some(e => e.n === n) && !addExtra(n, 'standpipe', {}, 1, 3, rng)) warn.push('no room for a standpipe in ' + id);
   }

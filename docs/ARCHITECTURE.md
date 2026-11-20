@@ -156,7 +156,7 @@ Copy the structure of `boss_r1.js` (it is commented line by line):
 `G.defineRoom({ id, region, kind, w, h, route, label, signs, map })`, `kind` one of `hub, main, branch, trial, arena`; `map` is `17 * h` strings of `30 * w` characters. G.defineRoom reports wrong widths, unknown characters, closed exits, a missing B or a wrong D count. Each region pool needs at least: 3 main rooms, 1 arena, 1 trial (if the region has an ability), 1 branch room with a guarded plinth. Main rooms have exactly one D. Run `node tools/roomlint.mjs <region>_`, then `node tools/smoke.mjs graph`, `walk` (crosses every region's chain on 5 seeds) and `fullrun`.
 
 ### Add or finish a region (js/content/regions.js)
-`G.defineRegion({ id, name, blurb, gate, boss, ability, fixedItem, enemies, flyers, ceiling, length, pool, palette })`. Every region now uses its own pool (`pool` = its id) and its own Warden (r1 tollkeeper, r2 lamp_heron, r3 switchman_idol, r4 gatewhale, final long_clock). Enemy lists follow bible section 5: `enemies` (ground, E), `flyers` (F), `ceiling` (L). The Terminus has `length: 2` (its pool holds four main rooms) and no `fixedItem`: only r1 to r4 have a guarded plinth. `palette` overrides `{ sky0, sky1, sky2, far, near, tile, side, edge, edgeHi, accent, spike }`. The hub needs one G per region.
+`G.defineRegion({ id, name, blurb, gate, boss, ability, fixedItem, enemies, flyers, ceiling, length, pool, palette, sequence, trialAt, ownAt, serviceAt })`. Every region now uses its own pool (`pool` = its id) and its own Warden (r1 tollkeeper, r2 lamp_heron, r3 switchman_idol, r4 gatewhale, final long_clock). Enemy lists follow bible section 5: `enemies` (ground, E), `flyers` (F), `ceiling` (L). The Terminus has `length: 2` (its pool holds four main rooms) and no `fixedItem`: only r1 to r4 have a guarded plinth. `palette` overrides `{ sky0, sky1, sky2, far, near, tile, side, edge, edgeHi, accent, spike }`. The hub needs one G per region.
 
 ### Add a prop type
 `G.props.TYPES.<name> = { draw(pr, ctx), update(pr, dt), interact(pr, player), prompt(pr, player) }` (only draw is required; a prop can be used with Up only while `prompt` returns `[title, line, hint]`). Placing it from a template needs a new character in rooms.js and worldgen.js: ask the engine lead.
@@ -200,3 +200,9 @@ The Junction is a three-screen authored hub: arrival shelter, central turntable,
 ## Campaign side-room policy
 
 Authored campaign regions do **not** populate spare doorway markers with shared random service closets. The Junction permanently hosts the ticket machine and kiosk; regional side doors are reserved for the movement trial, the region's guarded fixed-token room, or a deliberately authored story/reward space. The Terminus standpipe remains a shared template because it is a fixed pre-arena pacing stop. Generated/replay layouts can still use the shared branch pool.
+
+
+## Authored service stops
+
+A campaign region may set `serviceAt: '<main-room-id>'`. That room's standpipe is preserved by world balance as an intentional pacing beat. Authored service stops coexist with the Junction service and the fixed pre-Terminus stop; generated regions without `serviceAt` keep the older balancing behaviour. Wreck Quay currently uses `r1_wreck` after its landmark climb.
+

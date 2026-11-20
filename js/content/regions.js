@@ -10,7 +10,7 @@ Object.assign(G.title, { name: 'The Dry Line', tagline: 'Every Warden is open fr
   winText: 'The Long Clock stops', loseText: 'The line goes quiet' });
 
 G.defineRegion({ id: 'r1', name: 'Wreck Quay', blurb: 'Beached hulls, ribs and chains.', gate: 0, boss: 'tollkeeper', ability: 'dash', length: 4, introRoom: 'r1_gangway', landmark: 'r1_dock',
-  sequence: ['r1_gangway','r1_dock','r1_wreck','r1_tunnel'], trialAt:'r1_wreck', ownAt:'r1_tunnel',
+  sequence: ['r1_gangway','r1_dock','r1_wreck','r1_tunnel'], trialAt:'r1_wreck', ownAt:'r1_tunnel', serviceAt:'r1_wreck',
   fixedItem: 'pumice_crawler',
   enemies: ['ballast_crab', 'brine_spout', 'turnstile', 'sapper'], pool: 'r1',
   scale: { hp: 0.8, aggro: 0.85 },                                     // a gentle first region: 20% less health, a 15% slower tempo
