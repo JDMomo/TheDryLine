@@ -95,6 +95,23 @@ class Enemy {
   }
   update(dt) {
     const def = this.def;
+    // Authored encounter staging: a dormant enemy is visible but does not patrol/attack until a living player approaches.
+    // It still settles onto terrain, so dormant bodies never float or pop into existence.
+    if (this.wakeRange && !this.awake) {
+      const close = G.players.some(p => !p.down && Math.hypot(p.x - this.x, p.cy - (this.y - this.h / 2)) <= this.wakeRange);
+      if (!close) {
+        this.flash -= dt; this.kbT -= dt; this.vx = 0; this.harmless = true;
+        if (def.gravity !== false) this.vy = Math.min(this.vy + 1800 * dt, 900);
+        if (def.collide !== false) {
+          const res = tiles.moveBox(this, 0, this.vy * dt);
+          this.onGround = res.hy === 1; this.hitWall = res.hx; if (res.hy) this.vy = 0;
+        }
+        this.x = U.clamp(this.x, this.w / 2 + 2, tiles.cols * T - this.w / 2 - 2);
+        this.y = U.clamp(this.y, this.h + 2, tiles.rows * T);
+        return;
+      }
+      this.awake = true; this.harmless = this.dormantHarmless; this.targetUid = null; this.targetUntil = 0;
+    }
     this.flash -= dt; this.t -= dt * this.aggro; this.kbT -= dt;
     def.update(this, dt);
     if (def.gravity !== false) this.vy = Math.min(this.vy + 1800 * dt, 900);

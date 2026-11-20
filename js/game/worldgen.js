@@ -115,6 +115,15 @@ function fillContent(node, region, rng, used, ctx) {
   applyPlan('E', def.enemyPlan);
   applyPlan('F', def.flyerPlan);
   applyPlan('L', def.ceilingPlan);
+  // Optional proximity staging follows authored ground-enemy marker order. It changes only when AI wakes, never what spawns.
+  if (Array.isArray(def.wakePlan)) {
+    let n=0;
+    def.marks.forEach((m,i)=>{
+      if(m.ch!=='E')return;
+      const c=node.content[i], range=def.wakePlan[n++];
+      if(c&&c.type==='enemy'&&Number.isFinite(range)&&range>0)c.wakeRange=range;
+    });
+  }
 
   // One visibly overstamped machine may appear in later main rooms. Never put an elite in the region's onboarding room.
   if (def.kind === 'main' && node.id !== ctx.first) {
