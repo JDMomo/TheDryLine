@@ -1,6 +1,6 @@
 // Behaviour: what hurts the player and what it costs, driven by player input (setInput + step). The only setup is choosing a room and where to stand.
-//  - an enemy that overlaps the player costs exactly one health pip and grants invincibility: while the overlap goes on no second pip goes for about a second,
-//    then the next one does;
+//  - an active hostile contact body costs exactly one health pip and grants invincibility: while the overlap goes on no second pip goes for about a second,
+//    then the next one does. Patrol/recovery bodies may deliberately be harmless under the attack-contract rules;
 //  - a Warden's body hurts on contact (one pip, then invincibility);
 //  - spikes cost one pip and put the player back on safe ground (a run toward the pit from solid floor).
 export default async ({ page }) => {
@@ -8,19 +8,19 @@ export default async ({ page }) => {
     const D = G.debug, bad = [], ok = (c, m) => { if (!c) bad.push(m); };
     const P = () => D.state().players[0], T = G.C.T, M = G.C.MOVE;
     D.newRun(5); D.god(false);
-    // ---- enemy contact
-    let e = null;
-    for (const id of Object.keys(G.run.graph.nodes)) { D.gotoRoom(id); D.step(2); e = G.rooms.current.enemies.find(x => x.def.touch > 0 && !x.dead); if (e) break; }
-    ok(!!e, 'no room with an enemy found');
-    if (e) {
-      const max = P().maxHp, at = () => { e.x = P().x; e.y = P().y; e.vx = 0; e.vy = 0; e.hitWall = 0; };   // keep the enemy on top of the player (the setup of the overlap)
-      D.place(0, e.x, e.y); const hp0 = P().hp; D.step(1);
-      ok(P().hp === hp0 - 1, 'touching an enemy cost ' + (hp0 - P().hp) + ' pips, not 1');
-      ok(P().inv > 0.5, 'no invincibility after a hit: ' + P().inv);
+    // ---- hostile contact layer. Use a dedicated QA body so readability reworks may make patrol/recovery states harmless.
+    D.gotoRoom('r1'); D.step(2); G.rooms.current.enemies.length = 0;
+    if (!G.enemyDefs.qa_contact_hazard) G.defineEnemy({ id:'qa_contact_hazard', name:'QA contact', hp:999, w:28, h:30, touch:1, shards:[0,0], update(e){ e.vx=0; }, draw(){} });
+    const base=P(), e=new G.Enemy(G.enemyDefs.qa_contact_hazard, base.x+70, base.y); G.rooms.current.enemies=[e]; e.onGround=true;
+    {
+      const at = () => { e.x = G.players[0].x; e.y = G.players[0].y; e.vx = 0; e.vy = 0; e.hitWall = 0; e.onGround=true; };
+      D.place(0, e.x, e.y); at(); const hp0 = P().hp; D.step(1);
+      ok(P().hp === hp0 - 1, 'active hostile contact cost ' + (hp0 - P().hp) + ' pips, not 1');
+      ok(P().inv > 0.5, 'no invincibility after a hostile contact hit: ' + P().inv);
       let steps = 1;
-      for (; steps < 100; steps++) { G.players[0].x = e.x; G.players[0].y = e.y; D.step(1); }
+      for (; steps < 100; steps++) { at(); G.players[0].x=e.x; G.players[0].y=e.y; D.step(1); }
       ok(P().hp === hp0 - 1, 'a second pip went during the invincibility (hp ' + P().hp + ' of ' + hp0 + ' after ' + steps + ' steps)');
-      for (; steps < 260; steps++) { G.players[0].x = e.x; G.players[0].y = e.y; D.step(1); if (P().hp < hp0 - 1) break; }
+      for (; steps < 260; steps++) { at(); G.players[0].x=e.x; G.players[0].y=e.y; D.step(1); if (P().hp < hp0 - 1) break; }
       ok(P().hp === hp0 - 2, 'invincibility never ended: still overlapping after ' + steps + ' steps, hp ' + P().hp);
       ok(steps >= 100 && steps <= 200, 'invincibility ended after ' + steps + ' steps (expected about ' + Math.round(M.INV / G.C.STEP) + ')');
     }
@@ -71,5 +71,5 @@ export default async ({ page }) => {
     return bad;
   });
   if (res.length) throw new Error(res.slice(0, 5).join(' | '));
-  return 'enemy contact: one pip and invincibility; spikes: one pip and back on safe ground';
+  return 'hostile contact: one pip and invincibility; spikes: one pip and back on safe ground';
 };

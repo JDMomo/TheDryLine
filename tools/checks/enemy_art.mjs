@@ -29,8 +29,11 @@ export default async ({ page, shots }) => {
     }
 
     // 2. every state maps to a valid frame, across the whole of its timer
-    const STATES = { ballast_crab: ['idle'], brine_spout: [['idle', 1], ['wind', 0.6], ['spent', 0.35]], signal_gull: [['hover', 1], ['wind', 0.55], ['swoop', 1], ['hover', 1, 'swoop']],
-      handcar: [['roll', 0], ['wind', 0.65], ['dash', 1], ['rest', 0.9]], turnstile: [['walk', 0], ['turn', 0.5], ['walk', 0, 'blocked']] };
+    const STATES = { ballast_crab: [['patrol',0],['wind',0.38],['lunge',0.34],['recover',0.5]],
+      brine_spout: [['idle', 1], ['wind', 0.6], ['ventwind',0.42], ['spent', 0.72]],
+      signal_gull: [['hover', 1], ['wind', 0.55], ['swoop', 1], ['recover',0.48]],
+      handcar: [['roll', 0], ['wind', 0.65], ['dash', 1], ['rest', 0.9]],
+      turnstile: [['walk', 0], ['turn', 0.5], ['wind',0.55], ['charge',0.48], ['recover',0.72], ['walk', 0, 'blocked']] };
     const seen = {};
     for (const id of SKINNED) {
       const e = mk(id, 10), sk = G.enemySkins[id], d = G.enemyDefs[id]; seen[id] = new Set();
@@ -49,10 +52,11 @@ export default async ({ page, shots }) => {
       e.shieldHit = 0;
     }
     const hasF = (id, k) => seen[id].has(k);
+    for (const k of ['attack:0', 'attack:1', 'attack:2', 'attack:3', 'attack:4', 'attack:5']) { if (!hasF('ballast_crab', k)) bad('ballast_crab never shows ' + k); }
     for (const k of ['attack:0', 'attack:1', 'attack:2', 'attack:3', 'attack:4', 'attack:5']) { if (!hasF('brine_spout', k)) bad('brine_spout never shows ' + k); }
     for (const k of ['attack:0', 'attack:1', 'attack:2', 'attack:3', 'attack:4']) { if (!hasF('signal_gull', k)) bad('signal_gull never shows ' + k); }
     for (const k of ['attack:0', 'attack:1', 'attack:2', 'attack:3', 'attack:4', 'attack:5']) { if (!hasF('handcar', k)) bad('handcar never shows ' + k); }
-    for (const k of ['attack:0', 'attack:1', 'attack:3']) { if (!hasF('turnstile', k)) bad('turnstile never shows ' + k); }
+    for (const k of ['attack:0', 'attack:1', 'attack:2', 'attack:3', 'attack:4', 'attack:5']) { if (!hasF('turnstile', k)) bad('turnstile never shows ' + k); }
 
     // 3. the Scrapper's guard: held frame facing a player, a front slash is refused with a float and a spark, a back slash hurts
     {
@@ -60,7 +64,7 @@ export default async ({ page, shots }) => {
       const e = mk('turnstile', 15); e.face = 1; e.set('walk', 0); e.cool = 99; room.enemies.push(e);
       const p = G.players[0]; D.place(0, e.x + 60, e.y, -1); p.vx = 0;
       const sk = G.enemySkins.turnstile, g = G.enemyDefs.turnstile.skinFrame(e, sk);
-      if (g[0] !== 'attack' || g[1] !== 4) bad('scrapper should hold its guard frame facing a player: ' + g);
+      if (g[0] !== 'move') bad('scrapper should stay in its neutral move strip while merely guarding: ' + g);
       const hp = e.hp; G.combat.slashBy = { p, s: { dir: 'side' } }; e.damage(5, p.x); G.combat.slashBy = null;
       if (e.hp !== hp) bad('front slash got through the Scrapper');
       if (!G.fx.floaters.some(f => f.text === 'Blocked')) bad('no Blocked float');
@@ -123,11 +127,11 @@ export default async ({ page, shots }) => {
     cv.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;width:960px;height:360px;background:#1f3a3a';
     document.body.appendChild(cv); const ctx = cv.getContext('2d');
     const POSES = {
-      ballast_crab: [['idle', 0], ['idle', 0], ['idle', 0]],
+      ballast_crab: [['patrol', 0], ['wind', 0.38, 0.2], ['lunge', 0.34, 0.2]],
       brine_spout: [['idle', 1], ['wind', 0.6, 0.45], ['spent', 0.35, 0.34]],
       signal_gull: [['hover', 1], ['wind', 0.55, 0.3], ['swoop', 1, 0.4]],
       handcar: [['roll', 0], ['wind', 0.65, 0.35], ['dash', 1, 0.5]],
-      turnstile: [['walk', 0], ['turn', 0.5, 0.3], ['walk', 0, 0, true]]
+      turnstile: [['walk', 0], ['wind', 0.55, 0.25], ['charge', 0.48, 0.2, true]]
     };
     ctx.fillStyle = '#e9e2cf'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
     ['idle', 'wind-up (Scrapper: turn)', 'strike (Scrapper: blocked)'].forEach((t, i) => ctx.fillText(t, 160 + i * 320, 16));

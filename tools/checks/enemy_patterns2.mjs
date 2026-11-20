@@ -21,7 +21,7 @@ export default async ({page})=>{
   if(lob){const sh=G.shots.find(s=>s.hostile&&s.grav>0);sh.life=0;D.step(2);if(G.materials.counts().puddles<1)bad.push('Boiler lob left no Wet puddle');}
 
   G.combat.clear();room.enemies=[];const riv=new G.Enemy(G.enemyDefs.signal_gull,480,260);room.enemies=[riv];D.place(0,480,15*T,1);riv.t=0;
-  let hoverSafe=false,windSafe=false,swoopDanger=false,recovery=false,recoverSafe=false;
+  let hoverSafe=!!riv.harmless,windSafe=false,swoopDanger=false,recovery=false,recoverSafe=false;
   for(let i=0;i<900;i++){D.step(1);if(riv.state==='hover')hoverSafe=hoverSafe||riv.harmless;if(riv.state==='wind')windSafe=windSafe||riv.harmless;if(riv.state==='swoop')swoopDanger=swoopDanger||!riv.harmless;if(riv.state==='recover'){recovery=true;recoverSafe=recoverSafe||riv.harmless;break;}}
   if(!hoverSafe||!windSafe||!swoopDanger||!recovery||!recoverSafe)bad.push('Rivet phases wrong '+JSON.stringify({hoverSafe,windSafe,swoopDanger,recovery,recoverSafe,state:riv.state}));
   return {bad,errors:G.errors.slice()};

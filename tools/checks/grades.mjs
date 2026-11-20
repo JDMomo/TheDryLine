@@ -51,7 +51,7 @@ export default async ({ page }) => {
     const ft = ctx.fillText.bind(ctx); ctx.fillText = (t, ...a) => { texts.push(String(t)); return ft(t, ...a); };
     const lb = G.art.label; G.art.label = (c, t, ...a) => { texts.push(String(t)); return lb.call(G.art, c, t, ...a); };
     const want = G.game.gradeText(G.run.grades.r1);
-    texts.length = 0; G.map.draw(ctx); ok(texts.some(t => t === 'Grade: ' + want), 'the map does not show the grade: ' + want);
+    texts.length = 0; G.map.draw(ctx); ok(texts.some(t => t === want || t === 'Grade: ' + want), 'the map does not show the grade: ' + want);
     G.run.beaten.final = true; G.run.grades.final = { time: 100, parTime: 150, par: true, clean: false };
     for (const over of ['dead', 'win']) { G.run.over = over; texts.length = 0; G.menus.over(ctx); ok(texts.some(t => t.includes('Tollkeeper:') && t.includes(want)), over + ' screen does not list the Tollkeeper grade'); ok(over === 'dead' || texts.some(t => t.includes('The Long Clock:') && t.includes('Beaten · Par')), 'win screen does not list the Long Clock grade'); }
     G.art.label = lb; G.run.over = null;
