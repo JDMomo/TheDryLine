@@ -77,11 +77,13 @@ tools/smoke.mjs, tools/checks/*.mjs   headless test harness (not shipped)
 ## Template characters (G.defineRoom)
 ```
 #  solid             .  empty             ^  spikes (hurt; a down slash bounces off)     =  one-way platform
+s  slippery salt crust (solid; Wet dissolves it)    m  mud (solid; slows movement)    >/<  conveyors (solid; push grounded bodies)
 E  ground enemy      F  flying enemy      L  ceiling enemy      I  plinth (a token)                             C  lost trunk (becomes a plinth when the room is clear)
 R  ticket machine    S  kiosk ware        K  clipping booth (unused: worldgen leaves it empty, no template has one)                              M  signal post (region's ability)
 H  standpipe         D  doorway           B  boss (arena)       G  region gate (hub)      ?  sign (text from signs[])    P  party start (hub)
 X  cracked barrier (guarded branch rooms): a wall 3 tiles tall on the marker's tile; only a heavy cut breaks it (prop `crack`, content type `crack`)
 ```
+- Terrain mutations are per live room instance: Wet puddles can dissolve `s` into empty space without changing the reusable room template.
 - A marker stands on the tile below it: put it in the empty tile directly above a floor. The exception is L: it needs no floor, only a solid ceiling above it in the same column (the enemy climbs to the first solid tile above the marker, so put it in the empty tile just under the ceiling, within 6 tiles). L spawns an enemy defined with `ceiling: true` (the Hanging Lamp), taken from the region's `ceiling` list; it drops when a player passes under it. R needs 2 free tiles each side, K needs 3 (they spawn choices).
 - Main rooms: `route: [entrySide, exitSide]` declares two route ports (`left`, `right`, `top`, `bottom`); omitted means `['left','right']`. Left/right use rows 12 to 14 of the bottom cell. A top/bottom port is one contiguous opening of at least 3 `.` tiles in that edge row. Required routes stay crossable both ways with base movement; Wall Grip/Double Jump may provide faster or reward routes without gating a Warden. About one D each.
 - Arena: open on the left edge at rows 12 to 14, one B. The boss door is the first column from the left whose row 11 is solid and rows 12 to 14 are open; the fight starts when a player is 2 tiles past it, the door closes (a blocker) and reopens when the boss dies. The fight floor runs from the door to the first solid tile right of B on B's row: that sets `b.minX / b.maxX`.

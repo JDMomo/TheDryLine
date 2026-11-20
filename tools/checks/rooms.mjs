@@ -2,7 +2,8 @@
    Lint runs in Node on the template text. The traversal runs inside the page: it drives player 1 only through G.debug
    (newRun, gotoRoom, setInput, step, place, probe) and searches over short input segments (beam search). Documented in docs/ARCHITECTURE.md. */
 
-const CHARS = '#.^=EFLICRSKMHDBG?PX';
+const CHARS = '#.^=sm<>EFLICRSKMHDBG?PX';
+const SOLID = '#sm<>'; 
 const GROUND = 'EICRSKMHDBGP?X';         // markers that stand on the tile below them
 const TARGETS = 'ICRSKMH';              // things a bot must be able to walk up to in branch and trial rooms
 const EXIT_ROWS = [12, 13, 14];
@@ -27,7 +28,7 @@ export function lintRoom(r, abilityIds) {
     grid.push(out);
   });
   const at = (c, y) => (y < 0 || y >= rows || c < 0 || c >= cols) ? '#' : grid[y][c];
-  const solid = (c, y) => at(c, y) === '#';
+  const solid = (c, y) => SOLID.includes(at(c, y));
   const count = ch => marks.filter(m => m.ch === ch).length;
   const loc = m => '(col ' + m.c + ', row ' + m.r + ')';
 
@@ -82,7 +83,7 @@ export function lintRoom(r, abilityIds) {
       const below = at(m.c, m.r + 1);
       if (m.r + 1 >= rows) err.push(m.ch + ' at ' + loc(m) + ' is on the last row');
       else if (below === '^') err.push(m.ch + ' at ' + loc(m) + ' stands on spikes');
-      else if (below !== '#' && below !== '=') err.push(m.ch + ' at ' + loc(m) + ' floats: no solid ground under it (tile below is empty)');
+      else if (!SOLID.includes(below) && below !== '=') err.push(m.ch + ' at ' + loc(m) + ' floats: no solid ground under it (tile below is empty)');
       if (solid(m.c, m.r - 1)) err.push(m.ch + ' at ' + loc(m) + ' is inside a wall: the tile above it is solid (no headroom)');
     } else if (m.ch === 'L') {
       let r = m.r - 1; while (r >= 0 && !solid(m.c, r)) r--;
@@ -207,7 +208,7 @@ export function pageTraverse(spec) {
   };
   const field = g => {
     const dist = new Float64Array(cols * rows).fill(Infinity), qu = [];
-    const open = (c, y) => c >= 0 && c < cols && y >= 0 && y < rows && def.grid[y][c] !== '#' && def.grid[y][c] !== '^';
+    const open = (c, y) => c >= 0 && c < cols && y >= 0 && y < rows && !'#sm<>^'.includes(def.grid[y][c]);
     for (const [c, y] of goalTiles(g)) if (open(c, y)) { dist[y * cols + c] = 0; qu.push(c, y); }
     for (let i = 0; i < qu.length; i += 2) {
       const c = qu[i], y = qu[i + 1], d = dist[y * cols + c];
@@ -286,15 +287,15 @@ export function pageTraverse(spec) {
     for (let k = 1; k < 20; k++) {
       const c = fc + dir * k;
       if (c < 0 || c >= cols) break;
-      if (at(c, fr) === '#' || at(c, fr - 1) === '#') {
-        let top = fr; while (at(c, top - 1) === '#' && top > 0) top--;
-        let flr = fr; while (flr < rows && at(fc, flr) !== '#' && at(fc, flr) !== '=') flr++;      // floor under the player
+      if ('#sm<>'.includes(at(c, fr)) || '#sm<>'.includes(at(c, fr - 1))) {
+        let top = fr; while ('#sm<>'.includes(at(c, top - 1)) && top > 0) top--;
+        let flr = fr; while (flr < rows && !'#sm<>'.includes(at(fc, flr)) && at(fc, flr) !== '=') flr++;      // floor under the player
         const hgt = Math.max(1, flr - top);
         return 'a wall ' + hgt + ' tile' + (hgt > 1 ? 's' : '') + ' high at column ' + c + ' blocks the way ' + (dir > 0 ? 'right' : 'left') + ' (a base jump rises about 4 tiles)';
       }
-      let floor = false; for (let y = fr + 1; y <= fr + 3; y++) if (at(c, y) === '#' || at(c, y) === '=') { floor = true; break; }
+      let floor = false; for (let y = fr + 1; y <= fr + 3; y++) if ('#sm<>'.includes(at(c, y)) || at(c, y) === '=') { floor = true; break; }
       if (!floor) {
-        let wdt = 0; while (true) { const cc = c + dir * wdt; let f = false; for (let y = fr + 1; y <= fr + 3; y++) if (at(cc, y) === '#' || at(cc, y) === '=') { f = true; break; } if (f || cc < 0 || cc >= cols) break; wdt++; if (wdt > 40) break; }
+        let wdt = 0; while (true) { const cc = c + dir * wdt; let f = false; for (let y = fr + 1; y <= fr + 3; y++) if ('#sm<>'.includes(at(cc, y)) || at(cc, y) === '=') { f = true; break; } if (f || cc < 0 || cc >= cols) break; wdt++; if (wdt > 40) break; }
         return 'a gap or pit ' + wdt + ' tile' + (wdt > 1 ? 's' : '') + ' wide starts at column ' + c + ' (a base jump carries about 6)';
       }
     }
