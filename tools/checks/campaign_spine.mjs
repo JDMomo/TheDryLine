@@ -5,7 +5,7 @@ const PLAN={
   r1:{seq:['r1_gangway','r1_dock','r1_wreck','r1_tunnel'],trial:'r1_wreck',own:'r1_tunnel'},
   r2:{seq:['r2_spire','r2_shaft','r2_roost','r2_tower'],trial:'r2_shaft',own:'r2_tower'},
   r3:{seq:['r3_brines','r3_trestle','r3_terraces','r3_spire'],trial:'r3_trestle',own:'r3_spire'},
-  r4:{seq:['r4_concourse','r4_switchyard','r4_booths','r4_gateline'],trial:'r4_switchyard',own:'r4_gateline'},
+  r4:{seq:['r4_concourse','r4_booths','r4_switchyard','r4_gateline'],trial:'r4_switchyard',own:'r4_gateline'},
   final:{seq:['final_buffers','final_vents','final_gearworks']}
 };
 export default async({page})=>{
