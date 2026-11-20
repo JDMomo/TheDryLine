@@ -15,6 +15,40 @@ const BASE_PALETTE = {
 addEventListener('keydown', e => { if (e.code === 'F2' && !e.repeat) { e.preventDefault(); G.artTest = !G.artTest; } });
 const hash1 = (i, s) => Math.abs(Math.sin(i * 12.9898 + s) * 43758.5453) % 1;
 
+const bgLine = (ctx,x0,y0,x1,y1,col,w=3,a=0.5) => { ctx.globalAlpha=a; ctx.strokeStyle=col; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); ctx.globalAlpha=1; };
+function regionScenery(ctx, region, pal, camX, time) {
+  const drift = -((camX * 0.16) % 260);
+  ctx.save();
+  if (region === 'r1') { // Wreck Quay: distant hulls and ribs, kept as quiet silhouettes.
+    ctx.globalAlpha=0.34; ctx.strokeStyle=pal.edge; ctx.lineWidth=5;
+    for(let i=-1;i<6;i++){ const x=drift+i*210; ctx.beginPath(); ctx.arc(x+90,360,78,Math.PI,Math.PI*2); ctx.stroke(); bgLine(ctx,x+20,360,x+160,360,pal.side,8,0.35); }
+    ctx.globalAlpha=0.18; ctx.fillStyle=pal.edgeHi; for(let i=0;i<8;i++) ctx.fillRect(((i*173-camX*0.08)%1100+1100)%1100-80,390+(i%3)*16,110,3);
+  } else if (region === 'r2') { // Signal Reef: coral forks and suspended lamps.
+    for(let i=-1;i<8;i++){ const x=drift+i*145, h=90+(i%4)*34; bgLine(ctx,x,430,x,430-h,pal.edge,5,0.32); bgLine(ctx,x,430-h*0.55,x-24,430-h*0.82,pal.edge,3,0.28); bgLine(ctx,x,430-h*0.7,x+30,430-h*0.95,pal.edge,3,0.28); }
+    ctx.globalAlpha=0.38; ctx.fillStyle=pal.accent; for(let i=0;i<6;i++){ const x=((i*197-camX*0.12)%1040+1040)%1040-40, y=120+(i%3)*72; ctx.fillRect(x-2,y,4,24); ctx.beginPath(); ctx.arc(x,y+28,5,0,6.283); ctx.fill(); } ctx.globalAlpha=1;
+  } else if (region === 'r3') { // Salt Cutting: layered white shelves and crystal teeth.
+    ctx.globalAlpha=0.24; ctx.fillStyle=pal.edge; for(let i=-1;i<6;i++){ const x=drift+i*230, h=55+(i%3)*34; ctx.beginPath(); ctx.moveTo(x,430); ctx.lineTo(x+28,430-h); ctx.lineTo(x+155,430-h+10); ctx.lineTo(x+205,430); ctx.closePath(); ctx.fill(); }
+    ctx.globalAlpha=0.28; ctx.fillStyle=pal.edgeHi; for(let i=0;i<10;i++){ const x=((i*121-camX*0.1)%1060+1060)%1060-40, y=360+(i%4)*13; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+7,y-22-(i%3)*8); ctx.lineTo(x+14,y); ctx.closePath(); ctx.fill(); } ctx.globalAlpha=1;
+  } else if (region === 'r4') { // Ticket Hall: repeated station arches and stopped clocks.
+    ctx.globalAlpha=0.28; ctx.strokeStyle=pal.edge; ctx.lineWidth=5;
+    for(let i=-1;i<6;i++){ const x=drift+i*205; ctx.beginPath(); ctx.moveTo(x,430); ctx.lineTo(x,250); ctx.quadraticCurveTo(x+78,170,x+156,250); ctx.lineTo(x+156,430); ctx.stroke(); }
+    ctx.globalAlpha=0.24; ctx.strokeStyle=pal.accent; ctx.lineWidth=2; for(let i=0;i<5;i++){ const x=((i*229-camX*0.09)%1100+1100)%1100, y=125+(i%2)*90; ctx.beginPath(); ctx.arc(x,y,20,0,6.283); ctx.stroke(); bgLine(ctx,x,y,x,y-12,pal.accent,2,0.24); bgLine(ctx,x,y,x+10,y+4,pal.accent,2,0.24); } ctx.globalAlpha=1;
+  } else if (region === 'final') { // Terminus: rails converging on the great clock.
+    ctx.globalAlpha=0.24; ctx.fillStyle=pal.near; ctx.fillRect(395,80,170,350);
+    ctx.strokeStyle=pal.accent; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(480,170,58,0,6.283); ctx.stroke();
+    bgLine(ctx,480,170,480,126,pal.accent,3,0.35); bgLine(ctx,480,170,520,184,pal.accent,3,0.35);
+    for(const y of [410,432]){ bgLine(ctx,-40,y,480,320,pal.edge,3,0.28); bgLine(ctx,1000,y,480,320,pal.edge,3,0.28); }
+    ctx.globalAlpha=1;
+  } else { // Junction: quiet turntable geometry and platform lamps.
+    ctx.globalAlpha=0.22; ctx.strokeStyle=pal.edge; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(480,430,280,Math.PI,Math.PI*2); ctx.stroke();
+    for(let i=0;i<7;i++){ const x=100+i*125; bgLine(ctx,x,430,x,260,pal.side,4,0.24); ctx.globalAlpha=0.3; ctx.fillStyle=pal.accent; ctx.beginPath(); ctx.arc(x,250,5,0,6.283); ctx.fill(); }
+    ctx.globalAlpha=1;
+  }
+  // Paper/wash grain: deterministic, faint and static in screen space so it reads like texture rather than particles.
+  ctx.fillStyle='#f3ead6'; for(let i=0;i<72;i++){ const x=hash1(i,19.7)*C.W, y=hash1(i,41.2)*C.H; ctx.globalAlpha=0.018+hash1(i,7.3)*0.022; ctx.fillRect(x,y,1+hash1(i,3.4)*2,1); }
+  ctx.globalAlpha=1; ctx.restore();
+}
+
 const art = G.art = {
   define(id, painter) { painters[id] = painter; },
   // opts: { x, y, w, h, face, anchor: 'feet' | 'center', ... anything the painter wants }.
@@ -79,7 +113,7 @@ const art = G.art = {
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   },
   // Screen-space background with two parallax layers and drifting motes.
-  backdrop(ctx, pal, camX, time) {
+  backdrop(ctx, pal, camX, time, region = 'hub') {
     const g = ctx.createLinearGradient(0, 0, 0, C.H);
     g.addColorStop(0, pal.sky0); g.addColorStop(0.6, pal.sky1); g.addColorStop(1, pal.sky2);
     ctx.fillStyle = g; ctx.fillRect(0, 0, C.W, C.H);
@@ -100,6 +134,8 @@ const art = G.art = {
       ctx.globalAlpha = 0.25 + 0.2 * Math.sin(time * 1.3 + i * 2.1); ctx.fillRect(x, y, 2, 2);
     }
     ctx.globalAlpha = 1;
+    regionScenery(ctx, region, pal, camX, time);
+    const vg=ctx.createLinearGradient(0,0,0,C.H); vg.addColorStop(0,'rgba(0,0,0,0.18)'); vg.addColorStop(0.18,'rgba(0,0,0,0)'); vg.addColorStop(0.82,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.28)'); ctx.fillStyle=vg; ctx.fillRect(0,0,C.W,C.H);
   },
   // World-space tiles of the current room.
   tiles(ctx, pal) {
@@ -113,6 +149,12 @@ const art = G.art = {
         if (r > 0 && grid[r - 1][c] !== '#') {
           ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 4); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
           if ((c * 7 + r) % 3 === 0) { ctx.fillStyle = pal.edge; ctx.fillRect(x + 6, y - 3, 2, 3); ctx.fillRect(x + 19, y - 4, 2, 4); }
+          const reg=G.rooms&&G.rooms.current&&G.rooms.current.region;
+          if(reg==='r1' && (c+r)%4===0){ ctx.fillStyle=pal.edgeHi; ctx.globalAlpha=.45; ctx.fillRect(x+8,y+7,3,3); ctx.fillRect(x+22,y+7,3,3); ctx.globalAlpha=1; }
+          else if(reg==='r2' && (c+r)%3===0){ ctx.strokeStyle=pal.edgeHi; ctx.globalAlpha=.35; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x+9,y+4); ctx.lineTo(x+6,y-5); ctx.moveTo(x+22,y+4); ctx.lineTo(x+26,y-7); ctx.stroke(); ctx.globalAlpha=1; }
+          else if(reg==='r3' && (c+r)%3===0){ ctx.fillStyle=pal.edgeHi; ctx.globalAlpha=.38; ctx.beginPath(); ctx.moveTo(x+7,y+4); ctx.lineTo(x+12,y-5); ctx.lineTo(x+16,y+4); ctx.fill(); ctx.globalAlpha=1; }
+          else if(reg==='r4' && c%3===0){ ctx.fillStyle=pal.edgeHi; ctx.globalAlpha=.32; ctx.fillRect(x+4,y+7,24,2); ctx.globalAlpha=1; }
+          else if(reg==='final' && (c+r)%4===0){ ctx.strokeStyle=pal.edgeHi; ctx.globalAlpha=.28; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(x+16,y+14,7,0,6.283); ctx.stroke(); ctx.globalAlpha=1; }
         }
         ctx.fillStyle = pal.side;
         if (c > 0 && grid[r][c - 1] !== '#') ctx.fillRect(x, y, 2, T);

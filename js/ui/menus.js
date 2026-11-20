@@ -92,7 +92,7 @@ G.menus = {
     }
   },
   title(ctx) {
-    art.backdrop(ctx, art.palette('hub'), G.time * 12, G.time);
+    art.backdrop(ctx, art.palette('hub'), G.time * 12, G.time, 'hub');
     ctx.fillStyle = 'rgba(6,11,11,0.6)'; ctx.fillRect(0, 0, W, H);
     art.label(ctx, G.title.name && G.title.name !== 'Untitled' ? G.title.name : 'The Dry Line', W / 2, 62, 54, '#e9a23b', 'center', C.DISPLAY, 600);
     art.label(ctx, premise, W / 2, 106, 14, '#e9e2cf');
