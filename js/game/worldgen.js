@@ -259,8 +259,9 @@ function balance(graph, rng, used, ctx) {
   // the hub's three signs
   const hub = graph.nodes[graph.hub], hubDef = G.roomDefs[hub.def], pc = (hubDef.marks.find(m => m.ch === 'P') || { c: 14 }).c;
   for (let k = hub.signsPlaced || 0; k < HUB_SIGNS.length; k++) if (!addExtra(hub, 'sign', { text: HUB_SIGNS[k] }, 0, 1, rng, pc)) warn.push('no room for hub sign ' + (k + 1));
-  // the lock chart board stands behind the party's start, between the gates
-  (hub.extras || (hub.extras = [])).push({ type: 'board', data: {}, c: 17, r: 7, x: 17 * T + T / 2, y: 7 * T + 16 });
+  // The Route Board is an authored destination on the Junction's high clock balcony.
+  // Its bottom edge sits just above the row-13 one-way platform so a standing player can inspect it.
+  (hub.extras || (hub.extras = [])).push({ type: 'board', data: {}, c: 59, r: 13, x: 59 * T + T / 2, y: 13 * T + 16 });
   return warn;
 }
 
