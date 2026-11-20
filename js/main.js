@@ -48,13 +48,13 @@ function step(dt) {
     G.rooms.update(dt); G.fx.update(dt); G.tips.update(dt); G.game.checkEnd();
     if (run.over) { run.overT += dt; if (run.overT > 1.4) G.state = 'over'; }
     else if (inHub ? (hubPause(dt) || (pr.pause && !G.players.some(p => p.in.held.pause))) : pr.pause) { G.state = 'pause'; G.menus.open(G.input.pauseDev() || (G.players[0] && G.players[0].in.dev)); }
-    else if (pr.map) G.state = 'map';
+    else if (pr.map) { G.state = 'map'; if (G.map.open) G.map.open(); }
   }
   else if (G.state === 'pause') {
     for (const p of G.players) { p.leaveT = 0; p.leftNow = !!p.in.held.pause; }          // a Pause press that closes the menu must not count again as a hold in the Junction
     checkLost(); if (G.state === 'pause') G.menus.pauseStep(pr);
   }
-  else if (G.state === 'map') { if (pr.map || pr.pause) G.state = 'play'; }
+  else if (G.state === 'map') { if (pr.map || pr.pause) G.state = 'play'; else if (G.map.step) G.map.step(pr); }
   else if (G.state === 'over') { if (pr.jump) { G.game.newRun(); G.state = 'play'; } }
   G.input.endStep();
 }

@@ -63,7 +63,16 @@ function sideRoom(run, bn, letter) {
   return parts;
 }
 
+const UndefSafeNote=(n,len)=>Math.max(0,Math.min(len-1,Number.isFinite(n)?n:len-1));
+
 G.map = {
+  note: 0,
+  open() { const n=G.story?G.story.notes().length:0; G.map.note=Math.max(0,n-1); },
+  step(pr) {
+    const n=G.story?G.story.notes().length:0;if(n<2)return;
+    if(pr.left)G.map.note=(G.map.note+n-1)%n;
+    else if(pr.right)G.map.note=(G.map.note+1)%n;
+  },
   draw(ctx) {
     const run = G.run, graph = run.graph, here = G.rooms.current.id;
     ctx.fillStyle = 'rgba(6,11,11,0.98)'; ctx.fillRect(0, 0, W, H);
@@ -140,12 +149,12 @@ G.map = {
       }
       inline(ctx, parts, X0, y + 63, W - 10, 9.5);
     });
-    const note=G.story&&G.story.latest();
+    const notes=G.story?G.story.notes():[], ni=notes.length?UndefSafeNote(G.map.note,notes.length):0, note=notes[ni];
     if(note) {
-      ctx.fillStyle='rgba(6,11,11,0.86)';ctx.fillRect(18,H-49,W-36,24);
-      art.label(ctx, 'Latest note — '+note.title+': '+note.text, W/2, H-37, 10, '#e9e2cf');
+      ctx.fillStyle='rgba(6,11,11,0.9)';ctx.fillRect(18,H-50,W-36,25);
+      art.label(ctx, (notes.length>1?'←  ':'')+'Note '+(ni+1)+'/'+notes.length+' — '+note.title+': '+note.text+(notes.length>1?'  →':''), W/2, H-37, 9.8, '#e9e2cf');
     }
-    art.label(ctx, 'Bright = visited   ·   outline = here   ·   arrows = room route   ·   diamond = Warden   ·   Tab to close', W / 2, H - 12, 10, '#9aa89f');
+    art.label(ctx, 'Bright = visited   ·   outline = here   ·   arrows = route   ·   diamond = Warden   ·   Left/Right notes   ·   Tab close', W / 2, H - 12, 9.7, '#9aa89f');
   }
 };
 })();
