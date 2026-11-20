@@ -208,13 +208,13 @@ G.defineRoom({
 
 Object.assign(G.roomDefs.r3_trial,{decor:[{type:'banner_decor',c:5,r:14},{type:'crate_decor',c:9,r:14},{type:'banner_decor',c:24,r:14}]});
 Object.assign(G.roomDefs.r3_hold,{decor:[{type:'crate_decor',c:5,r:14},{type:'banner_decor',c:20,r:5},{type:'crate_decor',c:25,r:5}]});
-Object.assign(G.roomDefs.r3_brines,{enemyPlan:['brine_toad','brine_spout','ballast_crab'],
+Object.assign(G.roomDefs.r3_brines,{enemyPlan:['brine_toad','brine_spout','ballast_crab'],wakePlan:[225,250,245],
   decor:[{type:'crate_decor',c:6,r:14},{type:'banner_decor',c:28,r:14},{type:'crate_decor',c:52,r:14}]});
-Object.assign(G.roomDefs.r3_trestle,{enemyPlan:['ballast_crab','mirage','brine_spout'],
+Object.assign(G.roomDefs.r3_trestle,{enemyPlan:['ballast_crab','mirage','brine_spout'],wakePlan:[230,245,260],
   decor:[{type:'banner_decor',c:6,r:14},{type:'crate_decor',c:30,r:14},{type:'crate_decor',c:55,r:14}]});
-Object.assign(G.roomDefs.r3_terraces,{enemyPlan:['mirage','brine_toad','mirage','ballast_crab'],
+Object.assign(G.roomDefs.r3_terraces,{enemyPlan:['mirage','brine_toad','mirage','ballast_crab'],wakePlan:[225,235,240,250],
   decor:[{type:'crate_decor',c:9,r:14},{type:'banner_decor',c:39,r:14}]});
-Object.assign(G.roomDefs.r3_spire,{enemyPlan:['mirage','brine_spout','brine_toad'],flyerPlan:['signal_gull'],
+Object.assign(G.roomDefs.r3_spire,{enemyPlan:['mirage','brine_spout','brine_toad'],flyerPlan:['signal_gull'],wakePlan:[230,250,250],flyerWakePlan:[265],
   decor:[{type:'banner_decor',c:8,r:14},{type:'crate_decor',c:47,r:14},{type:'banner_decor',c:56,r:14}]});
 delete G.roomDefs.r3_cutting; delete G.roomDefs.r3_pond;
 
