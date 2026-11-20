@@ -231,10 +231,14 @@ G.defineRoom({
 })();
 
 
-Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerPlan:['signal_gull']});
-Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull']});
-Object.assign(G.roomDefs.r2_roost,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','signal_gull','lamp_wisp','signal_gull']});
-Object.assign(G.roomDefs.r2_tower,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','lamp_wisp']});
+Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerPlan:['signal_gull'],
+  decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:26,r:14},{type:'lamp_decor',c:43,r:14},{type:'lamp_decor',c:56,r:14}]});
+Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull'],
+  decor:[{type:'lamp_decor',c:4,r:30},{type:'lamp_decor',c:25,r:22},{type:'lamp_decor',c:5,r:14},{type:'lamp_decor',c:24,r:7}]});
+Object.assign(G.roomDefs.r2_roost,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','signal_gull','lamp_wisp','signal_gull'],
+  decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:29,r:14},{type:'lamp_decor',c:53,r:14}]});
+Object.assign(G.roomDefs.r2_tower,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','lamp_wisp'],
+  decor:[{type:'banner_decor',c:7,r:14},{type:'lamp_decor',c:18,r:14},{type:'lamp_decor',c:42,r:14},{type:'banner_decor',c:55,r:14}]});
 // Superseded procedural-era mains are deliberately not part of the authored campaign/fallback pool.
 delete G.roomDefs.r2_shelves; delete G.roomDefs.r2_ledges;
 

@@ -119,9 +119,12 @@ G.defineRoom({
 })();
 
 
-Object.assign(G.roomDefs.final_buffers,{enemyPlan:['ballast_crab','mirage']});
-Object.assign(G.roomDefs.final_vents,{enemyPlan:['handcar','harvester'],flyerPlan:['signal_gull','lamp_wisp']});
-Object.assign(G.roomDefs.final_gearworks,{enemyPlan:['turnstile','sapper','mirage','harvester'],flyerPlan:['signal_gull']});
+Object.assign(G.roomDefs.final_buffers,{enemyPlan:['ballast_crab','mirage'],
+  decor:[{type:'banner_decor',c:6,r:14},{type:'lamp_decor',c:28,r:14},{type:'lamp_decor',c:53,r:14}]});
+Object.assign(G.roomDefs.final_vents,{enemyPlan:['handcar','harvester'],flyerPlan:['signal_gull','lamp_wisp'],
+  decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:30,r:14},{type:'lamp_decor',c:55,r:14}]});
+Object.assign(G.roomDefs.final_gearworks,{enemyPlan:['turnstile','sapper','mirage','harvester'],flyerPlan:['signal_gull'],
+  decor:[{type:'banner_decor',c:5,r:14},{type:'lamp_decor',c:18,r:14},{type:'lamp_decor',c:37,r:14},{type:'banner_decor',c:54,r:14}]});
 delete G.roomDefs.final_tower;
 
 })();
