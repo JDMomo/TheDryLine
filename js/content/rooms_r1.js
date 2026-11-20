@@ -74,7 +74,7 @@ G.defineRoom({
   decor:[{type:'crate_decor',c:7,r:14},{type:'crate_decor',c:15,r:14},{type:'banner_decor',c:19,r:14},{type:'crate_decor',c:49,r:14}],
   map: paint(2, false, ({ put, fill }) => {
     // Arrival shelter: a low but generous roof frames the first twenty tiles without restricting the jump arc.
-    fill(2, 6, 3, 17, '#');
+    fill(5, 6, 3, 17, '#');                   // (a two-row roof slab: the solid block above it read as a black void, playtest issue 7)
     put(10, 5, '===========');                 // old awning/catwalk; optional, not required
     fill(14, 14, 18, 19, '#');                // first one-tile threshold
     put(14, 11, '?');

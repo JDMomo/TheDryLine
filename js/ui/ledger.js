@@ -5,7 +5,7 @@
    line in js/main.js: G.ledgerUI.titleStep(pr) in the title step. Drawing never changes game state; only the options page writes (G.ledger.setOption). */
 (() => {
 'use strict';
-const G = window.G, C = G.C, art = G.art, W = C.W, H = C.H;
+const G = window.G, C = G.C, art = G.art, W = C.W, H = C.H, U = G.util;
 const L = G.ledger, CUTS = Object.keys(G.CLASSES);
 const INTRO_T = 8;                                           // seconds the card stays over the first view of the Junction
 const clock = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
@@ -60,13 +60,55 @@ const optsText = run => {
   return parts.length ? 'Options: ' + parts.join(', ') : '';
 };
 const hudDraw = G.hud.draw;
+// One message at a time (same rule as the tips): the card waits for the story banner and the room-name card, then stays INTRO_T seconds of free screen,
+// low in the middle of the view where no HUD label is.
+const intro = G.ledgerIntro = { run: null, left: 0, last: 0, shown: false };
 G.hud.draw = function (ctx) {
   hudDraw.apply(this, arguments);
-  const run = G.run;
-  if (G.state === 'play' && run && run.rule && !run.over && run.time < INTRO_T) {
-    ctx.save(); ctx.globalAlpha = Math.min(1, (INTRO_T - run.time) / 1.2, 0.2 + run.time / 0.4);
-    card(ctx, W / 2, 70, 620, run.rule, optsText(run) + (optsText(run) ? '   ·   ' : '') + 'Run code ' + run.code);
-    ctx.restore();
+  const run = G.run, room = G.rooms && G.rooms.current;
+  if (intro.run !== run) { intro.run = run; intro.left = INTRO_T; intro.last = G.time; intro.shown = false; }
+  intro.shown = false;
+  if (G.state === 'play' && run && run.rule && !run.over && room && intro.left > 0) {
+    const waiting = !!(G.fx && G.fx.banner) || (room.enterAt !== undefined && G.time - room.enterAt < 2.6) || G.tips.shown;
+    const dt = Math.min(0.1, Math.max(0, G.time - intro.last));
+    if (!waiting) {
+      intro.left -= dt; intro.shown = true;
+      ctx.save(); ctx.globalAlpha = Math.min(1, intro.left / 1.2, 0.2 + (INTRO_T - intro.left) / 0.4);
+      const o = optsText(run), w = 440, text = o ? o : 'Run code ' + run.code;
+      const lines = wrap(ctx, run.rule.text, 13, w - 28), h = 52 + lines.length * 17 + 20;
+      card(ctx, W / 2, G.C.H - 64 - h, w, run.rule, text);
+      ctx.restore();
+    }
+  }
+  intro.last = G.time;
+};
+
+// ---------------------------------------------------------------- objectives: why a lost trunk is shut, and which enemy is left
+// A trunk opens when the room is clear. While one is shut a line at the top says how many enemies are left; after 20 s in the room the last two
+// are marked with a ring (and an arrow at the screen edge when they are out of view), so a hunt is never a guessing game.
+G.objective = { text: '', marks: 0 };
+const hudObjective = G.hud.draw;
+G.hud.draw = function (ctx) {
+  hudObjective.apply(this, arguments);
+  const room = G.rooms && G.rooms.current, obj = G.objective; obj.text = ''; obj.marks = 0;
+  if (G.state !== 'play' || !room || room.cleared || room.boss || room.fight || (G.fx && G.fx.banner)) return;
+  if (!room.props.some(p => p.type === 'trunk' && !p.gone)) return;
+  const live = room.enemies.filter(e => !e.dead && e.hp > 0), n = live.length; if (!n) return;
+  obj.text = 'Lost trunk: clear the room to open it (' + n + ' left)';
+  ctx.save(); ctx.font = '600 13px ' + C.FONT; const w = ctx.measureText(obj.text).width + 28;
+  ctx.fillStyle = 'rgba(6,11,11,0.78)'; ctx.fillRect(W / 2 - w / 2, 46, w, 24);
+  art.label(ctx, obj.text, W / 2, 63, 13, CREAM, 'center'); ctx.restore();
+  if (n <= 2 && G.time - (room.enterAt || 0) > 20) {
+    const cx = Math.round(G.cam.x), cy = Math.round(G.cam.y), pulse = 0.6 + 0.4 * Math.sin(G.time * 5);
+    obj.marks = n;
+    for (const e of live) {
+      const sx = e.x - cx, sy = (e.cy !== undefined ? e.cy : e.y - 20) - cy, inView = sx > 10 && sx < W - 10 && sy > 10 && sy < G.C.H - 10;
+      ctx.save(); ctx.strokeStyle = GOLD; ctx.fillStyle = GOLD; ctx.lineWidth = 2; ctx.globalAlpha = pulse;
+      if (inView) { ctx.beginPath(); ctx.arc(sx, sy, 30 + 4 * pulse, 0, 6.283); ctx.stroke(); }
+      else { const ax = U.clamp(sx, 20, W - 20), ay = U.clamp(sy, 90, G.C.H - 40), ang = Math.atan2(sy - ay, sx - ax);
+        ctx.translate(ax, ay); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -7); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
+    }
   }
 };
 

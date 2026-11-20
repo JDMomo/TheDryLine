@@ -180,7 +180,10 @@ function drawTokens(seed, chart, order, rule, startCut) {
     const id = take(fresh.length ? fresh : ok.length ? ok : left);
     out.plinth[r.id] = id; if (id) cuts.push(G.itemDefs[id].cls);
   });
-  out.trunks = [take(left), take(left)];
+  // The first trunk (placed in the first region's main rooms, see balance) must help against the FIRST Warden: a plain token of one of its three charted cuts
+  const first = order[0] && chart[order[0].id] || [], onFirst = left.filter(id => first.includes(G.itemDefs[id].cls)), plain = onFirst.filter(id => G.itemDefs[id].rarity === 'common');
+  out.trunks = [take(plain.length ? plain : onFirst.length ? onFirst : left)];
+  out.trunks.push(take(left));
   out.ticket = take(left);
   if (rule && rule.startToken) out.start.push(take(left));
   out.all = [...Object.values(out.plinth), ...out.trunks, out.ticket, ...out.start].filter(Boolean);
@@ -237,7 +240,10 @@ function balance(graph, rng, used, ctx) {
 
   // lost trunks: exactly 2, in main rooms
   entries('C', 'trunk').filter(e => kind(e.n) !== 'main').forEach(strip);
-  const trunks = keep(entries('C', 'trunk'), 2), rule = graph.rule || {};
+  // One trunk is always in the first region's main rooms (before its arena): a fresh player meets a token before the first Warden.
+  const firstId = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate)[0].id, allTr = rng.shuffle(entries('C', 'trunk')), early = allTr.find(e => e.n.region === firstId);
+  const keptTr = (early ? [early] : []).concat(allTr.filter(e => e !== early)).slice(0, 2); allTr.filter(e => !keptTr.includes(e)).forEach(strip);
+  const trunks = keptTr, rule = graph.rule || {};
   const queue = (graph.draw && graph.draw.trunks.slice()) || [];
   place('trunk', () => ({}), 1, 3, 2 - trunks.length);
   // ticket machine: exactly 1 (it can be used twice: 30 scrip, then 45)

@@ -72,6 +72,7 @@ fill(42, 42, 56, 66, '=');                     // kiosk awning (a step up, too)
 // ---- MIDDLE STOREY (row 31): the dispatch gallery and the Terminus viaduct
 fill(31, 31, 41, 55, '=');                     // mast bridge (freight gate at col 50, opens when the Tollkeeper falls)
 fill(17, 27, 48, 52, '#');                     // the signal box: a pillar from the high walk down to the bridge gate (no hopping over that gate)
+fill(19, 25, 49, 51, '.');                     // ... hollow: its lit cabin shows through (sealed, never entered)
 fill(31, 31, 56, 111, '=');                    // dispatch gallery
 fill(31, 31, 69, 71, '.'); fill(31, 31, 93, 95, '.');   // gaps: from the gallery you can always fall back to the yard (no Down + Jump needed)
 fill(31, 32, 112, 147, '#');                   // viaduct
@@ -87,7 +88,7 @@ fill(16, 16, 62, 63, '.'); fill(16, 16, 100, 101, '.'); fill(16, 16, 120, 121, '
 fill(9, 12, 56, 60, '#');                      // west freight gate housing (gate at col 58, opens when the Lamp-Heron falls)
 fill(9, 12, 108, 112, '#');                    // east freight gate housing (gate at col 110, opens when the Switchman Idol falls)
 // the clock: a hollow block, the Lost Property office inside (freight gate at col 86, opens when the Gatewhale falls)
-fill(4, 13, 86, 94, '#'); fill(9, 12, 87, 93, '.'); fill(10, 12, 86, 86, '.');
+fill(4, 13, 86, 94, '#'); fill(6, 12, 87, 93, '.'); fill(10, 12, 86, 86, '.');
 fill(13, 13, 83, 85, '=');                     // the office step, up from the balcony
 // crumbling ledges up the clock's east face to the clock top (stash)
 put(13, 96, 'c'); put(13, 97, 'c'); put(10, 99, 'c'); put(10, 100, 'c'); put(7, 96, 'c'); put(7, 97, 'c');
@@ -109,7 +110,7 @@ G.defineRoom({
     { id: 'r1', side: 'right', from: 44, to: 46, hint: 'East along the ground, through the low arch.' },
     { id: 'final', side: 'right', from: 28, to: 30, hint: 'Up the east stairs and along the viaduct.' },
     { id: 'r3', side: 'right', from: 13, to: 15, hint: 'Up the clock tower and along the high walk, or the east ladder from the viaduct.' },
-    { id: 'r2', side: 'top', from: 38, to: 41, via: 'junction_signal_stair', hint: 'Climb the Signal Mast to the roof hatch.' },
+    { id: 'r2', side: 'top', from: 38, to: 41, via: 'junction_signal_stair', hint: 'Route: west of the start, climb the Signal Mast to the top and jump up through the roof hatch.' },
     { id: 'r4', side: 'bottom', from: 121, to: 124, via: 'junction_hall_stair', hint: 'Drop through the grating: Down and Jump.' }
   ],
   gateFor: { r1: [140, 46], final: [130, 30], r3: [140, 15], r2: [50, 15], r4: [117, 46] },
@@ -133,7 +134,9 @@ G.defineRoom({
     { type: 'sign', c: 32, r: 28, data: { text: 'The lever holds the gate open for a few seconds. The plate holds it while someone stands on it: one holds, one runs.' } },
     { type: 'sign', c: 108, r: 46, data: { text: 'East stairs: the gallery, the viaduct and the Terminus. Wreck Quay is through the low arch.' } },
     { type: 'sign', c: 120, r: 46, data: { text: 'TICKET HALL, BELOW. Stand on the grating, hold Down and Jump.' } },
-    { type: 'sign', c: 44, r: 46, data: { text: 'SIGNAL MAST. The roof hatch at the top leads out to Signal Reef.' } }
+    { type: 'sign', c: 44, r: 46, data: { text: 'SIGNAL MAST to SIGNAL REEF. Climb the ledges to the very top, then jump up through the roof hatch.' } },
+    { type: 'sign', c: 43, r: 3, data: { text: 'The roof hatch is right above you. Jump up through it: Signal Reef.' } },
+    { type: 'sign', c: 71, r: 46, data: { text: 'ROUTES. Wreck Quay: east along the yard, the low arch. Ticket Hall: the grating at the east end (Down + Jump). The Terminus: east stairs, then the viaduct. Salt Cutting: up the clock tower, the high walk east. Signal Reef: west, up the Signal Mast to the roof hatch.' } }
   ],
   decor: [
     { type: 'crate_decor', c: 46, r: 46 }, { type: 'crate_decor', c: 135, r: 46 }, { type: 'crate_decor', c: 116, r: 30 },

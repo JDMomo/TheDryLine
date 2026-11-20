@@ -62,19 +62,21 @@ const paintWave = (ctx, s) => {
 
 // The attack registry: every attack as data (js/game/bosses.js documents the fields). The tell lengths here are the real ones, scaled by 0.75 when enraged.
 G.defineAttacks('tollkeeper', {
-  charge: { name: 'Charge', tell: 'chargeTell', wind: 0.75, strike: ['charge'], strikeT: 1.7, recover: 0.6, dodge: 'jump',
-    fair: 'It rears up for 0.75 s (the Belly opens), then runs straight at the nearest player at 540 px/s. Jump it or stand on a perch; a wall hit leaves a 1 s opening.',
+  charge: { name: 'Charge', tell: 'chargeTell', wind: 0.95, strike: ['charge'], strikeT: 1.7, recover: 0.6, dodge: 'jump',
+    fair: 'It rears up for 0.95 s (the Belly opens), then runs straight at the nearest player at 540 px/s. Jump it or stand on a perch; a wall hit leaves a 1 s opening.',
     slots: [{ cut: 'burst', flag: 'winded', mode: 'weaken', note: 'the charge is slower (360 px/s)' }] },
-  leap: { name: 'Leap', tell: 'leapTell', wind: 0.5, strike: ['leap'], strikeT: 0.9, recover: 0.8, dodge: 'move',
-    fair: 'It crouches for 0.5 s, then jumps to where the target stood; landing sends two floor shockwaves. Step out from under it, then jump the waves.',
+  leap: { name: 'Leap', tell: 'leapTell', wind: 0.7, strike: ['leap'], strikeT: 0.9, recover: 0.8, dodge: 'move',
+    fair: 'It crouches for 0.7 s, then jumps to where the target stood; landing sends two floor shockwaves. Step out from under it, then jump the waves.',
     slots: [{ cut: 'ground', flag: 'lame', mode: 'weaken', note: 'the leap falls short' }, { cut: 'arc', flag: 'noWaves', mode: 'weaken', note: 'the landing sends no shockwaves' }] },
-  spit: { name: 'Spit', tell: 'spitTell', wind: 0.5, strike: ['spit'], strikeT: 1.0, recover: 0.85, dodge: 'move',
-    fair: 'It crouches for 0.5 s, then lobs three globs (five enraged) that land on where the target stood. Keep moving.',
+  spit: { name: 'Spit', tell: 'spitTell', wind: 0.7, strike: ['spit'], strikeT: 1.0, recover: 0.85, dodge: 'move',
+    fair: 'It crouches for 0.7 s, then lobs three globs (five enraged) that land on where the target stood. Keep moving.',
     slots: [{ cut: 'pierce', flag: 'blind', mode: 'disable', note: 'it can no longer spit' }] }
 });
 
 G.defineBoss({
   id: 'tollkeeper', name: 'The Tollkeeper', hp: 900, par: 76, w: 124, h: 100,
+  // The first Warden is for a fresh player: with no token of any charted cut carried (every fare slot sealed) it has 15% less health.
+  onStart(b) { const have = G.game.partyClasses(); if (b.spots.every(sp => !have.has(sp.cls))) { b.maxHp *= 0.85; b.hp = b.maxHp; } },
 
   spots: {
     pierce: { name: 'Eye', local: [66, -68], r: 15,

@@ -101,8 +101,12 @@ export default async ({ page }) => {
       const t1 = spy(ctx => plate && plate.draw(ctx)); ok(t1.includes(r.name), c.id + ': the board does not name the card'); ok(t1.includes(first.split(' ')[0]), c.id + ': the board does not carry its text');
       const t2 = spy(ctx => G.map.draw(ctx)); ok(t2.includes('Timetable: ' + r.name) && t2.includes(r.text.slice(0, 20)), c.id + ': the map does not show the card');
       G.run.over = 'dead'; const t3 = spy(ctx => G.menus.over(ctx)); G.run.over = null; ok(t3.includes(r.name) && t3.includes(r.text.slice(0, 20)), c.id + ': the run-over screen does not show the card');
-      G.state = 'play'; G.run.time = 1; const t4 = spy(ctx => G.hud.draw(ctx)); ok(t4.includes(r.name), c.id + ': the first view of the Junction does not show the card');
-      G.run.time = 20; ok(!spy(ctx => G.hud.draw(ctx)).includes('TIMETABLE FOR THIS RUN'), c.id + ': the intro card stays on screen');
+      // the first view: one message at a time. A story banner (or the room-name card) holds the card back; it shows once they are gone, and ends after 8 s of free screen.
+      G.state = 'play'; const room = G.rooms.current; G.tips.shown = null; G.fx.banner = { a: 'The Last Timetable', b: 'x', t: 3, max: 3 }; room.enterAt = G.time - 10;
+      G.ledgerIntro.run = null; const tb = spy(ctx => G.hud.draw(ctx)); ok(!tb.includes('TIMETABLE FOR THIS RUN'), c.id + ': the card is drawn over a story banner');
+      G.fx.banner = null; const t4 = spy(ctx => G.hud.draw(ctx)); ok(t4.includes(r.name), c.id + ': the first view of the Junction does not show the card after the banner');
+      room.enterAt = G.time - 0.5; ok(!spy(ctx => G.hud.draw(ctx)).includes('TIMETABLE FOR THIS RUN'), c.id + ': the card is drawn over the room-name card'); room.enterAt = G.time - 10;
+      G.ledgerIntro.left = 0.01; G.time += 0.05; spy(ctx => G.hud.draw(ctx)); G.time += 0.05; ok(!spy(ctx => G.hud.draw(ctx)).includes('TIMETABLE FOR THIS RUN'), c.id + ': the intro card stays on screen');
       if (c.id === 'late_running') ok(t2.includes('Running late'), 'the map does not mark the late line');
     }
     // the hub board's card does not overlap the lock chart

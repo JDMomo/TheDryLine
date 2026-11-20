@@ -150,6 +150,10 @@ G.hud = {
           lines.slice(0,2).forEach((line,i)=>art.label(ctx,line,bx+108,by+54+i*17,13.5,'#e9e2cf','left'));
         }
       } else {
+        // a soft dark plate under the card keeps it readable over bright art behind it (the Long Clock's halo, lamps)
+        const pw = Math.max(380, Math.min(W - 40, (n.b ? n.b.length : 0) * 8 + 140)), pg = ctx.createLinearGradient((W - pw) / 2, 0, (W + pw) / 2, 0);
+        pg.addColorStop(0, 'rgba(6,11,11,0)'); pg.addColorStop(0.2, 'rgba(6,11,11,0.62)'); pg.addColorStop(0.8, 'rgba(6,11,11,0.62)'); pg.addColorStop(1, 'rgba(6,11,11,0)');
+        ctx.fillStyle = pg; ctx.fillRect((W - pw) / 2, 94, pw, 72);
         art.label(ctx, n.a, W / 2, 124, 26, '#e9a23b', 'center', C.DISPLAY, 600);
         if (n.b) art.label(ctx, n.b, W / 2, 152, 14, '#e9e2cf');
       }

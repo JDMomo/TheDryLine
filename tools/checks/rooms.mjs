@@ -225,7 +225,7 @@ export function pageTraverse(spec) {
       const row = Math.floor((p.y - 1) / T), col = Math.floor(p.x / T);
       if (g.side === 'left') return p.x <= 11.6 && row >= g.lo - 1 && row <= g.hi + 1;
       if (g.side === 'right') return p.x >= cols * T - 11.6 && row >= g.lo - 1 && row <= g.hi + 1;
-      if (g.side === 'top') return p.y - p.h <= 12 && col >= g.lo - 1 && col <= g.hi + 1;
+      if (g.side === 'top') return p.y - p.h < T && col >= g.lo - 1 && col <= g.hi + 1;
       return p.onGround && col >= g.lo && col <= g.hi && p.y >= (rows - 6) * T;
     }
     const m = marks[g.i], t = mpos(m);

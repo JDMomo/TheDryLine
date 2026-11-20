@@ -37,8 +37,8 @@ export default async ({ page }) => {
       info[r] = chart.join('/');
     }
     // 10% punch, co-op health
-    D.newRun(5); D.god(true); D.startBoss('r1'); const b1 = G.rooms.current.boss, base = G.bossDefs.tollkeeper.hp;
-    ok(b1.maxHp === base, 'one player: max hp ' + b1.maxHp + ' not ' + base);
+    D.newRun(5); D.god(true); D.startBoss('r1'); const b1 = G.rooms.current.boss, base = G.bossDefs.tollkeeper.hp * 0.85;   // no token carried: the first Warden has 15% less health (boss_r1.js onStart)
+    ok(Math.abs(b1.maxHp - base) < 1e-6, 'one player: max hp ' + b1.maxHp + ' not ' + base);
     const sp = b1.spots[0]; D.holdBoss({}); sp.open = true; sp.hp = 1;
     const hp0 = b1.hp; b1.hitSpot(sp, { itemId: 'none', owner: null, dmg: 0 });
     ok(Math.abs((hp0 - b1.hp) - base * 0.1) < 0.01, 'a punch took ' + (hp0 - b1.hp) + ' of ' + base);

@@ -208,7 +208,7 @@ class Boss {
     const q = this.spotPos(sp), col = G.CLASSES[sp.cls].color;
     if (!sp.open) {
       fx.spark(q.x, q.y, 6, '#8a938e', 200, 0.25); this.damage(st.dmg || 0);
-      if (this.sealedT <= 0) { fx.floatText(q.x, q.y - 14, 'Sealed', '#9aa89f'); this.sealedT = 0.7; }
+      if (this.sealedT <= 0) { fx.floatText(q.x, q.y - 14, 'Sealed: needs a ' + sp.cls + ' token', '#9aa89f'); this.sealedT = 0.7; }
       return;
     }
     sp.hp--; sp.flash = 0.25; fx.jolt(0.08, 8); fx.spark(q.x, q.y, 22, col, 420, 0.5); fx.ring(q.x, q.y, 8, 300, col, 0.3);
@@ -239,7 +239,9 @@ class Boss {
     const open = this.spots.filter(s => s.open).map(s => s.def.name);
     this.set('intro', 1.0); fx.jolt(0, 10);
     if (open.length) G.tips.fire('fare');
-    fx.say(this.def.name, open.length ? 'Fare slots open: ' + open.join(', ') + '.' : 'No token of its three cuts carried. Every fare slot is sealed.', 3.5);
+    const shut = this.spots.filter(s => !s.open).map(s => s.cls);
+    fx.say(this.def.name, open.length ? 'Fare slots open: ' + open.join(', ') + '.' + (shut.length ? ' Sealed: needs a ' + shut.join(' or ') + ' token.' : '')
+      : 'No token of its cuts (' + shut.join(', ') + '). Slashes still work, slowly: find a trunk, plinth or ticket token.', 4.5);
   }
   update(dt) {
     this.flash -= dt; this.sealedT -= dt;
@@ -282,12 +284,46 @@ class Boss {
       for (const sp of this.spots) G.bossSkin.badge(this, ctx, sp);
     } else {
       this.applyPose(ctx);
-      G.art.draw('boss_' + this.id, ctx, { x: 0, y: 0, face: 1, ent: this });
+      if (!this.drawWashed(ctx)) G.art.draw('boss_' + this.id, ctx, { x: 0, y: 0, face: 1, ent: this });
       if (this.state === 'stagger') this.drawStars(ctx, 0, 0);
       for (const sp of this.spots) this.drawSpot(ctx, sp);
     }
     ctx.restore();
     if (G.debugBoxes) this.drawBoxes(ctx);
+  }
+  // The code-drawn body in the watercolor style: the painter draws into an offscreen canvas (boss space, origin bottom centre), which then gets a
+  // wash shade (light top, cool dark bottom), paper grain, soft edges and a translucent dark-violet wash outline. Hit tests never read it. A sprite
+  // (G.sprites) or a skin is drawn as given; G.debug.noWash = true draws the plain painter.
+  drawWashed(ctx) {
+    if (G.sprites['boss_' + this.id] || (G.debug && G.debug.noWash) || !document.createElement) return false;
+    const k = G.view && G.view.scale > 1.4 ? 2 : 1, w = Math.ceil(this.def.w * 2 + 140), h = Math.ceil(this.h * 1.5 + 90), oy = h - 26;
+    let W = this._wash;
+    if (!W || W.k !== k || W.w !== w || W.h !== h) {
+      const mk = () => { const c = document.createElement('canvas'); c.width = w * k; c.height = h * k; return c; };
+      W = this._wash = { k, w, h, cv: mk(), mask: mk() };
+    }
+    const c = W.cv.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, w * k, h * k);
+    c.setTransform(k, 0, 0, k, w / 2 * k, oy * k);
+    G.art.draw('boss_' + this.id, c, { x: 0, y: 0, face: 1, ent: this });
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop';
+    const g = c.createLinearGradient(0, 0, 0, h * k);
+    g.addColorStop(0, 'rgba(255,243,210,0.22)'); g.addColorStop(0.45, 'rgba(255,243,210,0)'); g.addColorStop(1, 'rgba(34,30,66,0.34)');
+    c.fillStyle = g; c.fillRect(0, 0, w * k, h * k);
+    const gr = G.bossWashGrain || (G.bossWashGrain = (() => {
+      const t = document.createElement('canvas'); t.width = t.height = 64; const x = t.getContext('2d'); let r = 7;
+      for (let i = 0; i < 700; i++) { r = (r * 16807) % 2147483647; const px = r % 64; r = (r * 16807) % 2147483647; const py = r % 64; x.fillStyle = (i & 1) ? 'rgba(255,248,226,0.5)' : 'rgba(40,34,70,0.4)'; x.fillRect(px, py, 2, 2); }
+      return t; })());
+    c.globalAlpha = 0.16; c.fillStyle = c.createPattern(gr, 'repeat'); c.fillRect(0, 0, w * k, h * k); c.globalAlpha = 1;
+    const m = W.mask.getContext('2d');
+    m.setTransform(1, 0, 0, 1, 0, 0); m.globalCompositeOperation = 'source-over'; m.clearRect(0, 0, w * k, h * k); m.drawImage(W.cv, 0, 0);
+    m.globalCompositeOperation = 'source-in'; m.fillStyle = '#2b2440'; m.fillRect(0, 0, w * k, h * k);
+    ctx.save(); ctx.translate(-w / 2, -oy);
+    ctx.globalAlpha *= 1; const a0 = ctx.globalAlpha; ctx.globalAlpha = a0 * 0.5;
+    for (const [dx, dy] of [[-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.2]]) ctx.drawImage(W.mask, dx, dy, w, h);
+    ctx.globalAlpha = a0;
+    ctx.drawImage(W.cv, 0, 0, w, h);
+    ctx.restore(); return true;
   }
   // G.debugBoxes = true: hit shapes in magenta, contact boxes in red, fare-slot anchors as crosses, the state and attack above.
   drawBoxes(ctx) {

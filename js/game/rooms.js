@@ -93,6 +93,18 @@ G.defineRoom = def => {
 };
 
 const markPos = m => ({ x: m.c * T + T / 2, y: (m.r + 1) * T });
+const ENTRY_GRACE = 1.0;          // seconds after arriving during which the edge the party came in by does not lead out again
+const inGrace = (room, side) => room.entrySide === side && G.time - room.enterAt < ENTRY_GRACE;
+// Where a party arriving through a bottom opening stands: the nearest stable floor (not the hole, not crumble, spring, vent or spikes)
+// with two tiles of headroom, lowest rows first, within 12 columns of the opening. Null if there is none (the old pop-up is used).
+function bottomLanding(c0, room) {
+  for (let r = room.rows - 2; r >= Math.max(1, room.rows - 14); r--) for (let dc = 0; dc <= 12; dc++) for (const c of dc ? [c0 - dc, c0 + dc] : [c0]) {
+    if (c < 1 || c > room.cols - 2 || tiles.solid(c, r) || tiles.solid(c, r - 1) || tiles.spike(c, r)) continue;
+    if (!tiles.stableFloorAt(c, r + 1) || tiles.spike(c, r + 1)) continue;
+    return { x: (c + .5) * T, y: (r + 1) * T, dir: c < c0 ? -1 : 1 };
+  }
+  return null;
+}
 
 // Build the live room for a graph node: props, enemies and the boss come from the node's pre-rolled content.
 function instance(node) {
@@ -125,6 +137,41 @@ function groundY(room, c) {
   return (room.rows - 2) * T;
 }
 
+/* Solid interiors (playtest issue 7: deep rock read as flat black voids). Rock two or more tiles from any open tile gets faint masonry
+   courses and joints in the region's palette, and a few dim service vents deeper in; the tile art itself (js/art/world.js, art.js)
+   is untouched, this only draws over it. The depth map is cached per room and rebuilt if the grid is replaced. */
+function interiorDepth(room) {
+  if (room._depth && room._depthGrid === room.grid) return room._depth;
+  const g = room.grid, R = g.length, Cc = g[0].length, d = new Uint8Array(R * Cc).fill(9), q = [];   // the grid's own size (tests swap grids)
+  for (let r = 0; r < R; r++) for (let c = 0; c < Cc; c++) if (g[r][c] !== '#') { d[r * Cc + c] = 0; q.push(r * Cc + c); }
+  for (let i = 0; i < q.length; i++) {
+    const k = q[i], r = (k / Cc) | 0, c = k % Cc, v = d[k] + 1;
+    if (v > 6) continue;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const rr = r + dr, cc = c + dc; if (rr < 0 || rr >= R || cc < 0 || cc >= Cc) continue;
+      const kk = rr * Cc + cc; if (d[kk] > v) { d[kk] = v; q.push(kk); }
+    }
+  }
+  d.R = R; d.C = Cc; room._depth = d; room._depthGrid = room.grid; return d;
+}
+function drawInteriors(ctx, room, pal) {
+  const d = interiorDepth(room), Cc = d.C;
+  const c0 = Math.max(0, Math.floor(G.cam.x / T)), c1 = Math.min(Cc - 1, Math.floor((G.cam.x + C.W) / T));
+  const r0 = Math.max(0, Math.floor(G.cam.y / T)), r1 = Math.min(d.R - 1, Math.floor((G.cam.y + C.H) / T));
+  ctx.save(); ctx.fillStyle = pal.edge || '#6a6080';
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    const v = d[r * Cc + c]; if (v < 2) continue;
+    const x = c * T, y = r * T, course = r >> 1;
+    ctx.globalAlpha = v >= 3 ? 0.26 : 0.16;
+    if (!(r & 1)) ctx.fillRect(x, y, T, 1.5);                                   // a course line every two rows
+    if ((c + (course & 1) * 2) % 4 === 0) ctx.fillRect(x, y + ((r & 1) ? 0 : 1.5), 1.5, T);   // staggered joints
+    if (v >= 3 && ((c * 73 + r * 151) % 29) === 0) {                           // a dim service vent now and then, deep in the rock
+      ctx.globalAlpha = 0.34; for (let i = 0; i < 3; i++) ctx.fillRect(x + 7, y + 9 + i * 5, 18, 2);
+    }
+  }
+  ctx.restore();
+}
+
 const rooms = G.rooms = {
   current: null, trans: null,
   propNear(p) { return rooms.current.props.find(pr => !pr.gone && pr.near(p) && pr.prompt(p)); },
@@ -136,7 +183,9 @@ const rooms = G.rooms = {
     const room = G.run.rooms[nodeId] || (G.run.rooms[nodeId] = instance(node));
     if (rooms.current && rooms.current !== room) G.combat.leave();         // scrip on the floor goes with the party
     rooms.current = room; room.enterAt = G.time; tiles.load(room.grid, room.terrain); G.combat.clear(); fx.clear();
-    let x = 3 * T, y = groundY(room, 1), face = 1;
+    let x = 3 * T, y = groundY(room, 1), face = 1, landing = null;
+    // The edge the party came in by: for ENTRY_GRACE seconds it does not lead out again (no instant bounce back through a hole).
+    room.entrySide = entry.side || (entry.portal && ((room.def.portals || []).find(q => q.id === entry.portal) || {}).side) || null;
     // A home-area portal arrives as its edge does: a side portal on the floor under the opening, a top portal falling in,
     // a bottom portal standing on the grating over the hole (the hub's grates are one-way: arriving from below never falls back out).
     const portal = entry.portal && (room.def.portals || []).find(q => q.id === entry.portal);
@@ -156,6 +205,8 @@ const rooms = G.rooms = {
       const port = entry.col !== undefined ? { c: entry.col } : room.def.ports[entry.side];
       x = ((port && port.c) !== undefined ? port.c + 0.5 : room.cols / 2) * T;
       y = entry.side === 'top' ? 8 : room.rows * T - 6;
+      // Arriving from below: never over the open hole. Stand on the nearest stable floor beside it (a small hop for the feel of climbing out).
+      if (entry.side === 'bottom') landing = bottomLanding(Math.floor(x / T), room);
     } else {
       let i = entry.mark;
       if (entry.gate) i = room.def.marks.findIndex((m, k) => node.content[k] && node.content[k].type === 'gate' && node.content[k].data.region === entry.gate);
@@ -164,6 +215,11 @@ const rooms = G.rooms = {
     }
     G.players.forEach((p, k) => {
       if (p.down && G.players.some(q => !q.down)) p.revive(1);   // co-op revive on entering a room
+      if (landing) {
+        p.place(landing.x + landing.dir * k * 14, landing.y, landing.dir || 1); p.inv = 0.5;
+        p.onGround = false; p.vy = -260; p.safeX = landing.x; p.safeY = landing.y;
+        return;
+      }
       const vertical = entry.side === 'top' || entry.side === 'bottom';
       p.place(x + (vertical ? (k - (G.players.length - 1) / 2) * 14 : -face * k * 14), vertical && entry.side === 'top' ? p.h + 8 : y, face); p.inv = 0.5;
       if (vertical) {
@@ -240,14 +296,20 @@ const rooms = G.rooms = {
     // Home-area portals first: which opening of an edge a player leaves by decides where it leads.
     if (room.node.portals && !room.fight) {
       const out = p => p.x < -6 ? ['left', Math.floor((p.y - 1) / T)] : p.x > W + 6 ? ['right', Math.floor((p.y - 1) / T)]
-        : p.y - p.h < -8 ? ['top', Math.floor(p.x / T)] : p.y > H + 8 ? ['bottom', Math.floor(p.x / T)] : null;
+        : p.y - p.h < T ? ['top', Math.floor(p.x / T)] : p.y > H + 8 ? ['bottom', Math.floor(p.x / T)] : null;   // top: once the head is in the roof hatch (a short hop from the ledge under it does it)
       for (const p of live) {
-        const o = out(p); if (!o) continue;
+        const o = out(p); if (!o || inGrace(room, o[0])) continue;
         const q = room.node.portals.find(q => q.side === o[0] && o[1] >= q.lo - 1 && o[1] <= q.hi + 1);
         if (q) { rooms.go(q.dest, q.entry); return; }
       }
     }
     for (const p of live) {
+      const side = p.x < -6 ? 'left' : p.x > W + 6 ? 'right' : p.y - p.h < -8 ? 'top' : p.y > H + 8 ? 'bottom' : null;
+      if (side && inGrace(room, side)) {      // just arrived through this edge: hold the party in the room instead of bouncing it back
+        if (side === 'left') p.x = p.w / 2; else if (side === 'right') p.x = W - p.w / 2;
+        else if (side === 'top') { p.y = p.h + 2; p.vy = Math.max(0, p.vy); } else { p.y = H - 2; p.vy = Math.min(0, p.vy); }
+        continue;
+      }
       if (p.x < -6) { if (room.node.exits.left && !room.fight) { rooms.go(room.node.exits.left.to, room.node.exits.left.entry); break; } p.x = p.w / 2; }
       else if (p.x > W + 6) { if (room.node.exits.right && !room.fight) { rooms.go(room.node.exits.right.to, room.node.exits.right.entry); break; } p.x = W - p.w / 2; }
       else if (p.y - p.h < -8) { if (room.node.exits.top && !room.fight) { rooms.go(room.node.exits.top.to, room.node.exits.top.entry); break; } p.y = p.h + 2; p.vy = Math.max(0, p.vy); }
@@ -268,6 +330,7 @@ const rooms = G.rooms = {
     ctx.translate(-Math.round(G.cam.x) + (sh ? U.rnd(-sh, sh) * 0.6 : 0), -Math.round(G.cam.y) + (sh ? U.rnd(-sh, sh) * 0.6 : 0));
     for (const pr of room.props) pr.draw(ctx);
     art.tiles(ctx, pal);
+    drawInteriors(ctx, room, pal);
     for (const e of room.enemies) e.draw(ctx);
     if (room.boss) room.boss.draw(ctx);
     G.combat.draw(ctx);

@@ -120,7 +120,7 @@ const TYPES = {
       pr.gone = true;                                  // the trunk gives way to a plinth holding what it carried
       if (hasGood(d)) G.rooms.current.props.push(G.props.make('plinth', pr.x, pr.y, Object.assign({}, d)));
     },
-    prompt() { return ['Lost trunk', 'Something rattles inside.', 'Opens when the room is clear']; },
+    prompt() { const n = G.rooms.current.enemies.filter(e => !e.dead && e.hp > 0).length; return ['Lost trunk', 'Something rattles inside.', n ? 'Opens when the room is clear: ' + n + ' left' : 'Opens when the room is clear']; },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y;
       ctx.fillStyle = '#5a4630'; ctx.fillRect(x - 17, y - 20, 34, 20); ctx.fillStyle = '#b8482f'; ctx.fillRect(x - 17, y - 12, 34, 3); ctx.fillRect(x - 3, y - 15, 6, 8);
@@ -453,7 +453,7 @@ const TYPES = {
     interact(pr,p) {
       const beaten=['r1','r2','r3','r4'].filter(r=>G.run.beaten[r]).length;
       const lines=[
-        ['Station Keeper','The clock is not broken. That is the trouble. It still has a valid order.'],
+        ['Station Keeper','Slashes alone will not break a Warden. The dock at Wreck Quay has a lost trunk: clear the room and take the token inside.'],
         ['Station Keeper','One line has gone quiet. Listen to the Junction long enough and you can hear the relays settling.'],
         ['Station Keeper','Two Wardens released. The old board is beginning to look like a route home instead of a timetable.'],
         ['Station Keeper','Only one local order remains. The Terminus will still borrow whatever you leave running.'],
