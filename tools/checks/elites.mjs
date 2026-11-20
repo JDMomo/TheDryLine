@@ -23,7 +23,10 @@ export default async ({page})=>{
     if(before!==after)bad.push('elite rolls are not seed deterministic');
 
     // Runtime contract independent of a lucky graph roll.
-    D.gotoRoom('r4_concourse');const room=G.rooms.current;room.enemies=[];G.pickups.length=0;
+    const flat=Array.from({length:17},(_,r)=>Array.from({length:30},(_,c)=>(r===0||r>=15||((c===0||c===29)&&(r<12||r>14)))?'#':'.').join(''));
+    if(!G.roomDefs.qa_elite_flat)G.defineRoom({id:'qa_elite_flat',region:'r4',kind:'main',map:flat});
+    const qid='qa_elite_flat_node';G.run.graph.nodes[qid]={id:qid,def:'qa_elite_flat',region:'r4',exits:{},content:[],seen:true,parent:null};
+    G.rooms.enter(qid,{side:'left'});const room=G.rooms.current;room.enemies=[];G.pickups.length=0;
     const d=G.enemyDefs.sapper, normal=new G.Enemy(d,300,15*G.C.T), elite=new G.Enemy(d,400,15*G.C.T);elite.makeElite();
     if(!(elite.hp>normal.hp&&elite.aggro>normal.aggro&&elite.elite))bad.push('makeElite did not strengthen/mark enemy');
     const min=d.shards[0];elite.damage(9999,elite.x-20);D.step(1);

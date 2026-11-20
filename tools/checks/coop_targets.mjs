@@ -2,7 +2,10 @@
 export default async ({page})=>{
  const r=await page.evaluate(()=>{
   const D=G.debug,bad=[];D.newRun(606);D.god(true);while(G.players.length<2)D.addPlayer();
-  D.gotoRoom('r4_concourse');const room=G.rooms.current;room.enemies=[];
+  const flat=Array.from({length:17},(_,r)=>Array.from({length:30},(_,c)=>(r===0||r>=15||((c===0||c===29)&&(r<12||r>14)))?'#':'.').join(''));
+  if(!G.roomDefs.qa_coop_flat)G.defineRoom({id:'qa_coop_flat',region:'r4',kind:'main',map:flat});
+  const qid='qa_coop_flat_node';G.run.graph.nodes[qid]={id:qid,def:'qa_coop_flat',region:'r4',exits:{},content:[],seen:true,parent:null};
+  G.rooms.enter(qid,{side:'left'});const room=G.rooms.current;room.enemies=[];
   D.place(0,350,480,1);D.place(1,610,480,-1);
   const ids=['ballast_crab','sapper','turnstile','harvester','handcar','mirage'], picks=[];
   ids.forEach((id,i)=>{const e=new G.Enemy(G.enemyDefs[id],480+(i%2?8:-8),480);room.enemies.push(e);const p=e.target();picks.push(p&&p.index);});

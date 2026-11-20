@@ -1,7 +1,11 @@
 // Front-line readability: Strider and Scrapper use wind-up -> damaging active -> recovery, not passive contact.
 export default async ({page})=>{
  const r=await page.evaluate(()=>{
-  const D=G.debug,T=G.C.T,bad=[];D.newRun(707);D.god(true);D.gotoRoom('r1_dock');const room=G.rooms.current,p=G.players[0];
+  const D=G.debug,T=G.C.T,bad=[];D.newRun(707);D.god(true);
+  const flat=Array.from({length:17},(_,r)=>Array.from({length:30},(_,c)=>(r===0||r>=15||((c===0||c===29)&&(r<12||r>14)))?'#':'.').join(''));
+  if(!G.roomDefs.qa_pattern_flat)G.defineRoom({id:'qa_pattern_flat',region:'r1',kind:'main',map:flat});
+  const qid='qa_pattern_flat_node';G.run.graph.nodes[qid]={id:qid,def:'qa_pattern_flat',region:'r1',exits:{},content:[],seen:true,parent:null};
+  G.rooms.enter(qid,{side:'left'});const room=G.rooms.current,p=G.players[0];
   const run=(id,x)=>{
     room.enemies=[];const e=new G.Enemy(G.enemyDefs[id],x,15*T);room.enemies=[e];D.place(0,x+125,15*T,-1);p.onGround=true;e.onGround=true;e.cool=0;
     const seen={};for(let i=0;i<900;i++){D.step(1);seen[e.state]=(seen[e.state]||0)+1;if(e.state==='lunge'||e.state==='charge')seen.activeHarmless=!!e.harmless;if((e.state==='recover')&&i>60)break;}
