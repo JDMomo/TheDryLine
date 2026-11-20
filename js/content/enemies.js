@@ -77,23 +77,49 @@ if (!G.combat.slashBy && G.combat.melee) {
   };
 }
 
-/* ---------- 1. Strider (ballast_crab): small walker, patrols, turns at walls, ledges and spikes ---------- */
+/* ---------- 1. Strider (ballast_crab): light rusher; patrol -> claw tell -> committed scuttle -> punishable recovery ---------- */
 G.defineEnemy({
   id: 'ballast_crab', name: 'Strider', hp: 26, w: 30, h: 22, touch: 1, shards: [2, 5],
-  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; },
-  update(e) {
-    if (e.onGround && (e.hitWall || !safeAhead(e))) e.face = -e.face;
-    e.vx = e.face * 60;
+  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.cool=0.7+rr(); e.set('patrol',0); e.harmless=true; },
+  update(e,dt) {
+    e.cool-=dt; const p=e.target();
+    if(e.state==='patrol'){
+      e.harmless=true;
+      if(e.onGround&&(e.hitWall||!safeAhead(e)))e.face=-e.face;
+      e.vx=e.face*48;
+      if(e.cool<=0&&p&&near(e,p,190,60)){
+        faceTarget(e,p);
+        if(hopSafe(e,82)){e.vx=0;e.set('wind',0.38);}
+      }
+    } else if(e.state==='wind'){
+      e.harmless=true;e.vx=-e.face*24*(e.t/0.38);
+      if(e.t<=0)e.set('lunge',0.34);
+    } else if(e.state==='lunge'){
+      e.harmless=false;e.vx=e.face*245;
+      if(e.hitWall||!safeAhead(e,8)||e.t<=0){e.harmless=true;e.vx=0;e.set('recover',0.5);}
+    } else {
+      e.harmless=true;e.vx=0;
+      if(e.t<=0){e.cool=0.9+rr()*0.6;e.set('patrol',0);}
+    }
+  },
+  skinFrame(e,sk){
+    if(e.state==='wind')return ['attack',Math.min(2,Math.floor(e.prog()*3))];
+    if(e.state==='lunge')return ['attack',3];
+    if(e.state==='recover')return ['attack',e.prog()<0.5?4:5];
+    return ['move',G.time*sk.fps];
   },
   draw(e, ctx) {
     ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.face, 1);
-    const step = Math.sin(G.time * 12 + e.x * 0.1) * 3, body = hit(e, '#b7ad8e'), dark = hit(e, '#7d7660');
+    const step = Math.sin(G.time * (e.state==='lunge'?22:12) + e.x * 0.1) * 3, body = hit(e, '#b7ad8e'), dark = hit(e, '#7d7660');
+    if(e.state==='wind')warnRing(ctx,-12,15,e.prog());
+    if(e.state==='wind')ctx.scale(0.92,1.08); else if(e.state==='lunge')ctx.scale(1.16,0.88);
     for (const lx of [-11, -4, 5, 12]) line(ctx, lx, -8, lx + (lx > 0 ? 3 : -3), -1 + (lx > 0 ? step : -step) * 0.4, '#8c846c', 3);
-    solid(ctx, body, () => ctx.ellipse(0, -11, 14, 9, 0, 0, TAU));                              // shell
-    solid(ctx, dark, () => rrect(ctx, -9, -14, 18, 5, 2));                                        // ballast band
-    line(ctx, 11, -11, 17, -14, '#b7ad8e', 4);                                                    // arm
-    solid(ctx, body, () => ctx.arc(19, -15, 5, 0.5, TAU - 0.5));                                  // claw
-    line(ctx, 4, -17, 4, -23, '#b7ad8e', 2); line(ctx, 10, -16, 10, -22, '#b7ad8e', 2);          // eye stalks
+    solid(ctx, body, () => ctx.ellipse(0, -11, 14, 9, 0, 0, TAU));
+    solid(ctx, dark, () => rrect(ctx, -9, -14, 18, 5, 2));
+    const reach=e.state==='lunge'?27:e.state==='wind'?20:17;
+    line(ctx, 11, -11, reach, -14, '#b7ad8e', 4);
+    solid(ctx, e.state==='wind'?RUST:body, () => ctx.arc(reach+2, -15, 5, 0.5, TAU - 0.5));
+    line(ctx, 4, -17, 4, -23, '#b7ad8e', 2); line(ctx, 10, -16, 10, -22, '#b7ad8e', 2);
     eye(ctx, 4, -24, 2.6, LAMP); eye(ctx, 10, -23, 2.6, LAMP); eye(ctx, 4.6, -24, 1, OUT); eye(ctx, 10.6, -23, 1, OUT);
     ctx.restore();
   }
@@ -141,14 +167,13 @@ G.defineEnemy({
   }
 });
 
-/* ---------- 3. Scrapper (turnstile): slow walker behind a front shield; slashes from the front bounce ---------- */
+/* ---------- 3. Scrapper (turnstile): armored lane holder; shielded advance -> shove tell -> charge -> open recovery ---------- */
 G.defineEnemy({
   id: 'turnstile', name: 'Scrapper', hp: 44, w: 34, h: 40, touch: 1, shards: [3, 5], heavy: true,
-  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.set('walk', 0); e.cool = 1; },
-  // Slashes from the front (not a down slash from above) are blocked while the shield is up; tokens always hurt.
+  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.set('walk', 0); e.cool = 1; e.harmless=true; },
   guard(e, d, fromX) {
     const s = G.combat.slashBy;
-    if (!s || e.state === 'turn' || s.s.dir === 'down') return true;
+    if (!s || e.state === 'turn' || e.state==='recover' || s.s.dir === 'down') return true;
     if (Math.sign(s.p.x - e.x) === e.face) {
       fx.spark(e.x + e.face * 22, e.y - 20, 6, '#ffffff', 220, 0.2); fx.ring(e.x + e.face * 22, e.y - 20, 4, 90, '#ffffff', 0.15);
       if (!(e.shieldHit > 0)) fx.floatText(e.x, e.y - e.h - 6, 'Blocked', '#e9e2cf');
@@ -156,41 +181,51 @@ G.defineEnemy({
     }
     return true;
   },
-  // Skin: the braced arm (attack frame 4) is held while the front faces a player in reach, the shove (3) flashes when a slash is refused,
-  // the turn (shield open, hittable) crouches in (1) and comes back up (0); otherwise it walks.
   skinFrame(e, sk) {
-    if (e.shieldHit > 0) return ['attack', 3];
-    if (e.state === 'turn') return ['attack', e.prog() < 0.5 ? 1 : 0];
-    const p = e.target();
-    if (p && Math.sign(p.x - e.x) === e.face && Math.abs(p.x - e.x) < 220 && Math.abs(p.y - e.y) < 90) return ['attack', 4];
-    return ['move', G.time * sk.fps];
+    if(e.state==='wind')return ['attack',Math.min(2,Math.floor(e.prog()*3))];
+    if(e.state==='charge'||e.shieldHit>0)return ['attack',3];
+    if(e.state==='recover')return ['attack',e.prog()<0.5?4:5];
+    if(e.state==='turn')return ['attack',e.prog()<0.5?1:0];
+    return ['move',G.time*sk.fps];
   },
   update(e, dt) {
-    e.shieldHit = Math.max(0, (e.shieldHit || 0) - dt); e.cool -= dt;
-    const p = e.target();
-    if (e.state === 'walk') {
-      if (e.onGround && (e.hitWall || !safeAhead(e))) { e.set('turn', 0.5); e.flip = true; }
-      else if (e.cool <= 0 && p && Math.sign(p.x - e.x) === -e.face && Math.abs(p.x - e.x) < 150 && Math.abs(p.y - e.y) < 70) { e.set('turn', 0.5); e.flip = true; e.cool = 3; }
-      e.vx = e.state === 'walk' ? e.face * 28 : 0;
+    e.shieldHit=Math.max(0,(e.shieldHit||0)-dt);e.cool-=dt;const p=e.target();
+    if(e.state==='walk'){
+      e.harmless=true;
+      if(e.onGround&&(e.hitWall||!safeAhead(e))){e.set('turn',0.5);e.flip=true;}
+      else if(e.cool<=0&&p&&Math.abs(p.y-e.y)<70&&Math.abs(p.x-e.x)<230){
+        if(Math.sign(p.x-e.x)!==e.face){e.set('turn',0.5);e.flip=true;}
+        else if(hopSafe(e,100)){faceTarget(e,p);e.set('wind',0.55);}
+      }
+      e.vx=e.state==='walk'?e.face*26:0;
+    } else if(e.state==='turn'){
+      e.harmless=true;e.vx=0;
+      if(e.flip&&e.t<0.25){e.face=-e.face;e.flip=false;}
+      if(e.t<=0){e.cool=0.35;e.set('walk',0);}
+    } else if(e.state==='wind'){
+      e.harmless=true;e.vx=-e.face*18*(e.t/0.55);
+      if(e.t<=0)e.set('charge',0.48);
+    } else if(e.state==='charge'){
+      e.harmless=false;e.vx=e.face*225;
+      if(e.hitWall||!safeAhead(e,8)||e.t<=0){if(e.hitWall)fx.jolt(0.035,3);e.harmless=true;e.vx=0;e.set('recover',0.72);}
     } else {
-      e.vx = 0;                                                  // turning: the shield swings open for half a second
-      if (e.flip && e.t < 0.25) { e.face = -e.face; e.flip = false; }
-      if (e.t <= 0) e.set('walk', 0);
+      e.harmless=true;e.vx=0;
+      if(e.t<=0){e.cool=1.25+rr()*0.6;e.set('walk',0);}
     }
   },
   draw(e, ctx) {
     ctx.save(); ctx.translate(e.x, e.y); ctx.scale(e.face, 1);
-    const open = e.state === 'turn', body = hit(e, SAND), sway = Math.sin(G.time * 5 + e.x) * 1.5;
-    for (const lx of [-9, 9]) line(ctx, lx, -8, lx, 0, '#a89a78', 6);                            // legs
-    solid(ctx, body, () => rrect(ctx, -14, -34, 28, 28, 7));                                      // body
-    solid(ctx, hit(e, '#a89a78'), () => rrect(ctx, -10, -40, 20, 10, 5));                         // head
-    eye(ctx, 3, -35, 2.4, LAMP); eye(ctx, 3.7, -35, 1, OUT);
-    for (let k = 0; k < 3; k++) line(ctx, -9 + k * 9, -29 - sway * 0.2, -9 + k * 9, -11, '#a89a78', 2);   // turnstile arms on the back
-    // front shield: an iron plate; swung up and open while turning, rust flash when it bounces a hit
-    ctx.save(); ctx.translate(14, -20); if (open) ctx.rotate(-1.1);
-    solid(ctx, e.shieldHit > 0 ? '#ffffff' : '#8d979a', () => rrect(ctx, -2, -17, 9, 34, 4));
-    eye(ctx, 2.5, -9, 1.6, RUST); eye(ctx, 2.5, 9, 1.6, RUST);
-    ctx.restore(); ctx.restore();
+    const open=e.state==='turn'||e.state==='recover', body=hit(e,SAND), sway=Math.sin(G.time*5+e.x)*1.5;
+    if(e.state==='wind')warnRing(ctx,-21,23,e.prog());
+    if(e.state==='wind')ctx.scale(0.96,1.04);else if(e.state==='charge')ctx.scale(1.1,0.94);
+    for(const lx of [-9,9])line(ctx,lx,-8,lx,0,'#a89a78',6);
+    solid(ctx,body,()=>rrect(ctx,-14,-34,28,28,7));
+    solid(ctx,hit(e,'#a89a78'),()=>rrect(ctx,-10,-40,20,10,5));
+    eye(ctx,3,-35,2.4,LAMP);eye(ctx,3.7,-35,1,OUT);
+    for(let k=0;k<3;k++)line(ctx,-9+k*9,-29-sway*.2,-9+k*9,-11,'#a89a78',2);
+    ctx.save();ctx.translate(e.state==='charge'?19:14,-20);if(open)ctx.rotate(-1.1);else if(e.state==='wind')ctx.rotate(0.12);
+    solid(ctx,e.shieldHit>0?'#ffffff':e.state==='wind'?RUST:'#8d979a',()=>rrect(ctx,-2,-17,9,34,4));
+    eye(ctx,2.5,-9,1.6,RUST);eye(ctx,2.5,9,1.6,RUST);ctx.restore();ctx.restore();
   }
 });
 
