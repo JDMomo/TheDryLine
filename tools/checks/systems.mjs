@@ -28,8 +28,11 @@ export default async ({ page }) => {
       if (c.loosePlinths !== 0) fail('loose plinths ' + c.loosePlinths);
       if (c.signs < 3) fail('hub signs ' + c.signs);
       const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), last = g.regions[order[order.length - 1].id], pre = g.nodes[last.arena].exits.left.to;
-      const pipe = last.pipe || pre;   // the last region's standpipe stop: a shared branch room off the room before the arena, or that room itself
-      if ([...c.standpipes].sort().join() !== [g.hub, pipe].sort().join()) fail('standpipes in ' + c.standpipes + ', wanted ' + g.hub + ' and ' + pipe);
+      const pipe = last.pipe || pre;   // fixed pre-Terminus service
+      const authored = order.flatMap(r => r.serviceAt ? [g.regions[r.id].nodes.find(id => g.nodes[id] && g.nodes[id].def === r.serviceAt)] : []).filter(Boolean);
+      const wantedPipes = [...new Set([g.hub, ...authored, pipe])].sort();
+      if ([...c.standpipes].sort().join() !== wantedPipes.join()) fail('standpipes in ' + c.standpipes + ', wanted ' + wantedPipes);
+      for (const id of authored) if (G.roomDefs[g.nodes[id].def].kind !== 'main') fail('authored service stop is not a main room: ' + id);
       if (pipe !== pre && g.nodes[pipe].parent !== pre) fail('the standpipe room of the Terminus does not hang off the room before the arena');
       if (G.roomDefs[g.nodes[pre].def].kind !== 'main') fail('the room before the last arena is not a main room');
       for (const n of Object.values(g.nodes)) for (const k of G.worldgen.contents(n)) if (k.type === 'plinth' && k.data.price && k.data.price !== 40) fail('kiosk price ' + k.data.price);
@@ -88,10 +91,11 @@ export default async ({ page }) => {
     G.run.shards = 0; const w4 = props('plinth').find(p => p.data.price && (p.data.item || p.data.trinket));
     if (w4) { at(w4); tap('interact'); ok(G.run.shards === 0 && !G.run.trinkets.includes(w4.data.trinket), 'cannot buy without scrip'); }
 
-    // standpipes: heal fully once, in the hub and before the final arena
+    // standpipes: every authored service stop heals fully once, alongside the Junction and pre-Terminus service
     D.newRun(13); D.god(true);
     const order = Object.values(G.regionDefs).sort((a, b2) => a.gate - b2.gate), last = G.run.graph.regions[order[order.length - 1].id], pre = G.run.graph.nodes[last.arena].exits.left.to;
-    for (const id of [G.run.graph.hub, last.pipe || pre]) {
+    const authored = order.flatMap(r => r.serviceAt ? [G.run.graph.regions[r.id].nodes.find(id => G.run.graph.nodes[id] && G.run.graph.nodes[id].def === r.serviceAt)] : []).filter(Boolean);
+    for (const id of [...new Set([G.run.graph.hub, ...authored, last.pipe || pre])]) {
       D.gotoRoom(id); const sp = props('standpipe')[0]; ok(!!sp, 'standpipe in ' + id); if (!sp) continue;
       G.players[0].hp = 1; use(sp); ok(G.players[0].hp === G.players[0].maxHp, 'standpipe healed fully in ' + id);
       G.players[0].hp = 1; use(sp); ok(G.players[0].hp === 1, 'standpipe works once in ' + id);
