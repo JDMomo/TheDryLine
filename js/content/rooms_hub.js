@@ -1,24 +1,42 @@
-/* CONTENT: the hub, The Junction. One room of kind 'hub' with a P (party start), one G gate per region (left to right in gate order:
-   r1, r2, r3, r4, then the Terminus), a standpipe H and three signs (?, read left to right, texts in signs[]). No enemies. */
+/* CONTENT: The Junction. This is an authored place, not a menu with five doors.
+   Three screens wide: arrival platform -> turntable concourse -> Terminus annex. No enemies. */
 (() => {
 'use strict';
-const G = window.G;
-const WALL = '##############################', OPEN = '#............................#';
+const G=window.G;
+const W=90,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+for(let c=0;c<W;c++){g[0][c]='#';g[15][c]='#';g[16][c]='#';}
+for(let r=0;r<H;r++){g[r][0]='#';g[r][W-1]='#';}
+const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+const put=(r,c,t)=>{for(let i=0;i<t.length;i++)g[r][c+i]=t[i];};
 
-// A turntable platform: a calm floor with planks overhead (kept clear of the gate labels, which float at row 10). Gates at columns 3, 8, 13, 19, 24 (a run apart, all on the floor).
+// WEST — arrival shelter. Low roof, warm standpipe, first story sign, view into the larger station.
+fill(2,8,2,20,'#');
+fill(9,9,5,17,'=');
+fill(12,14,21,23,'#');
+put(14,7,'P'); put(14,12,'?'); put(14,17,'H');
+
+// CENTRAL — broad turntable floor with an upper catwalk. Gates are spaced as landmarks, not adjacent menu buttons.
+put(10,27,'==========');
+put(8,40,'============');
+put(10,55,'==========');
+fill(13,14,37,39,'#'); fill(12,14,50,52,'#');
+put(14,29,'G'); put(14,40,'G'); put(14,51,'G');
+put(14,34,'?'); put(14,46,'?');
+
+// EAST — old departures annex. Ticket Hall and Terminus stand apart under a taller clock canopy.
+fill(3,7,64,87,'#');
+put(8,66,'====================');
+fill(12,14,71,73,'#');
+put(14,67,'G'); put(14,82,'G'); put(14,76,'?');
+
 G.defineRoom({
-  id: 'junction', region: 'hub', kind: 'hub',
-  signs: ['Tokens open a Warden\'s fare slots. Match the shape. The board shows each Warden\'s three.',
-    'The party carries three tokens. Find them on guarded plinths, in lost trunks and at the ticket machine. Kiosks sell trinkets.',
-    'Every gate is open. The Long Clock borrows one attack from each Warden still alive; the Terminus gate says which.'],
-  map: [
-    WALL, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN,
-    '#.........==============.....#',
-    OPEN,
-    '#........===.............===.#',
-    OPEN, OPEN,
-    '#..G.?.G..?..G..P..G.?.G..H..#',
-    WALL, WALL
-  ]
+ id:'junction',region:'hub',kind:'hub',w:3,
+ signs:[
+  'The Last Timetable names one service that was never cancelled. The five lit gates still obey it.',
+  'Each Warden holds one local order. Releasing them makes the Long Clock less dangerous.',
+  'The lines are places, not stages. Follow the lamps, machinery and old public signs when the route forks.',
+  'The Terminus is open now. It is also strongest now.'
+ ],
+ map:g.map(row=>row.join(''))
 });
 })();

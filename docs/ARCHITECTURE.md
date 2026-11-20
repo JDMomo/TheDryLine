@@ -188,3 +188,10 @@ Run it on your own rooms before handing them over: `node tools/roomlint.mjs <sub
 - Regions: `scale {hp, aggro}` is applied to enemies at room instance; `intro {maxEnemies, calm, avoid}` shapes the first main room. `C.BOSS_GRACE`, `C.KILL_MEND` in util.js.
 - UI: `G.menus.pauseStep` (pause menu), `G.tips` (one-line tips, device wording via `G.input.name`), `G.props.layoutPrompt` (wrapped, clamped prompts). Blur and hidden tab call the auto-pause in main.js.
 - Checks: new `prompts`, `pause`, `tips`, `tokens_unique`, `arc_reach`, `arena_escape`, `r1_bot`, `page_fit`, `sprites`. Under file:// the game canvas is tainted: checks must record draw calls, not read pixels.
+
+
+## Authored campaign spine
+
+The default run now uses fixed main-room sequences in every region. This follows the production lesson that memorable exploration comes from a coherent place with stable landmarks, while randomness is better spent on encounters, loot and replay modifiers. Procedural selection remains supported by omitting a region's `sequence`.
+
+The Junction is a three-screen authored hub: arrival shelter, central turntable, and old departures/Terminus annex. Its five region gates are deliberately spaced through the station instead of presented as adjacent menu buttons.

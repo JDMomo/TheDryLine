@@ -289,6 +289,13 @@ G.worldgen = {
       const pipes = isLast ? defsOf('branch', 'shared').filter(hasH) : [], pipeDef = pipes.length ? rng.pick(pipes) : null;
       const want = [trials, own, shared].filter(p => p.length).length + (pipeDef ? 1 : 0);
       const chooseMains = () => {
+        // Story/campaign regions may define an authored main-room spine. Seed variation still controls enemies, loot,
+        // branch contents and elites; it no longer shuffles the spaces the player learns as the core journey.
+        if (Array.isArray(region.sequence) && region.sequence.length) {
+          const seq = region.sequence.map(id => mains.find(d => d.id === id)).filter(Boolean);
+          if (seq.length !== region.sequence.length) G.fail('region ' + region.id + ' sequence references a missing main room');
+          return seq.slice(0, region.length);
+        }
         const intro = region.introRoom && mains.find(d => d.id === region.introRoom);
         const landmark = region.landmark && mains.find(d => d.id === region.landmark);
         const pinned = [];
@@ -318,8 +325,17 @@ G.worldgen = {
       hub.content[gateMarks[ri]] = { type: 'gate', data: { region: region.id } };
 
       // Doorways: the trial first, then the region's own branch room, then shared branch rooms (own rooms again if none).
-      const slots = rng.shuffle(chain.flatMap(node => G.roomDefs[node.def].marks.map((m, i) => m.ch === 'D' ? { node, i } : null).filter(Boolean)));
-      const required = [trials, own].filter(p => p.length).map(p => ({ def: rng.pick(p), own: p === own }));
+      let slots = rng.shuffle(chain.flatMap(node => G.roomDefs[node.def].marks.map((m, i) => m.ch === 'D' ? { node, i } : null).filter(Boolean)));
+      const required = [];
+      if (trials.length) required.push({ def: rng.pick(trials), kind:'trial', prefer: region.trialAt });
+      if (own.length) required.push({ def: rng.pick(own), kind:'own', own:true, prefer: region.ownAt });
+      // Authored campaign plans pin the important side rooms to meaningful landmarks while leaving extra/shared doors seeded.
+      for (let k = required.length - 1; k >= 0; k--) {
+        const pref = required[k].prefer;
+        if (!pref) continue;
+        const at = slots.findIndex(sl => sl.node.def === pref);
+        if (at >= 0) slots.unshift(slots.splice(at, 1)[0]);
+      }
       // The standpipe stop goes on a doorway of the last main room when it has one (the Terminus: a standpipe before the arena).
       if (pipeDef) { const at = slots.findIndex(sl => sl.node === chain[chain.length - 1]); required.unshift({ def: pipeDef, pipe: true }); if (at > 0) slots.unshift(slots.splice(at, 1)[0]); }
       if (slots.length < required.length) warnings.push('region ' + region.id + ' has too few doorways for its trial and branch rooms');
