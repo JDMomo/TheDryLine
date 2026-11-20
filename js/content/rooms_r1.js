@@ -203,7 +203,9 @@ G.defineRoom({
     fill(2,10,14,19,'#');
     put(14,6,'?');
 
-    // Iron boss threshold. The arena parser sees row 11 solid with rows 12-14 open and uses this as the closing gate.
+    // Iron boss threshold. Arena parsing chooses the FIRST row-11 solid over a 3-tile opening,
+    // so clear the painter's ordinary left wall along the vestibule before stamping the intended threshold.
+    fill(11,11,0,19,'.');
     put(11,20,'#');
 
     // Escape shelves exactly three tiles above the floor and tight to both fight walls.
