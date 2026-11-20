@@ -7,7 +7,7 @@ export default async ({ page, shots }) => {
     // A fresh run with the final arena node set to the Long Clock; the fight is started with the party inside the door.
     window.T = {
       setup(beaten = [], tokens = [], god = true, seed = 5) {
-        D.newRun(seed); D.god(god);
+        G.ledger.force = 'none'; D.newRun(seed); D.god(god);     // no Timetable card: every borrowed attack is in play
         for (const r of beaten) G.run.beaten[r] = true;
         const node = G.run.graph.nodes[G.run.graph.regions.final.arena];
         if (node.def !== 'final_arena' || !node.content[0] || node.content[0].id !== 'long_clock') { node.def = 'final_arena'; node.content = [{ type: 'boss', id: 'long_clock' }]; }
@@ -29,7 +29,7 @@ export default async ({ page, shots }) => {
   });
   if (!defs.room || defs.room.kind !== 'arena' || defs.room.region !== 'final' || defs.room.cols !== 30 || defs.room.rows !== 17) throw new Error('arena room: ' + JSON.stringify(defs.room));
   if (defs.room.doorCol !== 3 || defs.room.floorX[0] !== 128 || defs.room.floorX[1] !== 928) throw new Error('arena door/floor: ' + JSON.stringify(defs.room));
-  if (!defs.boss || defs.boss.hp !== 1100 || defs.boss.spots.join() !== 'pierce,arc,burst,ground') throw new Error('boss def: ' + JSON.stringify(defs.boss));
+  if (!defs.boss || defs.boss.hp !== 1300 || defs.boss.spots.join() !== 'pierce,arc,burst,ground') throw new Error('boss def: ' + JSON.stringify(defs.boss));
 
   // ---- 1. every attack state in 150 s of play, both phases; tells last 0.45 s or more; at most three crabs; every slot exposed at some time
   const cov = await page.evaluate(() => {
@@ -133,7 +133,7 @@ export default async ({ page, shots }) => {
   const need = { none: ['toll', 'beam', 'sig', 'crates'], r1: ['beam', 'sig', 'crates'], r2: ['toll', 'sig', 'crates'], r3: ['toll', 'beam', 'crates'], r4: ['toll', 'beam', 'sig'], two: ['sig', 'crates'], all: [] };
   for (const k in need) {
     const c = w.cfg[k];
-    if (Math.abs(c.hp - 1100) > 1e-6 || Math.abs(c.hp0 - c.hp) > 1e-6) throw new Error(k + ': health must not depend on Wardens beaten: ' + c.hp);
+    if (Math.abs(c.hp - 1300) > 1e-6 || Math.abs(c.hp0 - c.hp) > 1e-6) throw new Error(k + ': health must not depend on Wardens beaten: ' + c.hp);
     if (c.borrowed.slice().sort().join() !== need[k].slice().sort().join()) throw new Error(k + ': borrowed ' + c.borrowed + ', wanted ' + need[k]);
     if (c.attacks.length !== 4 + need[k].length) throw new Error(k + ': attack bag has ' + c.attacks.length + ' attacks');
     if (c.shown.length !== need[k].length) throw new Error(k + ': G.game.borrows() lists ' + c.shown);

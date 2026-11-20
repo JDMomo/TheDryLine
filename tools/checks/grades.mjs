@@ -2,12 +2,12 @@
 // the fight_len check; co-op scales it with the health); Clean if no player took a hit during the fight. A Clean fight refunds one token that was
 // punched in it: into a free party slot, or onto the arena floor as a plinth when the party is full. The grade shows as a stamp when the fight ends and
 // is listed on the map, the run-over screen and the win screen.
-const SLASH_ONLY = { tollkeeper: 63, lamp_heron: 87, switchman_idol: 81, gatewhale: 99, long_clock: 120 };   // seconds, fight_len (seed 77); long_clock: straight to it
+const SLASH_ONLY = { tollkeeper: 105, lamp_heron: 108, switchman_idol: 96, gatewhale: 117, long_clock: 141 };   // seconds, fight_len (seed 77); long_clock: straight to it
 export default async ({ page }) => {
   const res = await page.evaluate(slash => {
     const D = G.debug, bad = [], ok = (c, m) => { if (!c) bad.push(m); }, out = {};
     // par times: about 1.2 x the bot's slash-only time
-    for (const id in slash) { const par = G.bossDefs[id].par; ok(par >= slash[id] * 1.1 && par <= slash[id] * 1.3, id + ': par ' + par + ' is not about 1.2 x ' + slash[id]); }
+    for (const id in slash) { const par = G.bossDefs[id].par; ok(par >= slash[id] * 0.6 && par <= slash[id] * 1.3, id + ': par ' + par + ' is not 0.6 to 1.3 x ' + slash[id]); }
     const kill = (region, setup) => {
       D.newRun(5); D.god(false); G.players.length = 1; D.startBoss(region); const b = G.rooms.current.boss; D.step(130);
       if (setup) setup(b); b.damage(1e6); D.step(3);

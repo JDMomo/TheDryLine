@@ -19,9 +19,9 @@
                         Punched: geysers show their marks longer.
    - Foot Plate (ground): the plate on the front foot, open while it stands on its feet. Slide the slab along the floor
                         at it from the front. Punched: it stays on the floor longer after a topple.
-   Own fields (set in init): lie 0..1 (toppled), lean, crouch, arms, lamp[3], sig (signalling), marks, zone. b.rect is
-   replaced in init so the lying body is slashable where it really lies (the base class has no hook for this). Contact damage
-   is done here (contact: false) because the lying body must not hurt the player who slashes it. */
+   Own fields (set in init): lie 0..1 (toppled), lean, crouch, arms, lamp[3], sig (signalling), marks, zone. The hook shapes(b)
+   puts the slashable box where the body really lies. Contact is a function: it hurts only while the boss stands (the fallen body is
+   safe to slash; the fall itself is a hit zone inside the topple attack). */
 (() => {
 'use strict';
 const G = window.G, U = G.util, fx = G.fx;
@@ -39,7 +39,6 @@ function nextAttack(b) {
   }
   return b.bag.pop();
 }
-const wind = (b, t) => Math.max(0.35, t * (b.rage ? 0.75 : 1));
 const hz = (b, lx0, lx1, ly0, ly1) => {                              // a world rect from boss-space x range and y range
   const xa = b.x + b.face * lx0, xb = b.x + b.face * lx1;
   return { x0: Math.min(xa, xb), x1: Math.max(xa, xb), y0: b.y + ly0, y1: b.y + ly1 };
@@ -60,14 +59,27 @@ function choose(b) {
     if (nx > b.minX && nx < b.maxX) { b.hops++; b.hopDir = dir; b.set('hop', 0.5); return; }
   }
   b.hops = 0; b.next = null; b.last = a;
-  if (a === 'rings') b.set('ringTell', wind(b, 0.75));
-  else if (a === 'geyser') b.set('geyserTell', wind(b, 0.7));
-  else if (a === 'lever') b.set('leverTell', wind(b, 0.65));
-  else {
+  if (a === 'topple') {
     if (!fits(b)) b.face = -b.face;                                      // not enough room in front: fall the other way
-    b.set('toppleTell', wind(b, 0.95)); startZone(b);
-  }
+    b.begin(a); startZone(b);
+  } else b.begin(a);                                                     // tell and wind-up come from the registry below
 }
+
+// The attack registry (js/game/bosses.js documents the fields). Wind-ups are scaled by 0.75 when enraged and never go under 0.35 s.
+G.defineAttacks('switchman_idol', {
+  rings: { name: 'Signal Rings', tell: 'ringTell', wind: 0.75, strike: ['ring'], strikeT: 2.5, recover: 1.0, dodge: 'jump',
+    fair: 'Arms up and all three lamps pulse; then one lamp lights for 0.45 s before its head fires a ring. Low ring: jump. Middle: stay down. High: stay low. A slash breaks any ring.',
+    slots: [{ cut: 'pierce', flag: 'fewRings', mode: 'weaken', note: 'two rings instead of four' }] },
+  geyser: { name: 'Brine Geysers', tell: 'geyserTell', wind: 0.7, strike: ['geyser'], strikeT: 2.4, recover: 1.1, dodge: 'move',
+    fair: 'Rust marks appear under each player and a column erupts 0.95 s later. Walk out of the marks; three waves.',
+    slots: [{ cut: 'burst', flag: 'slowGeyser', mode: 'weaken', note: 'the marks show 1.3 s instead of 0.95 s' }] },
+  lever: { name: 'Lever Toss', tell: 'leverTell', wind: 0.65, strike: ['lever'], strikeT: 1.0, recover: 1.0, dodge: 'cut',
+    fair: 'It raises two levers (three enraged) and throws them at the player; they fly back to it. Slash them or step aside.',
+    slots: [{ cut: 'arc', flag: 'noReturn', mode: 'weaken', note: 'the levers drop and stay down' }] },
+  topple: { name: 'Topple', tell: 'toppleTell', wind: 0.95, strike: ['topple'], strikeT: 0.38, recover: 3.5, recoverStates: ['lying', 'rise', 'recover'], dodge: 'move',
+    fair: 'It leans back and shudders for 0.95 s while a hatched zone marks the floor in front of it; then it falls flat and lies there. Be outside the zone; the lying body is safe to slash.',
+    slots: [{ cut: 'ground', flag: 'stiff', mode: 'weaken', note: 'it lies 1.5 s longer' }] }
+});
 
 // Floor warnings are harmless shots that only paint (r 0, one body-length under the floor line); the logic lives in b.marks / b.zone.
 function addMark(b, x) {
@@ -130,7 +142,13 @@ function blob(ctx, x, y, w, h, r, fill) {
 function disc(ctx, x, y, r, fill) { ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke(); }
 
 G.defineBoss({
-  id: 'switchman_idol', name: 'The Switchman Idol', hp: 1050, par: 97, w: 64, h: 152, contact: false,
+  id: 'switchman_idol', name: 'The Switchman Idol', hp: 1250, par: 97, w: 64, h: 152,
+  interp: ['lie', 'lean', 'crouch', 'arms'],
+  shapes(b) {                                                            // the lying body is where it really lies
+    if (b.lie > 0.5) { const a = [b.x + b.face * 28, b.x + b.face * (REACH - 10)]; return { x0: Math.min(...a), x1: Math.max(...a), y0: b.y - 64, y1: b.y }; }
+    return { x0: b.x - b.w / 2, x1: b.x + b.w / 2, y0: b.y - b.h, y1: b.y };
+  },
+  contact: b => b.acting() && b.lie < 0.02 && b.state !== 'rise' && hz(b, -28, 28, -146, 0),
 
   spots: {
     pierce: { name: 'Top Lens', local: [22, -130], r: 18, exposed: b => b.sig && b.lie < 0.02,
@@ -146,10 +164,6 @@ G.defineBoss({
   init(b) {
     Object.assign(b, { lie: 0, lie0: 0, lean: 0, crouch: 0, arms: 0, lamp: [0, 0, 0], sig: false, marks: [], zone: null, bag: [], next: null, last: '', hops: 0, hopDir: 1,
       ri: 0, ph: 0, pt: 0, seq: [], wave: 0, wt: 0, ln: 0, lt: 0 });
-    b.rect = function () {                                               // the lying body is where it really lies
-      if (this.lie > 0.5) return Object.assign({ y0: this.y - 64, y1: this.y }, (a => ({ x0: Math.min(...a), x1: Math.max(...a) }))([this.x + this.face * 28, this.x + this.face * (REACH - 10)]));
-      return { x0: this.x - this.w / 2, x1: this.x + this.w / 2, y0: this.y - this.h, y1: this.y };
-    };
   },
 
   pose(b) {
@@ -180,8 +194,6 @@ G.defineBoss({
         fx.dust(m.x, b.floor, 12); fx.spark(m.x, b.floor - 10, 10, '#e6eef4', 380, 0.45); fx.jolt(0, 5);
       }
     }
-    // contact damage: only while it stands (the fallen body is safe to slash; the fall itself is a hit zone)
-    if (b.lie < 0.02 && b.state !== 'rise') G.combat.hurtPlayers(hz(b, -28, 28, -146, 0), b.x);
     switch (b.state) {
       case 'idle':
         b.facePlayer();

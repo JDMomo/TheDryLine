@@ -1,10 +1,13 @@
 // Tollkeeper production art: concept-sheet state strip drives normal/stagger/rage while mechanics remain engine overlays.
+// The strip is a `states` boss skin (js/art/boss_skins.js): once the file is back, move G.bossSkinPending.tollkeeper into G.bossSkins.
 import fs from 'fs';
 export default async({page})=>{
  if(!fs.existsSync(new URL('../../assets/bosses/tollkeeper/states.webp',import.meta.url)))return 'skipped: Tollkeeper strip not in assets (needs re-export); code-drawn body in use';
  const r=await page.evaluate(async()=>{
   const D=G.debug,bad=[],wait=()=>new Promise(r=>setTimeout(r,20));
   for(let i=0;i<120&&G.spritesPending>0;i++)await wait();
+  if(!G.bossSkins.tollkeeper)return {bad:['the states file exists but js/art/boss_skins.js does not register it (move G.bossSkinPending.tollkeeper into G.bossSkins)'],errors:G.errors.slice()};
+  G.bossSkin.entryOf({id:'tollkeeper'});for(let i=0;i<120&&G.spritesPending>0;i++)await wait();
   const sk=G.strips&&G.strips.boss_tollkeeper_states;
   if(!sk||!sk.img||!sk.img.naturalWidth)return {bad:['Tollkeeper watercolor strip did not load'],errors:G.errors.slice()};
   if(sk.frames!==3||Math.round(sk.fw)!==144||sk.fh!==84)bad.push('unexpected Tollkeeper strip geometry '+JSON.stringify({frames:sk.frames,fw:sk.fw,fh:sk.fh}));
@@ -13,7 +16,7 @@ export default async({page})=>{
   const b=G.rooms.current.boss;if(!b)return {bad:['r1 arena has no Tollkeeper'],errors:G.errors.slice()};
   const cv=document.createElement('canvas'),ctx=cv.getContext('2d'),orig=ctx.drawImage.bind(ctx),frames=[];
   ctx.drawImage=(img,...a)=>{if(img===sk.img)frames.push(Math.round(a[0]/sk.fw));return orig(img,...a);};
-  const draw=()=>b.def.draw(b,ctx);
+  const draw=()=>b.draw(ctx);
   b.state='idle';b.hp=b.maxHp;draw();
   b.state='stagger';draw();
   b.state='idle';b.hp=b.maxHp*.4;draw();

@@ -6,9 +6,9 @@ export default async ({page})=>{
     const bad=[],D=G.debug;
     D.newRun(4242);D.god(true);G.rooms.enter(G.run.graph.hub,{start:true});
     const p=G.players[0],x0=p.x;
-    // The two lower cells of both shelter uprights must be open.
-    const d=G.roomDefs.junction;
-    for(const c of [57,58,71,72]) for(const rr of [30,31]) if(d.grid[rr][c]!==' .'.trim()) bad.push('sealed shelter at '+c+','+rr);
+    // The Keeper's canopy uprights stop above walking height: the three walking rows over the start floor stay open at both uprights.
+    const d=G.roomDefs.junction, P=d.marks.find(m=>m.ch==='P');
+    for(const c of [73,91]) for(let rr=P.r-2;rr<=P.r;rr++) if(d.grid[rr][c]!=='.') bad.push('sealed shelter at '+c+','+rr);
     // Simulate plain right movement long enough to leave the canopy.
     for(let i=0;i<180;i++){G.input._qa={right:true};D.setInput(0,{right:true});D.step(1);}
     D.setInput(0,{});

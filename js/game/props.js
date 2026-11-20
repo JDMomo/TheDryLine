@@ -257,7 +257,10 @@ const TYPES = {
   },
   gate: {       // hub gate into a region, data: { region }. Shows the region's Warden sigil, dimmed once beaten. The Terminus also shows what the Long Clock will borrow.
     interact(pr) {
-      const id = G.run.graph.regions[pr.data.region].first, def = G.roomDefs[G.run.graph.nodes[id].def];
+      // A home-area gate stands at its route's mouth: taking it is the same as walking out through that portal.
+      const rg = G.run.graph.regions[pr.data.region];
+      if (rg.mouth) return G.rooms.go(rg.mouth.node, rg.mouth.entry);
+      const id = rg.first, def = G.roomDefs[G.run.graph.nodes[id].def];
       G.rooms.go(id, { side: def.route ? def.route[0] : 'left' });
     },
     prompt(pr, p) {
@@ -265,8 +268,9 @@ const TYPES = {
       const chart = (G.run.graph.chart || {})[r.id], bor = r.id === 'final' ? G.game.borrows() : null;
       const fresh = !['r1','r2','r3','r4'].some(id=>G.run.beaten[id]);
       const recommend = fresh && r.id==='r1' ? ' Recommended first route: broad footing, fewer aerial threats. ' : '';
+      const hubDef = G.rooms.current && G.rooms.current.def, way = hubDef && (hubDef.portals || []).find(q => q.id === r.id), hint = way && way.hint ? ' ' + way.hint : '';
       return [r.name, recommend + (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.') + (chart ? ' Slots: ' + chart.map(c => G.CLASSES[c].name).join(', ') + '.' : '')
-        + (bor ? (bor.length ? ' It borrows from each Warden still alive: ' + bor.map(x => x.text + ' (' + x.warden + ')').join('; ') + '.' : ' Every Warden has fallen: it borrows nothing.') : ''), useName(p) + ' to enter'];
+        + (bor ? (bor.length ? ' It borrows from each Warden still alive: ' + bor.map(x => x.text + ' (' + x.warden + ')').join('; ') + '.' : ' Every Warden has fallen: it borrows nothing.') : '') + hint, useName(p) + ' to take this route'];
     },
     // the borrow lines above the Terminus gate label ("Borrows: a, b, c", wrapped), shown before the party commits to the fight
     borrowLines(pr, ctx) {
@@ -383,13 +387,18 @@ const TYPES = {
       const plates=room.props.filter(o=>o.type==='plate'&&!o.gone&&(o.data.channel||'main')===ch);
       const plate=plates.some(o=>G.players.some(p=>!p.down&&p.onGround&&Math.abs(p.x-o.x)<18&&Math.abs(p.y-o.y)<12));
       for(const o of plates)o.data.active=G.players.some(p=>!p.down&&p.onGround&&Math.abs(p.x-o.x)<18&&Math.abs(p.y-o.y)<12);
-      const open=!!(plate||(st&&st.timer>0));
+      const open=!!(plate||(st&&st.timer>0)||G.props.channelOpen(ch));
       const r1=Math.round(pr.y/C.T)-1;
       if(!pr.bl) pr.bl={c:Math.floor(pr.x/C.T),r0:r1-2,r1,on:!open,mech:true};
       if(!G.tiles.blockers.includes(pr.bl))G.tiles.blockers.push(pr.bl);
       pr.bl.on=!open;pr.data.open=open;pr.data.plate=plate;
     },
-    prompt() { return null; },
+    // Home-area gates on a 'beaten:<region>' channel say what opens them while they are shut.
+    prompt(pr) {
+      const m=/^beaten:(\w+)$/.exec(pr.data.channel||''); if(!m||pr.data.open) return null;
+      const r=G.regionDefs[m[1]], b=r&&G.bossDefs[r.boss];
+      return ['Freight gate','Locked under '+(b?b.name:'a Warden')+'\'s order. It opens when '+(r?r.name:'that line')+' goes quiet.',''];
+    },
     draw(pr,ctx) {
       const x=pr.x,y=pr.y,h=3*C.T,open=!!pr.data.open;
       ctx.save();ctx.translate(x,y);
@@ -516,6 +525,56 @@ const TYPES = {
       ctx.restore();
     }
   },
+  // Loop-back shortcut hatch, data: { region, side: 'home' | 'deep' }. The deep end (worldgen places it in the region's last main room)
+  // unbolts both ends and drops the party into the Junction; the home end (a template fixture) is bolted until then.
+  shortcut: {
+    interact(pr) {
+      const rid = pr.data.region, sc = G.run.graph.shortcuts && G.run.graph.shortcuts[rid], reg = G.regionDefs[rid];
+      if (!sc || !reg) return;
+      const opened = G.run.shortcuts || (G.run.shortcuts = {});
+      if (pr.data.side === 'deep') {
+        if (!opened[rid]) { opened[rid] = true; fx.say('Shortcut unbolted', 'The hatch drops straight into the Junction. It stays open from both sides now.', 3); }
+        G.rooms.go(G.run.graph.hub, { at: { x: sc.home.x, y: sc.home.y, face: 1 } });
+      } else {
+        if (!opened[rid]) return fx.say('Bolted hatch', 'Bolted from the far side. The bolt is somewhere deep in ' + reg.name + '.', 2.4);
+        G.rooms.go(sc.deep, { at: { x: sc.x, y: sc.y, face: -1 } });
+      }
+    },
+    prompt(pr, p) {
+      const rid = pr.data.region, reg = G.regionDefs[rid] || { name: '?' }, open = G.run.shortcuts && G.run.shortcuts[rid];
+      if (pr.data.side === 'deep') return ['Junction hatch', open ? 'A shortcut back to the Junction.' : 'The bolt is on this side. Unbolt it to open a way straight back to the Junction.', useName(p) + (open ? ' to drop through' : ' to unbolt')];
+      return [reg.name + ' hatch', open ? 'Unbolted. It drops deep into ' + reg.name + ', near the Warden.' : 'Bolted from the far side.', open ? useName(p) + ' to go through' : 'Opens from inside ' + reg.name];
+    },
+    draw(pr, ctx) {
+      const x = pr.x, y = pr.y, open = !!(G.run.shortcuts && G.run.shortcuts[pr.data.region]), pal = art.palette(pr.data.region);
+      ctx.save();
+      ctx.fillStyle = '#1d2422'; ctx.fillRect(x - 18, y - 52, 36, 52);
+      ctx.fillStyle = open ? '#0a0f0e' : '#59503e'; ctx.fillRect(x - 14, y - 48, 28, 48);
+      ctx.strokeStyle = '#14120f'; ctx.lineWidth = 3; ctx.strokeRect(x - 18, y - 52, 36, 52);
+      ctx.strokeStyle = pal.accent; ctx.lineWidth = 2; ctx.strokeRect(x - 14, y - 48, 28, 48);
+      if (!open) { ctx.fillStyle = '#a58d60'; ctx.fillRect(x - 16, y - 30, 32, 6); ctx.strokeStyle = '#14120f'; ctx.lineWidth = 2; ctx.strokeRect(x - 16, y - 30, 32, 6); }
+      else { ctx.globalAlpha = .35 + .15 * Math.sin(G.time * 2.5); ctx.fillStyle = pal.accent; ctx.fillRect(x - 10, y - 44, 20, 40); ctx.globalAlpha = 1; }
+      ctx.restore();
+      art.label(ctx, (G.regionDefs[pr.data.region] || { name: '' }).name, x, y - 62, 10.5, open ? pal.accent : '#9aa89f');
+    }
+  },
+  // A small scrip stash (home-area secrets), data: { scrip, name }. Taken once per run.
+  cache: {
+    interact(pr) {
+      const d = pr.data; if (d.taken) return;
+      d.taken = true; G.run.shards += d.scrip || 0;
+      fx.spark(pr.x, pr.y - 20, 16, '#fff3c4', 220, 0.5); fx.floatText(pr.x, pr.y - 60, '+' + (d.scrip || 0) + ' scrip', '#fff3c4');
+      fx.say(d.name || 'Stash', 'Someone hid ' + (d.scrip || 0) + ' scrip here and never came back for it.', 2.2);
+    },
+    prompt(pr, p) { return pr.data.taken ? null : [pr.data.name || 'Stash', 'A forgotten tin box.', useName(p) + ' to open']; },
+    draw(pr, ctx) {
+      const x = pr.x, y = pr.y, d = pr.data;
+      ctx.fillStyle = d.taken ? '#3a3a34' : '#6f6a52'; ctx.fillRect(x - 12, y - 14, 24, 14);
+      ctx.fillStyle = d.taken ? '#2a2a26' : '#8f8663'; ctx.fillRect(x - 13, y - (d.taken ? 14 : 18), 26, 5);
+      ctx.strokeStyle = '#14120f'; ctx.lineWidth = 2; ctx.strokeRect(x - 12, y - 14, 24, 14);
+      if (!d.taken) { ctx.fillStyle = '#fff3c4'; ctx.globalAlpha = .5 + .3 * Math.sin(G.time * 3 + x); ctx.fillRect(x - 2, y - 11, 4, 4); ctx.globalAlpha = 1; }
+    }
+  },
   sign: {       // data: { text }
     prompt(pr) { return pr.data.text ? ['', pr.data.text, ''] : null; },
     draw(pr, ctx) { const x = pr.x, y = pr.y; ctx.fillStyle = '#5a4630'; ctx.fillRect(x - 2, y - 26, 4, 26); ctx.fillStyle = '#8a6c46'; ctx.fillRect(x - 15, y - 40, 30, 16); ctx.fillStyle = '#5a4630'; ctx.fillRect(x - 10, y - 35, 20, 2); ctx.fillRect(x - 10, y - 30, 14, 2); }
@@ -523,6 +582,12 @@ const TYPES = {
 };
 
 G.props = {
+  // Mechanism channels that open by run state rather than a lever or plate: 'beaten:<region>' (that Warden has fallen),
+  // 'shortcut:<region>' (that loop-back hatch is unbolted). Used by mech_gate.
+  channelOpen(ch) {
+    const m = /^(beaten|shortcut):(\w+)$/.exec(ch || ''); if (!m || !G.run) return false;
+    return m[1] === 'beaten' ? !!G.run.beaten[m[2]] : !!(G.run.shortcuts && G.run.shortcuts[m[2]]);
+  },
   teachT: {},       // seconds each first-time tip has been on screen this session
   tip(pr) { const k = teachKey(pr); return G.meta.taught[k] ? '' : TEACH[k] || ''; },
   TYPES,            // content may add a prop type here: G.props.TYPES.<name> = { draw, update, interact, prompt }

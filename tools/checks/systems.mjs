@@ -12,16 +12,16 @@ export default async ({ page }) => {
       if (chk.unreachable.length || chk.deadEnds.length) fail('graph not sound');
       for (const r of Object.values(G.regionDefs)) {
         const f = c.fixed[r.id];
-        if (!r.fixedItem && !f) continue;   // the Terminus has no fixed token: the bible lists four guarded plinths, one per region r1 to r4
+        if (!r.plinth && !f) continue;   // the Terminus has no plinth: the bible lists four guarded plinths, one per region r1 to r4
         if (!f) { fail('no guarded plinth in ' + r.id); continue; }
         if (f.kind !== 'branch' || !f.parent) fail('plinth of ' + r.id + ' is not in a branch room');
-        const want = G.itemDefs[r.fixedItem] ? r.fixedItem : null;
-        if (want ? f.item !== want : (!G.itemDefs[f.item] || G.itemDefs[f.item].rarity === 'fixed' && false)) fail('plinth of ' + r.id + ' holds ' + f.item + ', wanted ' + (want || 'a defined token'));
+        if (f.item !== g.draw.plinth[r.id] || !G.itemDefs[f.item]) fail('plinth of ' + r.id + ' holds ' + f.item + ', the run drew ' + g.draw.plinth[r.id]);   // the token is drawn per run (the pool check covers which)
         if (g.nodes[f.node].region !== r.id) fail('plinth of ' + r.id + ' is in another region');
       }
       if (c.trunks !== 2 || c.trunksInMain !== 2) fail('trunks ' + c.trunks + ' (' + c.trunksInMain + ' in main rooms)');
       if (c.tickets !== 1) fail('ticket machines ' + c.tickets);
-      if (c.kioskRooms !== 1 || c.kioskWares !== 3) fail('kiosk rooms ' + c.kioskRooms + ', wares ' + c.kioskWares);
+      const rule = g.rule || {};   // Timetable cards Scrip Boom (kiosk closed) and Dry Pipes (no standpipes) change these counts: the timetable check covers them
+      if (rule.kioskClosed ? c.kioskWares !== 0 : (c.kioskRooms !== 1 || c.kioskWares !== 3)) fail('kiosk rooms ' + c.kioskRooms + ', wares ' + c.kioskWares);
       if (c.booths !== 0) fail('booths ' + c.booths);
       if (Object.values(G.roomDefs).some(d => d.marks.some(m => m.ch === 'K'))) fail('a room template still has a booth marker');
       for (const n of Object.values(g.nodes)) for (const k of G.worldgen.contents(n)) if (k.type === 'plinth' && k.data.price && !k.data.trinket) fail('the kiosk sells a token');
@@ -31,7 +31,7 @@ export default async ({ page }) => {
       const pipe = last.pipe || pre;   // fixed pre-Terminus service
       const authored = order.flatMap(r => r.serviceAt ? [g.regions[r.id].nodes.find(id => g.nodes[id] && g.nodes[id].def === r.serviceAt)] : []).filter(Boolean);
       const wantedPipes = [...new Set([g.hub, ...authored, pipe])].sort();
-      if ([...c.standpipes].sort().join() !== wantedPipes.join()) fail('standpipes in ' + c.standpipes + ', wanted ' + wantedPipes);
+      if ([...c.standpipes].sort().join() !== (rule.noPipes ? '' : wantedPipes.join())) fail('standpipes in ' + c.standpipes + ', wanted ' + wantedPipes);
       for (const id of authored) if (G.roomDefs[g.nodes[id].def].kind !== 'main') fail('authored service stop is not a main room: ' + id);
       if (pipe !== pre && g.nodes[pipe].parent !== pre) fail('the standpipe room of the Terminus does not hang off the room before the arena');
       if (G.roomDefs[g.nodes[pre].def].kind !== 'main') fail('the room before the last arena is not a main room');
@@ -92,7 +92,7 @@ export default async ({ page }) => {
     if (w4) { at(w4); tap('interact'); ok(G.run.shards === 0 && !G.run.trinkets.includes(w4.data.trinket), 'cannot buy without scrip'); }
 
     // standpipes: every authored service stop heals fully once, alongside the Junction and pre-Terminus service
-    D.newRun(13); D.god(true);
+    G.ledger.force = 'none'; D.newRun(13); D.god(true);
     const order = Object.values(G.regionDefs).sort((a, b2) => a.gate - b2.gate), last = G.run.graph.regions[order[order.length - 1].id], pre = G.run.graph.nodes[last.arena].exits.left.to;
     const authored = order.flatMap(r => r.serviceAt ? [G.run.graph.regions[r.id].nodes.find(id => G.run.graph.nodes[id] && G.run.graph.nodes[id].def === r.serviceAt)] : []).filter(Boolean);
     for (const id of [...new Set([G.run.graph.hub, ...authored, last.pipe || pre])]) {

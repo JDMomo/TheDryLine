@@ -121,16 +121,20 @@ Rules, from research: slots are few so each pick costs another; every token is u
 |---|---|---|---|---|---|
 | cobalt_awl | Cobalt Awl | pierce | common | fast straight shot; hold Up to fire upward | none: the baseline |
 | tin_spindle | Tin Spindle | pierce | rare | thin needle that passes through enemies | stand still 0.6 s first and it flies twice as far and hits harder |
-| flint_tether | Flint Tether | pierce | fixed, r2 | bolt on a cable | pulls you to where it lands |
+| flint_tether | Flint Tether | pierce | signature | bolt on a cable | pulls you to where it lands |
 | ochre_ladle | Ochre Ladle | arc | common | lobbed shot that bursts on landing | none: the baseline |
 | sulphur_kettle | Sulphur Kettle | arc | rare | heavy, slow lob with a big burst | steer it left and right in flight |
-| chalk_skipstone | Chalk Skipstone | arc | fixed, r3 | bouncing throw | each bounce (up to 3) adds damage |
+| chalk_skipstone | Chalk Skipstone | arc | signature | bouncing throw | each bounce (up to 3) adds damage |
 | cinder_bell | Cinder Bell | burst | common | pulse around you; clears enemy shots | none: the baseline |
 | rust_censer | Rust Censer | burst | rare | pulse around you | a second pulse fires 1.2 s later where you stood |
-| copper_drum | Copper Drum | burst | fixed, r4 | pulse around you | launches you and nearby allies upward |
+| copper_drum | Copper Drum | burst | signature | pulse around you | launches you and nearby allies upward |
 | basalt_roller | Basalt Roller | ground | common | slab that slides along the floor and drops off ledges | none: the baseline |
 | quartz_wake | Quartz Wake | ground | rare | sliding wave | splits in two at each ledge |
-| pumice_crawler | Pumice Crawler | ground | fixed, r1 | slow floor flame that lasts a long time | waits at ledges; press the item button again to send it on |
+| pumice_crawler | Pumice Crawler | ground | signature | slow floor flame that lasts a long time | waits at ledges; press the item button again to send it on |
+| jet_gimlet | Jet Gimlet | pierce | ledger (feat) | bolt that turns after 0.35 s and flies home to you | strikes everything twice, out and back; tags metal, magnetic |
+| amber_sling | Amber Sling | arc | ledger (feat) | short lob that bursts into two small bursts | tags flammable, brittle: the burst lights what it touches and shatters brittle things |
+| mica_lantern | Mica Lantern | burst | ledger (feat) | pulse 90 px ahead of you, again 0.7 s later | tags brittle, spark: it lights clouds at a distance |
+| gypsum_sledge | Gypsum Sledge | ground | ledger (feat) | slab that hugs the floor | grows from 5 to 15 damage as it slides; tags heavy, slick |
 
 ### Materials (decision "Materials", 2026-11-15)
 Every token and trinket has one or two material tags and one card line naming the interactions they give it. The tags appear as small labelled chips on every card (plinth prompt, kiosk, map, HUD) and the line sits under the description. Interactions have fixed numbers, no dice, and a floating word names each one when it fires. Materials never change which fare slot a token opens: that stays its cut.
@@ -177,15 +181,41 @@ Not built: a general wind-material rule. Boiler brine lobs now leave Wet puddles
 - The run starts with the four commons and the four fixed tokens in the pool (fixed tokens are placed on their plinths; the rest of the pool feeds the trunks and the ticket machine). Each rare is locked until the player has punched one slot of that cut in any run (meta save).
 - Picking up a token when the party is full swaps it with the selected slot; the old one stays on the plinth.
 
-### Where tokens come from in one run (7 tokens on offer, 3 carried)
-- 4 fixed plinths, one per region (r1 to r4), each in a guarded branch room (a short platforming or combat test). Always the same token in the same region.
-- 2 lost trunks in main rooms; each opens when its room is cleared and holds a random pool token.
-- 1 ticket machine: pay scrip to see three tickets (tokens first) and keep one. It can be used twice: the first roll costs 30 scrip, the second 45.
-- 1 kiosk: three wares, trinkets only, 40 scrip each. It sells no tokens.
-- No clipping booth (removed; its prop code remains in the engine, unused).
-- Tokens stay unique within a run: a token is on offer in one place only. When the pool runs dry a source offers a trinket or scrip.
-- Standpipes: one in the hub, one before the final arena. Full heal, once each per run.
+### Where tokens come from in one run (16 tokens in the pool, 7 on offer, 3 carried)
+The pool has 16 tokens, four per cut: the common token, the rare one (needs its cut unlocked), the signature token (once fixed to one region, now ordinary), and one **ledger token** that a feat adds (see section 8c). Each run draws 7 from them, reproducibly from the seed (`G.worldgen` `drawTokens`; the draw is in `graph.draw`):
+- 4 plinths, one per region (r1 to r4), each in a guarded branch room. Each holds a token of a cut that the **next** region's lock chart makes useful (the Wardens' fare slots differ per seed, so a cut locked on a Warden is not offered where you cannot use it next); the four prefer four different cuts. The map shows "Plinth: <token>" for each line you have seen.
+- 2 lost trunks in main rooms; each opens when its room is cleared.
+- 1 ticket machine: the first of its three tickets is the run's ticket token, then trinkets (30 scrip, then 45 for the second roll). It is usable twice.
+- Optionally 1 start token (the Packed Lunch card, or a starting-token choice unlocked by the ledger): the party begins holding it.
+- 1 kiosk: three trinkets, 40 scrip each. It sells no tokens.
+- Tokens stay unique within a run, and the run's drawn tokens are placed first, so nothing else offers them twice. When the pool runs dry a source offers a trinket or scrip.
+- Standpipes: one in the Junction, one at every authored service stop and one before the final arena. Full heal, once each per run.
 - Scrip: enemies drop 2 to 5; a beaten Warden drops 40. Scrip left on the floor is collected when the party leaves the room.
+- Run code: `SEED-CUTS` plus an optional `.HEX` part that records what the ledger had unlocked and which options were chosen, so a code replays the same run on any save. Old two-part codes still work.
+
+## 8b. The Timetable (one rule per run)
+The Last Timetable names a rule for the day's service. One card is rolled per run from the seed and the cards unlocked so far; it is announced on the title-to-Junction transition (a card for 8 s), kept on a plate in the Junction beside the Route Board, printed on the map and on the run-over screen. Each card is a flat, deterministic rule, never a random event during play.
+
+| Card | Rule | In the deck |
+|---|---|---|
+| Rebate Day | every token punched in a Clean fight comes back (not only the first) | from the start |
+| Fare Surge | scrip drops doubled; the kiosk is shuttered | from the start |
+| Short Shift | the Long Clock borrows one attack fewer | from the start |
+| Late Running | one of the last three lines (named by the seed) is crowded: none of its enemies are thinned out | from the start |
+| Dry Pipes | no standpipes; releasing a Warden mends the whole party | from the start |
+| Packed Lunch | the party starts holding one extra token from the draw | from the start |
+| Wide Plates | slots take 4 hits but each punch takes 15% of a Warden's health | feat First Toll |
+| Stopwatch | a Par grade gives one more health pip; Clean gives 20 scrip | feat Lamp Out |
+| Brittle Stock | one named cut is worth double (20%) but its tokens crack after two uses | feat Idol Down |
+| Long Haul | Wardens have 25% more health and release two pips | feat Beached |
+
+## 8c. The feat ledger (options, not power)
+Feats are things done in a run. They are stored in the meta save and shown on the Ledger screen (title: Map button; pause: Map button). A feat only ever unlocks an OPTION: a new token in the pool, a new Timetable card, a starting-token choice or Express mode. Nothing makes the Wanderer stronger.
+- First Toll, Lamp Out, Idol Down, Beached: beat each of the four Wardens (unlock a card each: Wide Plates, Stopwatch, Brittle Stock, Long Haul).
+- Clean Toll, Clean Lamp, Clean Idol, Clean Whale: beat each Warden without being hit (unlock Jet Gimlet, Amber Sling, Mica Lantern, Gypsum Sledge).
+- The Clock Stops: beat the Long Clock (unlocks Express: Wardens +15% health, one pip fewer).
+- Full Fare: punch all three fare slots of one Warden (unlocks the starting-token choice).
+- Honours with no unlock: Straight to the Buffers (win with no Warden beaten), Under Par (win in under 30 minutes), Every Cut (punch a slot with each cut), Chemistry (all twelve material interactions).
 
 ## 9. Trinkets (passive, last the whole run, belong to the whole party)
 Six enable a materials rule (section 8); two are plain. Each has tags and a card line like a token. Ids are unchanged.

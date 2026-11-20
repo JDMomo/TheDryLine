@@ -1,6 +1,7 @@
 /* CONTENT: the boss of region final (The Terminus), THE LONG CLOCK (id long_clock). The last boss: it never moves.
-   Structure follows boss_r1.js. Everything the base class lacks is done inside this file:
-   - Borrowed attacks: when the fight starts (b.start is wrapped) it borrows one extra attack for every Warden NOT yet beaten
+   Structure follows boss_r1.js. It uses the base class hooks (js/game/bosses.js): onStart, filterDamage (the shutters), onDeath, the attack
+   registry (the four borrowed attacks are registered `like` the Warden's own attack they copy), b.summon() and a function for the vent's position.
+   - Borrowed attacks: when the fight starts (onStart) it borrows one extra attack for every Warden NOT yet beaten
      (G.game.borrows): r1 Tollkeeper a pair of floor shockwaves (toll), r2 Lamp-Heron a lamp beam sweeping along the floor (beam),
      r3 Switchman Idol signal rings at one of three heights (sig), r4 Gatewhale dropped crates that stand as short-lived pillars
      (crates). They are mixed into the normal attack bag with the same rules (wind-up of 0.45 s or more, avoidable with base
@@ -18,7 +19,7 @@
 'use strict';
 const G = window.G, U = G.util, fx = G.fx;
 
-const HP = 1100, BODY_W = 190, BODY_H = 230;
+const HP = 1300, BODY_W = 190, BODY_H = 230;
 const HUB_Y = -150, HAND_LEN = 270, HAND_A0 = 82 * Math.PI / 180, HAND_A1 = -6 * Math.PI / 180, HAND_LAG = 0.8;
 const BEAM_SPEED = 260;
 const PEND_L = 410, PEND_R = 28, PEND_A = 0.7, PEND_P = 3.4, PEND_TOP = 40;
@@ -28,7 +29,6 @@ const SIG_Y = [-34, -82, -130];                                      // signal r
 const ARMOURED = { ringTell: 1, ring: 1, handsTell: 1, hands: 1, rainTell: 1, rain: 1, tollTell: 1, toll: 1, beamTell: 1, beam: 1, sigTell: 1, sig: 1, crateTell: 1, crates: 1 };
 const INK = '#0a0b1a', I0 = '#171a3e', I1 = '#232865', I2 = '#3a418f', I3 = '#7c84e0', WHITE = '#f4f1e8', LAMP = '#f4e6b8', WARN = '#b8482f';
 const ventBroken = b => b.spots.some(s => s.cls === 'pierce' && s.broken);   // the vent slot may be locked out of this run's chart: then it is never broken
-let cur = null;                                                      // the live boss (there is only ever one), for the vent slot's position
 
 // ---------------------------------------------------------------- set-up that depends on the run
 // Called when the boss is built and again when the fight starts (the arena may have been entered before a Warden fell).
@@ -73,21 +73,13 @@ function markCrates(b) {
   b.cmarks = cols;
 }
 
-const crabs = () => G.rooms.current.enemies.filter(e => e.id === 'ballast_crab' && !e.dead);
-
 function summon(b) {
   if (b.flags.noSummon) return;
-  const room = G.rooms.current, free = 3 - crabs().length, want = Math.min(free, b.flags.p2 ? 3 : 2);
+  const free = 3 - b.ownedAlive('ballast_crab').length, want = Math.min(free, b.flags.p2 ? 3 : 2);
   for (let k = 0; k < want; k++) {
     const side = (k + (b.last === 'wind' ? 0 : 1)) % 2 ? 1 : -1, x = U.clamp(b.x + side * (150 + k * 36), b.minX - 60, b.maxX + 60);
-    const e = new G.Enemy(G.enemyDefs.ballast_crab, x, b.floor);
-    e.summoned = true;
-    e.damage = function (d, fromX) {                                  // summoned crabs drop no scrip, so they cannot be farmed
-      if (this.dead) return;
-      this.hp -= d; this.flash = G.fx.flashT(0.1); this.kbT = 0.12; this.kbV = Math.sign(this.x - fromX || 1) * 220;
-      if (this.hp <= 0) { this.dead = true; fx.spark(this.x, this.y - this.h / 2, 18, '#e9e2cf', 320, 0.5); }
-    };
-    room.enemies.push(e); fx.dust(x, b.floor, 10); fx.ring(x, b.floor - 10, 4, 120, LAMP, 0.3);
+    b.summon('ballast_crab', x, b.floor, { loot: false });            // summoned crabs drop no scrip (Enemy.damage, noLoot), so they cannot be farmed
+    fx.dust(x, b.floor, 10); fx.ring(x, b.floor - 10, 4, 120, LAMP, 0.3);
   }
 }
 
@@ -125,24 +117,44 @@ const pickAttack = b => {
     if (!b.bag.length) b.bag = rng.shuffle(b.attacks.slice());
     let a = b.bag.pop();
     if (a === b.last && b.bag.length) { const o = b.bag.pop(); b.bag.unshift(a); a = o; }
-    if (a === 'rain' && b.flags.noRain) continue;
+    if (!b.available(a)) continue;                                   // a punched slot can take an attack away (the Bell Housing: spark rain)
     return a;
   }
   return 'rings';
 };
 
 function chooseAttack(b) {
-  const sp = b.flags.p2 ? 0.8 : 1, a = pickAttack(b);
+  const a = pickAttack(b);
   b.last = a;
-  if (a === 'rings') b.set('ringTell', 0.7 * sp);
-  else if (a === 'hands') b.set('handsTell', 0.9 * sp);
-  else if (a === 'rain') b.set('rainTell', 0.7 * sp);
-  else if (a === 'toll') b.set('tollTell', 0.7 * sp);
-  else if (a === 'beam') { b.beamDir = G.run.rng.chance(0.5) ? 1 : -1; b.set('beamTell', 0.9 * sp); }
-  else if (a === 'sig') b.set('sigTell', 0.75 * sp);
-  else if (a === 'crates') { markCrates(b); b.set('crateTell', 0.85 * sp); }
-  else b.set('windTell', 0.9 * sp);
+  if (a === 'beam') b.beamDir = G.run.rng.chance(0.5) ? 1 : -1;
+  else if (a === 'crates') markCrates(b);
+  b.begin(a);                                                          // tell and wind-up come from the registry below
 }
+
+// The attack registry (js/game/bosses.js documents the fields). Wind-ups are scaled by 0.8 once the pendulum is loose (windScale below).
+// The four borrowed attacks are `like` the Warden's own attack they copy: the same fairness note and base move, with the Long Clock's tell and states.
+G.defineAttacks('long_clock', {
+  rings: { name: 'Floor Rings', tell: 'ringTell', wind: 0.7, strike: ['ring'], strikeT: 2.6, recover: 1.5, dodge: 'jump',
+    fair: 'The base glows and the plinth shakes for 0.7 s; then pairs of shockwaves run along the floor, three rounds (four with the pendulum loose). Jump them.',
+    slots: [{ cut: 'ground', flag: 'railBroken', mode: 'weaken', note: 'the floor rings come singly' }] },
+  hands: { name: 'Steam Hands', tell: 'handsTell', wind: 0.9, strike: ['hands'], strikeT: 5, recover: 1.6, dodge: 'move',
+    fair: 'Both hands rise out of the hub, dashed, and show their sweep for 0.9 s; then two jets sweep up from the floor like clock hands, slowly. Walk under or past the moving hand.',
+    slots: [{ cut: 'pierce', flag: 'oneHand', mode: 'weaken', note: 'only one steam hand is left' }] },
+  rain: { name: 'Spark Rain', tell: 'rainTell', wind: 0.7, strike: ['rain'], strikeT: 2.6, recover: 1.4, dodge: 'move',
+    fair: 'The bell swings and chimes for 0.7 s; then columns are marked on the floor and a spark falls down each 0.65 s later. Leave the marks.',
+    slots: [{ cut: 'arc', flag: 'noRain', mode: 'disable', note: 'the bell is silent: no more spark rain' }] },
+  wind: { name: 'Wind Up', tell: 'windTell', wind: 0.9, strike: ['wind'], strikeT: 1.8, recover: 1.0, dodge: 'cut',
+    fair: 'The mainspring begins to flare for 0.9 s; then ballast crabs are summoned (at most three alive) and the Mainspring stays open for 1.8 s.',
+    slots: [{ cut: 'burst', flag: 'noSummon', mode: 'weaken', note: 'it can no longer summon' }] },
+  toll: { like: 'tollkeeper.leap', name: 'Toll (borrowed from the Tollkeeper)', from: 'r1', tell: 'tollTell', wind: 0.7, strike: ['toll'], strikeT: 1.7, recover: 0.9,
+    fair: 'The plinth glows rust for 0.7 s; then two waves run along the floor toward the nearest player. Jump them.', dodge: 'jump' },
+  beam: { like: 'lamp_heron.sweep', name: 'Lamp Beam (borrowed from the Lamp-Heron)', from: 'r2', tell: 'beamTell', wind: 0.9, strike: ['beam'], strikeT: 4, recover: 0.9,
+    fair: 'A ghost of the beam shows at the edge it will come from for 0.9 s; then a band of lamplight sweeps along the floor. Jump it.' },
+  sig: { like: 'switchman_idol.rings', name: 'Signals (borrowed from the Switchman Idol)', from: 'r3', tell: 'sigTell', wind: 0.75, strike: ['sig'], strikeT: 2.1, recover: 0.9,
+    fair: 'The three lamps on the clock\'s side pulse for 0.75 s; then the lit lamp is the height of the next ring (jump the low one, stay low for the high one).' },
+  crates: { like: 'gatewhale.crates', name: 'Crate Drop (borrowed from the Gatewhale)', from: 'r4', tell: 'crateTell', wind: 0.85, strike: ['crates'], strikeT: 1.0, recover: 0.9,
+    fair: 'Brackets mark two floor spots for 0.85 s; crates drop there and stand as short-lived pillars.' }
+});
 
 // ---------------------------------------------------------------- shot painters (world space)
 const paintRing = (ctx, s) => {
@@ -170,10 +182,14 @@ const paintSpark = (ctx, s) => {
 // ---------------------------------------------------------------- the boss
 G.defineBoss({
   id: 'long_clock', name: 'The Long Clock', hp: HP, par: 144, w: BODY_W, h: BODY_H, contact: false,
+  windScale: b => (b.flags.p2 ? 0.8 : 1),
+  onStart(b) { setup(b); b.scale = 1; },                              // the arena may have been entered before a Warden fell; its hp never depends on the Wardens beaten
+  filterDamage: (b, d) => (ARMOURED[b.state] ? d * 0.3 : d),           // shutters: while it attacks, slashes and token body hits do 30%
+  onDeath(b) { clearCrates(b); b.beamX = null; },                     // the crabs it summoned are killed by the base class
 
   spots: {
     pierce: { name: 'Side Vent', r: 16,
-      get local() { return [(cur ? cur.ventSide : 1) * 100, -120]; },                  // alternates sides
+      local: b => [b.ventSide * 100, -120],                                            // alternates sides
       exposed: b => b.ventOpen,
       accepts: (b, st) => Math.abs(st.vx || 0) > Math.abs(st.vy || 0) && Math.sign(st.vx) === -b.ventSide,   // flying in from outside, level
       onBreak(b) { b.flags.oneHand = true; }, lost: 'Only one steam hand is left.' },
@@ -190,18 +206,11 @@ G.defineBoss({
   },
 
   init(b) {
-    cur = b; b.face = 1;
+    b.face = 1;
     b.bag = []; b.last = ''; b.marks = []; b.hands = []; b.bob = null; b.crates = []; b.cmarks = []; b.beamX = null; b.beamDir = 1; b.sigH = 0; b.sigN = 0; b.sigT = 0; b.sigPh = 0; b.tollN = 0; b.tollT = 0; b.tollDir = 1;
     b.ventSide = G.run && G.run.rng.chance(0.5) ? 1 : -1; b.ventOpen = true; b.ventT = 3.6;
     b.ringN = 0; b.ringT = 0; b.hT = 0; b.rainLeft = 0; b.rainT = 0; b.pt = 0; b.pa = 0; b.sway = 0;
     setup(b);
-    const baseStart = G.Boss.prototype.start, baseDamage = G.Boss.prototype.damage;
-    b.start = function () { setup(this); this.scale = 1; cur = this; baseStart.call(this); };
-    // Shutters: while it attacks, slashes and token body hits do 30%.
-    b.damage = function (d) {
-      baseDamage.call(this, ARMOURED[this.state] ? d * 0.3 : d);
-      if (this.hp <= 0) { for (const e of crabs()) if (e.summoned) e.damage(999, this.x); clearCrates(this); this.beamX = null; }
-    };
   },
 
   pose(b) { return { ox: b.state === 'stagger' ? Math.sin(G.time * 30) * 2 : (b.state === 'transition' ? Math.sin(G.time * 40) * 3 : 0) }; },

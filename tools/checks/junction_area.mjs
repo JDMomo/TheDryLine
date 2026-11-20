@@ -3,7 +3,7 @@ export default async ({page})=>{
  const r=await page.evaluate(()=>{
    const D=G.debug,bad=[],def=G.roomDefs.junction;
    if(!def)return {bad:['junction room missing'],errors:G.errors.slice()};
-   if(def.cols<120||def.rows<34)bad.push('junction is not a 4x2-screen area: '+def.cols+'x'+def.rows);
+   if(def.cols<120||def.rows<51)bad.push('junction is not a home area of at least 4x3 screens: '+def.cols+'x'+def.rows);
    const marks=ch=>def.marks.filter(m=>m.ch===ch);
    if(marks('G').length!==5)bad.push('junction needs five region gates, got '+marks('G').length);
    for(const ch of ['P','N','R','S'])if(!marks(ch).length)bad.push('junction missing marker '+ch);
@@ -11,7 +11,7 @@ export default async ({page})=>{
    const chars=def.grid.join('');
    if(chars.includes('^'))bad.push('junction contains damaging spikes');
    if(!chars.includes('='))bad.push('junction has no upper footbridge');
-   const upper=def.grid.slice(0,24).reduce((n,row)=>n+[...row].filter(c=>c==='=').length,0);
+   const upper=def.grid.slice(0,34).reduce((n,row)=>n+[...row].filter(c=>c==='=').length,0);
    if(upper<50)bad.push('upper district too small: '+upper+' one-way tiles');
 
    D.newRun(4040);D.god(true);const room=G.rooms.current;
@@ -29,5 +29,5 @@ export default async ({page})=>{
  });
  if(r.bad.length)throw new Error(r.bad.join(' | '));
  if(r.errors.length)throw new Error('G.errors: '+r.errors.join(' | '));
- return 'Junction is 4x2 screens with five gates, upper loop, service bays and Station Keeper';
+ return 'Junction is a '+'home area with five gates, upper walks, service bays and Station Keeper';
 };

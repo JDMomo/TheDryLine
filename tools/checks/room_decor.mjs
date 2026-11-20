@@ -10,7 +10,7 @@ export default async({page})=>{
      if(!G.sprites.prop_lamp_decor)bad.push('watercolor lamp sprite did not load');
    }
    if(lamps.some(l=>l.prompt(G.players[0])!==null))bad.push('decor lamp became interactive');
-   const before=G.tiles.blockers.length;G.debug.step(4);
+   G.debug.step(1);const before=G.tiles.blockers.length;G.debug.step(4);   // (one step first: the Junction's mechanism gates register their own blockers on their first update)
    if(G.tiles.blockers.length!==before)bad.push('decor lamp changed collision blockers');
    return {bad,errors:G.errors.slice(),count:lamps.length};
  });

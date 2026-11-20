@@ -1,4 +1,4 @@
-// The authored four-screen, two-storey Junction: props must fit the WORLD, labels must fit a camera view centered on their prop,
+// The authored home area (the Junction, five screens by three storeys): props must fit the WORLD, labels must fit a camera view centered on their prop,
 // and no unrelated prop boxes may overlap. The lock-chart rows remain internally readable.
 export default async ({ page }) => {
   const res = await page.evaluate(() => {
@@ -27,7 +27,8 @@ export default async ({ page }) => {
       }
       const gates=room.props.filter(p=>p.type==='gate').sort((a,b)=>a.x-b.x);
       if(gates.length!==5)bad.push('Junction has '+gates.length+' gates, wanted 5');
-      for(let i=1;i<gates.length;i++)if(gates[i].x-gates[i-1].x<7*G.C.T)bad.push('gates '+(i-1)+'/'+i+' are too menu-like/close: '+Math.round(gates[i].x-gates[i-1].x)+'px');
+      // gates stand at their routes' mouths on different storeys: no two closer than 7 tiles (straight-line distance)
+      for(let i=0;i<gates.length;i++)for(let j=i+1;j<gates.length;j++){const d=Math.hypot(gates[i].x-gates[j].x,gates[i].y-gates[j].y);if(d<7*G.C.T)bad.push('gates '+gates[i].data.region+'/'+gates[j].data.region+' are too menu-like/close: '+Math.round(d)+'px');}
     }
     return {bad,nProps,nBoxes};
   });

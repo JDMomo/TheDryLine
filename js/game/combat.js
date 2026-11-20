@@ -40,6 +40,7 @@ const M = G.materials = {
   mods() { return G.run.mods; },
   word(x, y, text, tag) {
     M.fired[text] = (M.fired[text] || 0) + 1; if (M.log.length < 400) M.log.push(text);
+    if (G.ledger && G.run) G.ledger.event('material', { word: text });         // the feat ledger counts each rule once
     fx.floatText(x, y - 18, text, (G.MATERIALS[tag] || {}).color || '#fff3c4');
   },
   line(id) { const d = G.itemDefs[id] || G.trinketDefs[id]; return d && d.inter ? d.inter : ''; },
@@ -231,6 +232,7 @@ const combat = G.combat = {
     }
   },
   dropShards(x, y, total) {
+    if (G.run && G.run.rule && G.run.rule.scrip) total *= G.run.rule.scrip;            // Timetable card Scrip Boom: drops are doubled
     const n = Math.min(12, total), each = total / Math.max(1, n);
     for (let i = 0; i < n; i++) pickups.push({ x, y: y - 8, w: 8, h: 8, vx: U.rnd(-160, 160), vy: U.rnd(-380, -160), value: each, life: 14 });
   },

@@ -4,7 +4,7 @@
 const G = window.G;
 
 const NAMES = {
-  junction:'The Junction',
+  junction:'The Junction', junction_signal_stair:'Signal Stair', junction_hall_stair:'Hall Stair',
   r1_ribs:'Hull Ribs', r1_chain:'Chain Crossing', r1_gangway:'Turnstile Gangway', r1_wreck:'Beached Deck', r1_tunnel:'Brine Tunnel', r1_dock:'Wreck Dock',
   r1_trial:'Signal Gantry', r1_hold:'Sealed Cell', r1_arena:'Toll House',
   r2_spire:'Coral Stair', r2_shelves:'Signal Shelves', r2_shaft:'Lamp Shaft', r2_roost:'Gull Roost', r2_ledges:'Ledge Row', r2_tower:'Beacon Tower',
@@ -72,7 +72,7 @@ const story=G.story={
       const n=['r1','r2','r3','r4'].filter(k=>G.run.beaten[k]).length;
       if (n!==s.hubBeat) {
         s.hubBeat=n;
-        if(n===0) add('hub:0','The Last Timetable','Five gates are open. Start west through Wreck Quay if you want the gentlest line; the fifth gate leads to the order they all still obey.',true,'guide');
+        if(n===0) add('hub:0','The Last Timetable','Five routes leave the Junction, every one still open. Walk east along the yard to Wreck Quay for the gentlest line; the high viaduct leads to the order they all still obey.',true,'guide');
         else if(n===1) add('hub:1','The Junction wakes','One line has gone quiet. Somewhere under the platform, a relay clicks to the next page.',true);
         else if(n===2) add('hub:2','Half the line is silent','The board no longer looks like a challenge. It looks like a chain of messages that failed to arrive.',true);
         else if(n===3) add('hub:3','One Warden remains','Three old machines have released their orders. The Terminus gate sounds different now.',true);

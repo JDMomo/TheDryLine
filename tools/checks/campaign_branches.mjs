@@ -3,7 +3,7 @@ export default async({page})=>{
  const r=await page.evaluate(()=>{
   const bad=[],seen={};
   for(let seed=1;seed<=40;seed++){
-    G.debug.newRun(seed);const g=G.run.graph;
+    G.ledger.force='none';G.debug.newRun(seed);const g=G.run.graph;
     for(const reg of Object.values(G.regionDefs)){
       const rg=g.regions[reg.id], branches=rg.nodes.map(id=>g.nodes[id]).filter(n=>n.parent);
       const defs=branches.map(n=>n.def).sort();(seen[reg.id]||(seen[reg.id]=new Set())).add(defs.join(','));

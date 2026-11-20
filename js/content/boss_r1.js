@@ -8,8 +8,12 @@
    - update(b, dt) is a small state machine. b.set(state, seconds) switches state; b.t counts down to zero.
      The base class puts the boss in 'idle' after the intro and after every stagger, so 'idle' must exist and must
      choose the next attack. The base class runs 'sleep', 'intro', 'stagger' and 'dead' itself; never set those.
-   - Every attack has a tell (a pose the player can read, at least 12 frames), then the attack, then a 'recover'
-     window where the boss can be hit.
+   - Every attack is declared as data in G.defineAttacks (below): its tell state and length, strike states, recovery,
+     a fairness note and which fare slot disables or weakens it. update() calls b.begin(id) to start one; the tell
+     is at least 0.45 s (0.35 s enraged), then the attack, then a 'recover' window where the boss can be hit.
+   - Hooks instead of tricks (see the top of js/game/bosses.js): shapes(b) for what a slash can hit, contact for what
+     hurts on touch, onStart / filterDamage / onDeath, b.summon() for enemies the boss owns, a fare slot's `local` may be
+     a function. A boss file never assigns to an instance method of G.Boss (the check boss_hooks enforces it).
    - Random choices that change the fight use G.run.rng (seeded, so a seed replays a run). Math.random and G.util.rnd
      are for dust and sparks only.
    - Hostile things are shots: b.shoot({ ... }) (fields: G.combat.shoot in js/game/combat.js).
@@ -35,16 +39,14 @@ const G = window.G, U = G.util, fx = G.fx;
 
 // 'idle' calls this to pick the next attack. Rage (below half hp) shortens every tell by a quarter.
 function chooseAttack(b) {
-  const rng = G.run.rng, sp = b.rage ? 0.75 : 1;
+  const rng = G.run.rng;
   b.facePlayer();
   let opts = ['charge'];
   if (b.x >= b.minX + 133 && b.x <= b.maxX - 133) opts.push('leap');      // only leap when clear of the side perches
-  if (!b.flags.blind) opts.push('spit');                                   // the punched Eye ends the spit
+  if (b.available('spit')) opts.push('spit');                              // the punched Eye ends the spit
   if (opts.length > 1) opts = opts.filter(o => o !== b.last);              // never the same attack twice in a row
   const pick = rng.pick(opts); b.last = pick;
-  if (pick === 'charge') b.set('chargeTell', 0.75 * sp);
-  else if (pick === 'leap') b.set('leapTell', 0.5 * sp);
-  else b.set('spitTell', 0.5 * sp);
+  b.begin(pick);                                                           // tell and wind-up come from the registry below
 }
 
 // Shot painters: called in world space with the shot (s.x, s.y are its centre, or its bottom centre for a rect shot).
@@ -58,8 +60,21 @@ const paintWave = (ctx, s) => {
   ctx.quadraticCurveTo(s.x + d * 16, y - 14, s.x + d * 12, y); ctx.closePath(); ctx.fill();
 };
 
+// The attack registry: every attack as data (js/game/bosses.js documents the fields). The tell lengths here are the real ones, scaled by 0.75 when enraged.
+G.defineAttacks('tollkeeper', {
+  charge: { name: 'Charge', tell: 'chargeTell', wind: 0.75, strike: ['charge'], strikeT: 1.7, recover: 0.6, dodge: 'jump',
+    fair: 'It rears up for 0.75 s (the Belly opens), then runs straight at the nearest player at 540 px/s. Jump it or stand on a perch; a wall hit leaves a 1 s opening.',
+    slots: [{ cut: 'burst', flag: 'winded', mode: 'weaken', note: 'the charge is slower (360 px/s)' }] },
+  leap: { name: 'Leap', tell: 'leapTell', wind: 0.5, strike: ['leap'], strikeT: 0.9, recover: 0.8, dodge: 'move',
+    fair: 'It crouches for 0.5 s, then jumps to where the target stood; landing sends two floor shockwaves. Step out from under it, then jump the waves.',
+    slots: [{ cut: 'ground', flag: 'lame', mode: 'weaken', note: 'the leap falls short' }, { cut: 'arc', flag: 'noWaves', mode: 'weaken', note: 'the landing sends no shockwaves' }] },
+  spit: { name: 'Spit', tell: 'spitTell', wind: 0.5, strike: ['spit'], strikeT: 1.0, recover: 0.85, dodge: 'move',
+    fair: 'It crouches for 0.5 s, then lobs three globs (five enraged) that land on where the target stood. Keep moving.',
+    slots: [{ cut: 'pierce', flag: 'blind', mode: 'disable', note: 'it can no longer spit' }] }
+});
+
 G.defineBoss({
-  id: 'tollkeeper', name: 'The Tollkeeper', hp: 720, par: 76, w: 124, h: 100,
+  id: 'tollkeeper', name: 'The Tollkeeper', hp: 900, par: 76, w: 124, h: 100,
 
   spots: {
     pierce: { name: 'Eye', local: [66, -68], r: 15,
@@ -87,6 +102,7 @@ G.defineBoss({
   // While staggered the base class owns the state; this hook only lets the pose settle.
   staggered(b, dt) { b.rear = Math.max(0, b.rear - dt * 6); b.crouch = U.approach(b.crouch, 0, dt * 7); },
 
+  interp: ['rear', 'crouch'],
   update(b, dt) {
     const rng = G.run.rng, tgt = b.target(), sp = b.rage ? 0.75 : 1, dx = tgt.x - b.x;
     b.crouch = U.approach(b.crouch, b.state === 'leapTell' || b.state === 'spitTell' ? 1 : 0, dt * 7);
@@ -120,7 +136,7 @@ G.defineBoss({
         if (b.y >= b.floor) {
           b.y = b.floor; b.vy = 0; fx.jolt(0, 12); fx.dust(b.x, b.floor, 16);
           if (!b.flags.noWaves) for (const d of [-1, 1])
-            b.shoot({ x: b.x + d * 70, y: b.floor, vx: d * 430, life: 3, rect: { w: 26, h: 34 }, tile: 'pass', paint: paintWave });
+            b.shoot({ x: b.x + d * 70, y: b.floor, vx: d * 430, life: 3, rect: { w: 26, h: 34 }, tile: 'pass', kind: 'wave', paint: paintWave });
           b.set('recover', 0.8);
         }
         break;
@@ -131,7 +147,7 @@ G.defineBoss({
         b.spitT -= dt;
         if (b.spitT <= 0) {
           const m = b.toWorld(62, -38), tf = 0.72 + 0.09 * b.spitN, g = 1400;
-          b.shoot({ x: m.x, y: m.y, vx: (tgt.x - m.x) / tf + rng.range(-40, 40), vy: (tgt.y - 24 - m.y) / tf - g * tf / 2, grav: g, life: 3, r: 9, paint: paintGlob });
+          b.shoot({ x: m.x, y: m.y, vx: (tgt.x - m.x) / tf + rng.range(-40, 40), vy: (tgt.y - 24 - m.y) / tf - g * tf / 2, grav: g, life: 3, r: 9, kind: 'glob', paint: paintGlob });
           fx.spark(m.x, m.y, 5, '#cfe3c0', 160, 0.25);
           b.spitN--; b.spitT = 0.2; if (b.spitN <= 0) b.set('recover', 0.85);
         }
@@ -145,19 +161,6 @@ G.defineBoss({
 
   // Boss space, facing right. The fare slots are drawn on top by the base class.
   draw(b, ctx) {
-    const painted = G.strips && G.strips.boss_tollkeeper_states;
-    if (painted && painted.img && painted.fw) {
-      // State art is clean source-of-truth watercolor; the base Boss class has already applied facing and pose().
-      const frame = (b.state === 'stagger' || b.state === 'dead') ? 1 : (b.rage ? 2 : 0);
-      const dw = 176, dh = 103;
-      ctx.drawImage(painted.img, frame * painted.fw, 0, painted.fw, painted.fh, -88, -103, dw, dh);
-      // Preserve the engine's hit confirmation over the painted body.
-      if (b.flash > 0) {
-        ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255,255,255,.58)';
-        ctx.fillRect(-88, -103, dw, dh); ctx.restore();
-      }
-      return;
-    }
     const body = b.flash > 0 ? '#f4efe2' : (b.rage && b.state !== 'dead' ? '#4a3a3c' : '#39444a'), a0 = ctx.globalAlpha;
     ctx.fillStyle = '#1d2428'; for (const lx of [-52, -22, 14, 44]) ctx.fillRect(lx - 7, -16, 14, 16);                      // feet
     ctx.globalAlpha = a0 * 0.85; ctx.fillStyle = '#c9783a'; ctx.beginPath(); ctx.ellipse(8, -10, 46, 12, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = a0;   // furnace belly

@@ -78,6 +78,17 @@ G.defineRoom = def => {
   }
   if ((def.kind === 'branch' || def.kind === 'trial') && doors !== 1) bad('branch and trial rooms need exactly one D');
   if (def.kind === 'hub' && !marks.some(m => m.ch === 'P')) bad('the hub needs a P marker');
+  /* Home-area portals (kind 'hub' only): several openings on any edge, each its own route out.
+     def.portals = [{ id, side, from, to, via }]: side left/right (from..to = open rows) or top/bottom (from..to = open columns).
+     id names a region (its route), via optionally names a connector room template (kind 'main', region 'hub') between the hub and the
+     region's first room. Every listed opening must be open on that edge; worldgen links each one (node.portals). */
+  if (def.portals) {
+    room.portals = def.portals.map(p => Object.assign({}, p));
+    for (const p of room.portals) {
+      const edgeOpen = k => p.side === 'left' ? grid[k][0] === '.' : p.side === 'right' ? grid[k][cols - 1] === '.' : p.side === 'top' ? grid[0][k] === '.' : grid[rows - 1][k] !== '#';
+      for (let k = p.from; k <= p.to; k++) if (!edgeOpen(k)) { bad('portal ' + p.id + ' is not open on the ' + p.side + ' edge at ' + k); break; }
+    }
+  }
   G.roomDefs[def.id] = room;
 };
 
@@ -96,6 +107,9 @@ function instance(node) {
     else if (c.type === 'boss') { if (!G.run.beaten[node.region]) room.boss = new G.Boss(G.bossDefs[c.id], x, y, node.region, { x0: def.floorX[0], x1: def.floorX[1] }); }
     else if (c.type !== 'start') room.props.push(G.props.make(c.type, x, y, Object.assign({}, c.data)));
   });
+  // Authored fixtures (def.fixtures: [{ type, c, r, data }]): working props placed by the template itself, outside the seeded rolls
+  // (the home area's scrip caches and loop-back hatches). Like markers they stand on the tile below (c, r).
+  for (const d of (def.fixtures || [])) room.props.push(G.props.make(d.type, (d.c + .5) * T, (d.r + 1) * T, JSON.parse(JSON.stringify(d.data || {}))));
   // Authored visual-only decoration is deliberately outside marker/content rolls: it never changes seed balance or collision.
   for (const d of (def.decor || [])) {
     const x=(d.c+.5)*T, y=(d.r+1)*T, data=Object.assign({decor:true},d.data||{});
@@ -123,10 +137,23 @@ const rooms = G.rooms = {
     if (rooms.current && rooms.current !== room) G.combat.leave();         // scrip on the floor goes with the party
     rooms.current = room; room.enterAt = G.time; tiles.load(room.grid, room.terrain); G.combat.clear(); fx.clear();
     let x = 3 * T, y = groundY(room, 1), face = 1;
-    if (entry.side === 'left') { x = 40; y = groundY(room, 1); }
+    // A home-area portal arrives as its edge does: a side portal on the floor under the opening, a top portal falling in,
+    // a bottom portal standing on the grating over the hole (the hub's grates are one-way: arriving from below never falls back out).
+    const portal = entry.portal && (room.def.portals || []).find(q => q.id === entry.portal);
+    if (portal) {
+      const mid = Math.floor((portal.from + portal.to) / 2);
+      if (portal.side === 'left' || portal.side === 'right') {
+        const c = portal.side === 'left' ? 1 : room.cols - 2; let r = portal.from;
+        while (r < room.rows - 1 && !tiles.floorAt(c, r)) r++;
+        entry = { at: { x: portal.side === 'left' ? 40 : room.cols * T - 40, y: r * T, face: portal.side === 'left' ? 1 : -1 } };
+      } else if (portal.side === 'top') entry = { side: 'top', col: mid };
+      else { let r = room.rows - 6; while (r < room.rows - 1 && !tiles.floorAt(mid, r)) r++; entry = { at: { x: (mid + .5) * T, y: r * T, face: -1 } }; }
+    }
+    if (entry.at) { x = entry.at.x; y = entry.at.y; face = entry.at.face || 1; }
+    else if (entry.side === 'left') { x = 40; y = groundY(room, 1); }
     else if (entry.side === 'right') { x = room.cols * T - 40; y = groundY(room, room.cols - 2); face = -1; }
     else if (entry.side === 'top' || entry.side === 'bottom') {
-      const port = room.def.ports[entry.side];
+      const port = entry.col !== undefined ? { c: entry.col } : room.def.ports[entry.side];
       x = ((port && port.c) !== undefined ? port.c + 0.5 : room.cols / 2) * T;
       y = entry.side === 'top' ? 8 : room.rows * T - 6;
     } else {
@@ -210,6 +237,16 @@ const rooms = G.rooms = {
 
     // side exits, and the invisible wall where there is none
     const W = room.cols * T, H = room.rows * T;
+    // Home-area portals first: which opening of an edge a player leaves by decides where it leads.
+    if (room.node.portals && !room.fight) {
+      const out = p => p.x < -6 ? ['left', Math.floor((p.y - 1) / T)] : p.x > W + 6 ? ['right', Math.floor((p.y - 1) / T)]
+        : p.y - p.h < -8 ? ['top', Math.floor(p.x / T)] : p.y > H + 8 ? ['bottom', Math.floor(p.x / T)] : null;
+      for (const p of live) {
+        const o = out(p); if (!o) continue;
+        const q = room.node.portals.find(q => q.side === o[0] && o[1] >= q.lo - 1 && o[1] <= q.hi + 1);
+        if (q) { rooms.go(q.dest, q.entry); return; }
+      }
+    }
     for (const p of live) {
       if (p.x < -6) { if (room.node.exits.left && !room.fight) { rooms.go(room.node.exits.left.to, room.node.exits.left.entry); break; } p.x = p.w / 2; }
       else if (p.x > W + 6) { if (room.node.exits.right && !room.fight) { rooms.go(room.node.exits.right.to, room.node.exits.right.entry); break; } p.x = W - p.w / 2; }

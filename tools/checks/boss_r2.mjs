@@ -137,7 +137,7 @@ export default async ({ page, shots }) => {
   });
   if (!kill.pinned.dead || !kill.pinned.beaten || kill.pinned.fight || kill.pinned.locked) throw new Error('pinned kill: ' + JSON.stringify(kill.pinned));
   if (!kill.bot.dead || !kill.bot.beaten) throw new Error('slash bot did not win in 420 s: ' + JSON.stringify(kill.bot));
-  if (kill.pinned.hp !== 960) throw new Error('hp should be 960');
+  if (kill.pinned.hp !== 1180) throw new Error('hp should be 1180');
 
   // ---- 5. random input, 90 s, all tokens
   const soak = await page.evaluate(() => {

@@ -97,6 +97,15 @@ S.quartz_wake = ['ground', `<path d="M20 32 Q23.5 26 27 32 T34 32" fill="none" s
 S.pumice_crawler = ['ground', `<path d="M34 44 Q26 44 27.5 36 Q29 29 36 21.5 Q36.5 28.5 41 30 Q43.5 27 42.5 23.5 Q52 29 51 38 Q50 44 41.5 44Z" stroke-width="1.8"/>`,
   `<circle cx="36" cy="38.5" r="2.1" fill="BASE"/><circle cx="43.5" cy="36" r="1.8" fill="BASE"/><circle cx="40.5" cy="41" r="1.5" fill="BASE"/><circle cx="38.5" cy="32.5" r="1.4" fill="BASE"/>`];
 
+// ledger tokens (one per cut, unlocked by feats; js/game/ledger.js)
+S.jet_gimlet = ['pierce', `<path d="M21 49 Q19 37 33 36.5 Q42 36 44.5 43" fill="none" stroke-width="3.4"/><path d="M39.5 39.5 L47.5 44.5 L39 48Z" stroke-width="1.6"/><circle cx="21.5" cy="49.5" r="2.4" stroke="none"/>`];
+S.amber_sling = ['arc', `<path d="M15 30 L22 40 L29 30" fill="none" stroke-width="3"/><path d="M22 40 V52" fill="none" stroke-width="3.6"/><circle cx="22" cy="45" r="4.2" stroke="none"/>`,
+  `<circle cx="20.6" cy="43.6" r="1.3" fill="BASE"/>`];
+S.mica_lantern = ['burst', `<path d="M25.5 29 H38.5 L40.5 35 V47 H23.5 V35Z" stroke-width="1.8"/><path d="M28.5 29 V24.5 H35.5 V29" fill="none" stroke-width="2.8"/>`,
+  `<rect x="28" y="34.5" width="8" height="8" rx="1" fill="BASE"/><path d="M32 34.5 V42.5" stroke="#14181c" stroke-width="1.2"/>`];
+S.gypsum_sledge = ['ground', `<path d="M23.5 40 H54.5 V35 Q54.5 31 50.5 31 H29 Q25 31 23.5 35Z" stroke-width="1.8"/><path d="M26 43.5 H52" fill="none" stroke-width="3.2"/><path d="M31 31 L36 22.5 H44 L48 31" fill="none" stroke-width="2.6"/>`,
+  `<path d="M28 35.5 H50" stroke="BASE" stroke-width="1.8" stroke-linecap="round" fill="none"/>`];
+
 // ---- TRINKETS: a neutral brass tag with a small object
 const TAG = { base: '#CDB57A', hi: '#EADBA9', sh: '#9A8452' };
 const tagPath = rpoly([[22, 3], [42, 3], [55, 16], [55, 59], [9, 59], [9, 16]], 7);

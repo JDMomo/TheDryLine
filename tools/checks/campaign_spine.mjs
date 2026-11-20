@@ -14,7 +14,7 @@ export default async({page})=>{
     for(const seed of [1,2,5,9,33,77,121]){
       D.newRun(seed);const g=G.run.graph,signature={};
       const hub=G.roomDefs[G.run.graph.nodes[g.hub].def];
-      if(hub.id!=='junction'||hub.w!==4||hub.h!==2||hub.cols!==120||hub.rows!==34)bad.push('seed '+seed+' Junction is not 4 screens x 2 storeys / 120x34');
+      if(hub.id!=='junction'||hub.w<4||hub.h<3||hub.cols<120||hub.rows<51)bad.push('seed '+seed+' Junction is not a home area of at least 4 screens x 3 storeys: '+hub.cols+'x'+hub.rows);
       const gates=G.run.rooms[g.hub].props.filter(p=>p.type==='gate').map(p=>Math.round(p.x/G.C.T));
       if(gates.length!==5)bad.push('seed '+seed+' Junction gate count '+gates.length);
       for(const [rid,p] of Object.entries(PLAN)){

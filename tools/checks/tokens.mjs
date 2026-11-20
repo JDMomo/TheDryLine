@@ -47,7 +47,7 @@ export default async ({ page }) => {
     return out;
   }, { RANGE });
   const ids = res.ids;
-  if (ids.length !== 12) throw new Error('expected 12 tokens, found ' + ids.length + ': ' + ids.join());
+  if (ids.length !== 16) throw new Error('expected 16 tokens, found ' + ids.length + ': ' + ids.join());
   for (const id of ids) {
     const r = res.tokens[id];
     if (r.noSpot) throw new Error(id + ': no flat floor found for the test');
@@ -56,7 +56,7 @@ export default async ({ page }) => {
     if (r.leftEmpty || r.left) throw new Error(id + ': shots left behind (' + r.leftEmpty + ', ' + r.left + ')');
     if (r.cd < 0.6 || r.cd > 1.6) throw new Error(id + ': cooldown ' + r.cd + ' outside 0.6 to 1.6');
   }
-  for (const cut of Object.keys(CUTS)) if (ids.filter(i => res.tokens[i].cls === cut).length !== 3) throw new Error('cut ' + cut + ' does not have three tokens');
+  for (const cut of Object.keys(CUTS)) if (ids.filter(i => res.tokens[i].cls === cut).length !== 4) throw new Error('cut ' + cut + ' does not have four tokens');
 
   // each cut punches its slot on the reference boss (aim values as in punch.mjs)
   const bossX = 1200, aim = { pierce: [980, 436, 1], arc: [1004, 480, 1, { right: true }], burst: [1110, 480, 1], ground: [1400, 480, -1] };
@@ -92,5 +92,5 @@ export default async ({ page }) => {
     if (!t.has) throw new Error(t.id + ' not on the run');
     for (const k in WANT[t.id]) if (Math.abs((t.changed[k] === true ? 1 : t.changed[k]) - (WANT[t.id][k] === true ? 1 : WANT[t.id][k])) > 1e-9) throw new Error(t.id + ': modifier ' + k + ' is ' + t.changed[k]);
   }
-  return '12 tokens, 4 cuts, 8 trinkets';
+  return '16 tokens, 4 cuts, 8 trinkets';
 };

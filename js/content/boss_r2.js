@@ -15,21 +15,17 @@
    - Ankle (ground): the front leg's joint. Exposed while it stands still to peck; slide a slab in from the front.
    Punched: no lamp sweep / weaker gust / fewer sparks / longer stuck time.
 
-   The base class has no hook for "what part of me is hit by a slash", so this file overrides b.rect() on its own instance (narrow body;
-   the stuck head while it is stuck) and turns off contact damage (contact: false) to hurt only through the legs, the stab, the pool of
-   light, sparks and wind, which it handles itself. Fare slot positions follow the head, so their `local` is a pair of getters. */
+   Hooks (js/game/bosses.js): shapes(b) gives the narrow body, or the stuck head while it is stuck; contact is a function that hurts only
+   through the stilts (and not at all while the boss is frozen or in its intro); the stab, the pool of light, sparks and wind are hurt
+   by the attacks themselves. Fare slot positions follow the head, so their `local` is a function of the boss. */
 (() => {
 'use strict';
 const G = window.G, U = G.util, fx = G.fx;
 
 const OUT = '#1c1829', HIDE = '#8d85b0', HIDE2 = '#665e8a', LEG = '#5f587e', WING = '#aaa2c8', LAMP = '#f4e6b8', FLASH = '#fffbe8';
 const REST_X = 60, REST_Y = -188, HALF_W = 30, BODY_H = 150;
-const ATTACKS = { peck: 'peckTell', sweep: 'sweepTell', gust: 'gustTell', fall: 'fallTell' };
-
-// The boss in the room (there is only ever one), read by the fare slot getters below.
-let cur = null;
-const dyn = (fx_, fy_) => { const a = [0, 0]; Object.defineProperty(a, '0', { get: () => (cur ? fx_(cur) : 0) }); Object.defineProperty(a, '1', { get: () => (cur ? fy_(cur) : 0) }); return a; };
 const stuck = b => b.state === 'peckStuck';
+const headWorld = b => b.toWorld(b.hx, b.hy);
 
 // A hostile spark shot (cut by a slash).
 const paintSpark = (ctx, s) => {
@@ -46,30 +42,52 @@ const paintBolt = (ctx, s) => {
 
 // 'idle' calls this to pick the next attack. Never the same attack twice in a row; a peck only when a player is within reach.
 function chooseAttack(b) {
-  const rng = G.run.rng, sp = b.rage ? 0.75 : 1, dx = Math.abs(b.target().x - b.x);
+  const rng = G.run.rng, dx = Math.abs(b.target().x - b.x);
   b.facePlayer();
   let opts = ['gust', 'fall'];
   if (!b.flags.noSweep) opts.push('sweep');
   if (dx <= 230) opts.push('peck', 'peck');
   opts = opts.filter(o => o !== b.last);
   const pick = rng.pick(opts); b.last = pick;
-  const tell = { peck: 0.7, sweep: 0.8, gust: 0.75, fall: 0.85 }[pick] * sp;
   if (pick === 'peck') b.pkx = b.target().x;
   if (pick === 'fall') b.pickColumns();
-  b.set(ATTACKS[pick], tell);
+  b.begin(pick);                                                           // tell and wind-up come from the registry below
 }
 
+// The attack registry (js/game/bosses.js documents the fields). Wind-ups are scaled by 0.75 when enraged.
+G.defineAttacks('lamp_heron', {
+  peck: { name: 'Peck', tell: 'peckTell', wind: 0.7, strike: ['peckStab'], strikeT: 0.14, recover: 1.6, recoverStates: ['peckStuck', 'peckOut'], dodge: 'move',
+    fair: 'The head rises over a white floor mark that locks 0.5 s before the stab (0.4 enraged); step off it. The stuck head is open to slashes.',
+    slots: [{ cut: 'ground', flag: 'longStuck', mode: 'weaken', note: 'the head stays stuck in the floor longer' }] },
+  sweep: { name: 'Lamp Sweep', tell: 'sweepTell', wind: 0.8, strike: ['sweep'], strikeT: 4, recover: 1.0, dodge: 'jump',
+    fair: 'The head lowers and the lamp swells, a faint line shows the path; then a pool of light slides along the floor. Jump or dash it.',
+    slots: [{ cut: 'pierce', flag: 'noSweep', mode: 'disable', note: 'it can no longer sweep its lamp' }] },
+  gust: { name: 'Wing Gust', tell: 'gustTell', wind: 0.75, strike: ['gust'], strikeT: 2.7, recover: 1.0, dodge: 'jump',
+    fair: 'The wings flare and the lamp flashes; wind pushes sideways while sparks stream low (jump) and high (stay down).',
+    slots: [{ cut: 'arc', flag: 'softGust', mode: 'weaken', note: 'weaker wind, slower sparks, a shorter gust' }] },
+  fall: { name: 'Spark Fall', tell: 'fallTell', wind: 0.85, strike: ['fall'], strikeT: 0.7, recover: 0.9, dodge: 'move',
+    fair: 'It rises while white columns glow on the floor; sparks drop down those columns 0.85 s later. Leave the columns.',
+    slots: [{ cut: 'burst', flag: 'fewSparks', mode: 'weaken', note: 'one column fewer' }] }
+});
+
 G.defineBoss({
-  id: 'lamp_heron', name: 'The Lamp-Heron', hp: 960, par: 104, w: 70, h: BODY_H, contact: false,
+  id: 'lamp_heron', name: 'The Lamp-Heron', hp: 1180, par: 104, w: 70, h: BODY_H,
+  interp: ['hx', 'hy', 'ha'],
+  shapes(b) {
+    if (stuck(b)) { const h = headWorld(b); return { x0: h.x - 26, x1: h.x + 26, y0: b.floor - 76, y1: b.floor }; }
+    return { x0: b.x - HALF_W, x1: b.x + HALF_W, y0: b.y - BODY_H, y1: b.y };
+  },
+  // Only the stilts hurt on touch (the body is too high to walk into).
+  contact: b => b.acting() && { x0: b.x - HALF_W + 4, x1: b.x + HALF_W - 4, y0: b.y - 100, y1: b.y },
 
   spots: {
-    pierce: { name: 'Lamp', local: dyn(b => b.hx + 4, b => b.hy), r: 17,
+    pierce: { name: 'Lamp', local: b => [b.hx + 4, b.hy], r: 17,
       exposed: b => b.state === 'sweep' || b.state === 'gust',
       onBreak(b) { b.flags.noSweep = true; }, lost: 'It can no longer sweep its lamp.' },
     arc: { name: 'Back Hatch', local: [-6, -BODY_H + 4], r: 20,
       accepts: (b, st) => st.vy > 0,                                       // the lobbed shot must be falling onto it
       onBreak(b) { b.flags.softGust = true; }, lost: 'Its gusts are weaker.' },
-    burst: { name: 'Throat', local: dyn(b => b.hx - 26, b => b.hy - 22), r: 16,
+    burst: { name: 'Throat', local: b => [b.hx - 26, b.hy - 22], r: 16,
       exposed: stuck,                                                      // only while the head is stuck in the floor
       onBreak(b) { b.flags.fewSparks = true; }, lost: 'It drops fewer sparks.' },
     ground: { name: 'Ankle', local: [24, -20], r: 17,
@@ -80,13 +98,8 @@ G.defineBoss({
   // Own fields: head position in boss space (hx, hy) and angle ha, lamp glow lit, wing spread 0..1, lift off the floor, the peck floor
   // mark pkx (world x), spark fall column xs, the beam's world x, the wind spark timer and lane.
   init(b) {
-    cur = b;
     Object.assign(b, { hx: REST_X, hy: REST_Y, ha: 0.25, lit: 0.3, wing: 0, last: '', pkx: 0, cols: [], beamX: 0, sparkT: 0, lane: 0, walk: 0 });
-    b.rect = () => {
-      if (stuck(b)) { const h = b.headWorld(); return { x0: h.x - 26, x1: h.x + 26, y0: b.floor - 76, y1: b.floor }; }
-      return { x0: b.x - HALF_W, x1: b.x + HALF_W, y0: b.y - BODY_H, y1: b.y };
-    };
-    b.headWorld = () => b.toWorld(b.hx, b.hy);
+    b.headWorld = () => headWorld(b);
     b.pickColumns = () => {
       const rng = G.run.rng, n = (b.rage ? 4 : 3) - (b.flags.fewSparks ? 1 : 0), x0 = b.minX - 48 + 40, x1 = b.maxX + 48 - 40, xs = [b.target().x];
       for (let i = 1; i < n; i++) xs.push(b.target().x + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * rng.range(115, 160));
@@ -128,12 +141,12 @@ G.defineBoss({
       case 'peckStab': {                             // the head drops onto the mark
         const d = (b.pkx - b.x) * b.face;
         head(d, relFloor - 46, 1.4, 3000);
-        const h = b.headWorld();
+        const h = headWorld(b);
         G.combat.hurtPlayers({ x0: h.x - 24, x1: h.x + 24, y0: floor - 90, y1: floor }, h.x);
         if (b.t <= 0) {
-          const w = b.headWorld(); fx.jolt(0, 9); fx.dust(w.x, floor, 14); fx.ring(w.x, floor - 4, 6, 220, LAMP, 0.3);
+          const w = headWorld(b); fx.jolt(0, 9); fx.dust(w.x, floor, 14); fx.ring(w.x, floor - 4, 6, 220, LAMP, 0.3);
           if (b.rage) for (const s of [-1, 1])        // rage twist: two sparks skitter out along the floor
-            b.shoot({ x: w.x + s * 30, y: floor - 8, vx: s * 320, hug: true, life: 1.1, r: 8, cut: true, paint: paintSpark });
+            b.shoot({ x: w.x + s * 30, y: floor - 8, vx: s * 320, hug: true, life: 1.1, r: 8, cut: true, kind: 'spark', paint: paintSpark });
           b.set('peckStuck', b.flags.longStuck ? 2.0 : 1.25);
         }
         break;
@@ -149,7 +162,7 @@ G.defineBoss({
       // ---- Lamp Sweep: the Lamp is exposed while it sweeps.
       case 'sweepTell':                              // head lowers, the lamp swells, a faint line on the floor shows the path
         head(72, -150, 0.35, 500);
-        if (b.t <= 0) { b.beamX = b.headWorld().x; b.set('sweep', 6); fx.jolt(0, 5); }
+        if (b.t <= 0) { b.beamX = headWorld(b).x; b.set('sweep', 6); fx.jolt(0, 5); }
         break;
       case 'sweep': {                                // a pool of light slides along the floor away from the lamp
         head(72, -150, 0.35, 500);
@@ -175,7 +188,7 @@ G.defineBoss({
         b.sparkT -= dt;
         if (b.sparkT <= 0) {                         // alternate a low spark (jump it) and a high one (stay down); weaker gusts send them slower
           const m = b.toWorld(70, b.lane % 2 ? -100 : -20); b.lane++;
-          b.shoot({ x: m.x, y: m.y, vx: b.face * 330, life: 3.5, r: 8, cut: true, paint: paintSpark });
+          b.shoot({ x: m.x, y: m.y, vx: b.face * 330, life: 3.5, r: 8, cut: true, kind: 'spark', paint: paintSpark });
           fx.spark(m.x, m.y, 4, LAMP, 160, 0.25);
           b.sparkT = (b.flags.softGust ? 0.8 : 0.55) * (b.rage ? 0.85 : 1);
         }
@@ -187,7 +200,7 @@ G.defineBoss({
       case 'fallTell':                               // rises while white columns glow on the floor
         b.y = Math.max(floor - 70, b.y - 160 * dt); head(30, -205, -0.4, 500);
         if (b.t <= 0) {
-          for (const x of b.cols) b.shoot({ x, y: 50, vy: 900, life: 1.2, rect: { w: 40, h: 90 }, tile: 'die', paint: paintBolt });
+          for (const x of b.cols) b.shoot({ x, y: 50, vy: 900, life: 1.2, rect: { w: 40, h: 90 }, tile: 'die', kind: 'bolt', paint: paintBolt });
           b.set('fall', 0.7); fx.jolt(0, 6);
         }
         break;
@@ -201,8 +214,6 @@ G.defineBoss({
         if (b.t <= 0) b.set('idle', rng.range(0.5, 0.9) * sp);
         break;
     }
-    // Only the stilts hurt on touch (the body is too high to walk into).
-    if (b.state !== 'stagger') G.combat.hurtPlayers({ x0: b.x - HALF_W + 4, x1: b.x + HALF_W - 4, y0: b.y - 100, y1: b.y }, b.x);
   },
 
   // Boss space, facing right. Shapes: two legs, two feet, tail, wing, body, neck, beak, lamp head, lamp cap (11). Fare slots are drawn by the base class.

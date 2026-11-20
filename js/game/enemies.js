@@ -64,6 +64,11 @@ class Enemy {
   edgeAhead() { return !tiles.floorAt(Math.floor((this.x + this.face * (this.w / 2 + 6)) / T), Math.floor((this.y + 2) / T)); }
   damage(d, fromX) {
     if (this.dead) return;
+    if (this.noLoot) {                                // an enemy a boss summoned for the fight (b.summon(.., { loot: false })): no scrip, no mend, no defeat art
+      this.hp -= d; this.flash = fx.flashT(0.1); this.kbT = 0.12; this.kbV = Math.sign(this.x - fromX || 1) * (this.def.heavy ? 60 : 220);
+      if (this.hp <= 0) { this.dead = true; fx.spark(this.x, this.y - this.h / 2, 18, '#e9e2cf', 320, 0.5); }
+      return;
+    }
     if (this.def.guard && this.def.guard(this, d, fromX) === false) return;   // guard(e, d, fromX): return false to block the hit
     this.hp -= d; this.flash = fx.flashT(0.1); this.kbT = 0.12; this.kbV = Math.sign(this.x - fromX || 1) * (this.def.heavy ? 60 : 220);
     if (this.hp <= 0) {

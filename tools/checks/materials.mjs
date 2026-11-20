@@ -2,7 +2,8 @@
 // prompt); each interaction is triggered through G.debug and produces its effect; the same seed and inputs give the same result twice;
 // materials never change which fare slot a token opens (its cut).
 const CUT = { cobalt_awl: 'pierce', tin_spindle: 'pierce', flint_tether: 'pierce', ochre_ladle: 'arc', sulphur_kettle: 'arc', chalk_skipstone: 'arc',
-  cinder_bell: 'burst', rust_censer: 'burst', copper_drum: 'burst', basalt_roller: 'ground', quartz_wake: 'ground', pumice_crawler: 'ground' };
+  cinder_bell: 'burst', rust_censer: 'burst', copper_drum: 'burst', basalt_roller: 'ground', quartz_wake: 'ground', pumice_crawler: 'ground',
+  jet_gimlet: 'pierce', amber_sling: 'arc', mica_lantern: 'burst', gypsum_sledge: 'ground' };
 const WORDS = ['Ignite', 'Flare', 'Douse', 'Conduct', 'Pull', 'Stop', 'Kick', 'Slide', 'Shatter', 'Crack', 'Punt', 'Anchor'];
 
 export default async ({ page }) => {
@@ -185,7 +186,7 @@ export default async ({ page }) => {
   const bad = res.cards.filter(c => c.bad.length).map(c => c.kind + ' ' + c.id + ': ' + c.bad.join(', '));
   if (bad.length) throw new Error('cards: ' + bad.join('; '));
   const ids = res.cards.filter(c => c.kind === 'token').map(c => c.id), trs = res.cards.filter(c => c.kind === 'trinket');
-  if (ids.length !== 12 || trs.length !== 8) throw new Error('expected 12 tokens and 8 trinkets, found ' + ids.length + ' and ' + trs.length);
+  if (ids.length !== 16 || trs.length !== 8) throw new Error('expected 16 tokens and 8 trinkets, found ' + ids.length + ' and ' + trs.length);
   // the six core tags each appear on a token and a trinket
   const used = t => [res.cards.some(c => c.kind === 'token' && c.tags.includes(t)), res.cards.some(c => c.kind === 'trinket' && c.tags.includes(t))];
   for (const t of ['heavy', 'metal', 'flammable', 'wet', 'slick', 'brittle']) { const [a, b] = used(t); if (!a && t !== 'slick') throw new Error('no token is ' + t); if (!b && t !== 'flammable') throw new Error('no trinket is ' + t); }

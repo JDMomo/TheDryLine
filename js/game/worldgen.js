@@ -4,12 +4,12 @@
 const G = window.G, U = G.util;
 G.regionDefs = {};
 
-/* G.defineRegion({ id, name, blurb, gate, boss, ability, fixedItem, enemies, flyers, ceiling, length, pool, palette })
+/* G.defineRegion({ id, name, blurb, gate, boss, ability, plinth, enemies, flyers, ceiling, length, pool, palette })
    gate       position of this region's gate in the hub, left to right (0, 1, 2 ...)
    boss       boss id fought in this region's arena
    ability    ability id granted by this region's signal post (same every run)
-   fixedItem  token id that always sits on the plinth of this region's own branch room (same every run); if it is not
-              defined yet, that plinth rolls a random token
+   plinth     true: this region's own branch room holds a guarded plinth. Which token sits on it is drawn per run (G.worldgen.drawTokens): a
+              token of a cut that opens a fare slot on the next region's Warden in the ring, shown on the map before the player commits
    enemies    enemy ids spawned at E markers; flyers: ids spawned at F markers; ceiling: ids spawned at L markers (fallback: any enemy
               of the right kind; a ceiling enemy is one defined with ceiling: true)
    length     number of main rooms before the arena (default 3)
@@ -40,6 +40,9 @@ const CUTS = ['pierce', 'arc', 'burst', 'ground'];
 // exact counts by balance(). ctx.own: node ids that are a region's own branch room (the guarded fixed plinth).
 function fillContent(node, region, rng, used, ctx) {
   const def = G.roomDefs[node.def], signs = def.kind === 'hub' ? HUB_SIGNS : (def.signs || []);
+  // Mechanism channel of a Y / A / Z marker: 'main' unless the template names one at that tile (def.channels['c,r']), e.g. the home
+  // area's 'beaten:r1' gates, which open once that Warden has fallen (props.js mech_gate).
+  const chan = m => (def.channels && def.channels[m.c + ',' + m.r]) || 'main';
   let signN = 0, plinthN = 0;
   const token = () => { const id = G.items.roll(rng, used); if (id) used.push(id); return id; };
   // Enemies: one shuffled bag per marker kind per room, so a room with several ground markers never rolls the same enemy at all of
@@ -66,15 +69,15 @@ function fillContent(node, region, rng, used, ctx) {
     else if (m.ch === 'M') c = region.ability ? { type: 'post', data: { abil: region.ability } } : null;
     else if (m.ch === '?') c = { type: 'sign', data: { text: signs[signN++] || '' } };
     else if (m.ch === 'X') c = { type: 'crack', data: {} };
-    else if (m.ch === 'Y') c = { type: 'lever', data: { channel: 'main' } };
-    else if (m.ch === 'A') c = { type: 'plate', data: { channel: 'main' } };
-    else if (m.ch === 'Z') c = { type: 'mech_gate', data: { channel: 'main' } };
+    else if (m.ch === 'Y') c = { type: 'lever', data: { channel: chan(m) } };
+    else if (m.ch === 'A') c = { type: 'plate', data: { channel: chan(m) } };
+    else if (m.ch === 'Z') c = { type: 'mech_gate', data: { channel: chan(m) } };
     else if (m.ch === 'Q') c = { type: 'rail_cart', data: { span: 3 } };
     else if (m.ch === 'N') c = { type: 'guide', data: {} };
     else if (m.ch === 'C') c = { type: 'trunk', data: {} };                 // what they hold is drawn by balance() once the counts are trimmed
     else if (m.ch === 'I') {
       // Only the region's own branch room holds a plinth (its first one): the region's fixed token, guarded. Others are trimmed.
-      if (ctx.own.has(node.id) && !plinthN++) c = { type: 'plinth', data: Object.assign(fixedOrRandom(region, rng, used), { locked: true }) };
+      if (ctx.own.has(node.id) && !plinthN++) c = { type: 'plinth', data: Object.assign(plinthOf(region, ctx, rng, used), { locked: true }) };
     } else if (m.ch === 'R') {
       c = { type: 'ticket', data: { choices: [] } };
     } else if (m.ch === 'S') c = { type: 'plinth', data: { ware: true } };
@@ -84,13 +87,14 @@ function fillContent(node, region, rng, used, ctx) {
   // A region's first main room is an introduction (region.intro): at most maxEnemies enemies, and nothing from `avoid` (the turnstile and
   // the brine spout) within `calm` tiles of the entrance, where the party arrives (column 1). Those become crabs; extras are dropped
   // (the ones nearest the entrance first).
-  if (region.intro && ctx.first === node.id) {
+  const late = !!(ctx.rule && ctx.rule.region === region.id);                // Timetable card Late Running: no softening, no thinning
+  if (region.intro && ctx.first === node.id && !late) {
     const it = region.intro, idx = () => def.marks.map((m, i) => i).filter(i => node.content[i] && node.content[i].type === 'enemy');
     for (const i of idx()) if (def.marks[i].c - 1 <= it.calm && it.avoid.includes(node.content[i].id)) node.content[i] = { type: 'enemy', id: G.enemyDefs.ballast_crab ? 'ballast_crab' : null };
     while (idx().length > it.maxEnemies) { const list = idx().sort((a, b) => def.marks[a].c - def.marks[b].c); node.content[list[0]] = null; }
   }
   // Thin out a main room that holds more enemies than its region allows (drop the most repeated kinds first).
-  const cap = ENEMY_CAP[region.id];
+  const cap = late ? null : ENEMY_CAP[region.id];
   if (cap && def.kind === 'main') {
     const idx = () => def.marks.map((m, i) => i).filter(i => node.content[i] && node.content[i].type === 'enemy');
     for (let n = idx().length; n > cap[1]; n--) {
@@ -138,17 +142,16 @@ function fillContent(node, region, rng, used, ctx) {
 }
 // Enemies per main room: [min, max] by region (the templates carry the minimum; fillContent trims to the maximum).
 const ENEMY_CAP = { r1: [2, 3], r2: [3, 4], r3: [3, 4], r4: [3, 5], final: [4, 5] };
-// What a guarded plinth holds: the region's fixed token, or (a region without one) whatever the run still has to offer.
-const fixedOrRandom = (region, rng, used) => region.fixedItem && G.itemDefs[region.fixedItem] ? { item: region.fixedItem } : lootData(rng, used);
-/* Token uniqueness. `used` holds every token (and trinket) id already placed or offered anywhere in this run, the guarded plinths' fixed
-   tokens first; nothing draws an id in it, so a token turns up once per run. When the pool of tokens has run dry a source offers a
-   trinket, or failing that scrip, instead. Everything draws from the run's seeded rng, so a seed gives the same world. */
+// What a guarded plinth holds: the token the run drew for this region (ctx.draw.plinth), or (none left) a trinket or scrip.
+const plinthOf = (region, ctx, rng, used) => lootData(rng, used, ctx.draw && ctx.draw.plinth[region.id]);
+/* Token uniqueness. `used` holds every token (and trinket) id already placed or offered anywhere in this run, the run's drawn tokens
+   first; nothing draws an id in it, so a token turns up once per run. A source whose drawn token is missing offers a trinket, or
+   failing that scrip, instead. Everything draws from the run's seeded rngs, so a run code gives the same world. */
 const FILLER_SCRIP = 40;
 const trinketFor = (rng, used) => { const t = G.trinkets.roll(rng, used); if (t) used.push(t); return t; };
-// What a trunk or a ticket choice holds: { item } | { trinket } | { scrip }
-function lootData(rng, used) {
-  const id = G.items.roll(rng, used);
-  if (id) { used.push(id); return { item: id }; }
+// What a trunk, plinth or ticket choice holds: { item } (the drawn token, if there is one) | { trinket } | { scrip }
+function lootData(rng, used, token) {
+  if (token) return { item: token };
   const t = trinketFor(rng, used);
   return t ? { trinket: t } : { scrip: FILLER_SCRIP };
 }
@@ -157,6 +160,33 @@ function ware(rng, used) {
   const t = trinketFor(rng, used);
   return t ? { type: 'plinth', data: { trinket: t, price: 40 } } : null;
 }
+/* The run's token draw (rolled from the seed alone, its own stream): about 7 of the pool, so which tokens exist differs every run.
+   - each region with a guarded plinth gets a token of a cut that the lock chart makes useful on the NEXT Warden in the ring (r1 -> r2 -> r3 -> r4 -> r1),
+     and the four plinths hold four different cuts when the pool allows (rares and ledger tokens come up a third as often)
+   - then two lost trunks, one ticket machine token, and (Timetable card Packed Lunch) one starting token; a chosen starting token comes out of the pool first
+   Returns { plinth: { regionId: id }, trunks: [id, id], ticket: id, start: [id], all: [every id drawn] }; a missing id is null (the pool ran dry). */
+function drawTokens(seed, chart, order, rule, startCut) {
+  const rng = U.makeRng((seed ^ 0x7a3c91d5) >>> 0), startTok = startCut && G.ledger.commonOf(startCut) ? G.ledger.commonOf(startCut).id : null;
+  let left = G.items.pool().filter(id => id !== startTok);
+  const take = cands => {
+    const bag = cands.flatMap(id => G.items.weight(id) === 1 ? [id] : [id, id, id]);
+    if (!bag.length) return null;
+    const id = rng.pick(bag); left = left.filter(x => x !== id); return id;
+  };
+  const ring = order.filter(r => r.plinth), out = { plinth: {}, trunks: [], ticket: null, start: startTok ? [startTok] : [], all: [] }, cuts = [];
+  ring.forEach((r, k) => {
+    const next = ring[(k + 1) % ring.length], ok = left.filter(id => (chart[next.id] || []).includes(G.itemDefs[id].cls));
+    const fresh = ok.filter(id => !cuts.includes(G.itemDefs[id].cls));
+    const id = take(fresh.length ? fresh : ok.length ? ok : left);
+    out.plinth[r.id] = id; if (id) cuts.push(G.itemDefs[id].cls);
+  });
+  out.trunks = [take(left), take(left)];
+  out.ticket = take(left);
+  if (rule && rule.startToken) out.start.push(take(left));
+  out.all = [...Object.values(out.plinth), ...out.trunks, out.ticket, ...out.start].filter(Boolean);
+  return out;
+}
+
 /* The lock chart: for every region's Warden, the three cuts that have a fare slot this run (the fourth is locked out). Rolled from the
    seed alone. The first four regions lock a different cut each (so every cut is locked on at least one Warden and no two Wardens
    share a chart); the rest lock a random cut. Returns { regionId: [cut, cut, cut] }, cuts in CUTS order. */
@@ -207,14 +237,16 @@ function balance(graph, rng, used, ctx) {
 
   // lost trunks: exactly 2, in main rooms
   entries('C', 'trunk').filter(e => kind(e.n) !== 'main').forEach(strip);
-  const trunks = keep(entries('C', 'trunk'), 2);
+  const trunks = keep(entries('C', 'trunk'), 2), rule = graph.rule || {};
+  const queue = (graph.draw && graph.draw.trunks.slice()) || [];
   place('trunk', () => ({}), 1, 3, 2 - trunks.length);
   // ticket machine: exactly 1 (it can be used twice: 30 scrip, then 45)
   const machines = keep(entries('R', 'ticket'), 1);
   place('ticket', () => ({ choices: [] }), 2, 4, 1 - machines.length);
   // kiosk: exactly 1 room with exactly 3 wares
   const wares = entries('S', 'plinth'), rooms = [...new Set(wares.map(e => e.n))];
-  if (rooms.length) {
+  if (rule.kioskClosed) wares.forEach(strip);                                  // Timetable card Scrip Boom: the kiosk is closed (no wares)
+  else if (rooms.length) {
     const kioskNode = rng.pick(rooms);
     wares.filter(e => e.n !== kioskNode).forEach(strip);
     const mine = wares.filter(e => e.n === kioskNode);
@@ -234,7 +266,7 @@ function balance(graph, rng, used, ctx) {
     const id = graph.regions[region.id].nodes.find(id => graph.nodes[id] && graph.nodes[id].def === region.serviceAt);
     return id ? [id] : [];
   });
-  const wanted = [...new Set([graph.hub, ...serviceNodes, last && last.pipe ? last.pipe : lastMain].filter(Boolean))];
+  const wanted = rule.noPipes ? [] : [...new Set([graph.hub, ...serviceNodes, last && last.pipe ? last.pipe : lastMain].filter(Boolean))];   // Timetable card Dry Pipes: no standpipes
   entries('H', 'standpipe').filter(e => !wanted.includes(e.n.id)).forEach(strip);
   for (const id of wanted) {
     const n = graph.nodes[id];
@@ -243,14 +275,15 @@ function balance(graph, rng, used, ctx) {
   // each region's guarded fixed plinth (its own branch room)
   for (const id of ctx.own) {
     const n = graph.nodes[id];
-    if (!entries('I', 'plinth').some(e => e.n === n) && !addExtra(n, 'plinth', Object.assign(fixedOrRandom(G.regionDefs[n.region], rng, used), { locked: true }), 1, 3, rng)) warn.push('no room for the plinth in ' + id);
+    if (!entries('I', 'plinth').some(e => e.n === n) && !addExtra(n, 'plinth', Object.assign(plinthOf(G.regionDefs[n.region], ctx, rng, used), { locked: true }), 1, 3, rng)) warn.push('no room for the plinth in ' + id);
   }
   // What the sources hold is drawn only now that the counts are final, so tokens are not wasted on sources that were trimmed away.
   // Order: the trunks, the ticket machine's first three, the kiosk (trinkets), then the machine's second three.
   const all = type => nodes.flatMap(n => G.worldgen.contents(n).filter(c => c.type === type));
-  for (const c of all('trunk')) Object.assign(c.data, lootData(rng, used));
+  for (const c of all('trunk')) Object.assign(c.data, lootData(rng, used, queue.shift()));
   const machinesNow = all('ticket');
-  for (let k = 0; k < 3; k++) for (const c of machinesNow) c.data.choices.push(lootData(rng, used));
+  // the machine's first three: the run's ticket token first, then trinkets (the second roll offers trinkets and scrip only)
+  for (const c of machinesNow) { c.data.choices.push(lootData(rng, used, graph.draw && graph.draw.ticket)); for (let k = 1; k < 3; k++) c.data.choices.push(lootData(rng, used)); }
   for (const c of all('plinth').filter(c => c.data.ware)) {
     const w = ware(rng, used);
     if (w) { delete c.data.ware; Object.assign(c.data, w.data); } else warn.push('kiosk ware empty');
@@ -261,17 +294,54 @@ function balance(graph, rng, used, ctx) {
   for (let k = hub.signsPlaced || 0; k < HUB_SIGNS.length; k++) if (!addExtra(hub, 'sign', { text: HUB_SIGNS[k] }, 0, 1, rng, pc)) warn.push('no room for hub sign ' + (k + 1));
   // The Route Board is an authored destination on the Junction's high clock balcony.
   // Its bottom edge sits just above the row-13 one-way platform so a standing player can inspect it.
-  (hub.extras || (hub.extras = [])).push({ type: 'board', data: {}, c: 59, r: 13, x: 59 * T + T / 2, y: 13 * T + 16 });
+  // The hub template may say where the board and the Timetable plate hang (hubDef.board / hubDef.timetable = [c, r]).
+  const bd = hubDef.board || [59, 13];
+  (hub.extras || (hub.extras = [])).push({ type: 'board', data: {}, c: bd[0], r: bd[1], x: bd[0] * T + T / 2, y: bd[1] * T + 16 });
+  // The Timetable card hangs on the same balcony, left of the board (prop type 'timetable', js/ui/ledger.js; placement note: docs/HANDOFF_HUB.md)
+  const tt = hubDef.timetable || [53, 13];
+  hub.extras.push({ type: 'timetable', data: {}, c: tt[0], r: tt[1], x: tt[0] * T + T / 2, y: tt[1] * T + 16 });
   return warn;
+}
+
+const OPP = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+/* Loop-back shortcuts (home area). hubDef.shortcuts = [{ region, c, r }]: the home end is a bolted hatch at (c, r) (a fixture in the
+   template); its far end is placed here in the region's last main room, near the exit toward the Warden, as an extra 'shortcut' prop.
+   The far end can always be used and unbolts both ends (G.run.shortcuts[region]); the home end opens only after that.
+   graph.shortcuts[region] = { deep: nodeId, x, y, home: { x, y } }. Placed with no random draws, so it never shifts a seed's other rolls. */
+function placeShortcuts(graph, hubDef, warnings) {
+  graph.shortcuts = {};
+  for (const s of hubDef.shortcuts || []) {
+    const rg = graph.regions[s.region]; if (!rg) continue;
+    const mains = rg.nodes.filter(id => G.roomDefs[graph.nodes[id].def].kind === 'main' && !graph.nodes[id].parent), deep = graph.nodes[mains[mains.length - 1]];
+    if (!deep) continue;
+    const d = G.roomDefs[deep.def], fwd = (d.route || ['left', 'right'])[1], port = d.ports && d.ports[fwd];
+    const near = fwd === 'right' ? d.cols - 7 : fwd === 'left' ? 6 : port ? port.c : d.cols >> 1;
+    const nearRow = fwd === 'left' || fwd === 'right' ? d.rows - 3 : fwd === 'top' ? 0 : d.rows - 1;
+    // a spot 3 tiles wide on safe solid floor (rock, salt or mud), 3 tiles of headroom, clear of markers and other extras,
+    // nearest the way on to the Warden
+    const g = d.grid, ex = deep.extras || [], cand = [];
+    for (let r = 3; r < d.rows - 1; r++) for (let c = 4; c < d.cols - 4; c++) {
+      let ok = true;
+      for (let x = c - 1; x <= c + 1 && ok; x++) ok = '#sm'.includes(g[r + 1][x]) && g[r][x] === '.' && g[r - 1][x] === '.' && g[r - 2][x] === '.';
+      if (ok && !d.marks.some(m => Math.abs(m.r - r) <= 2 && Math.abs(m.c - c) <= 2) && !ex.some(e => Math.abs(e.r - r) <= 2 && Math.abs(e.c - c) <= 2)) cand.push({ c, r });
+    }
+    if (!cand.length) { warnings.push('no room for the ' + s.region + ' loop-back hatch in ' + deep.def); continue; }
+    const best = cand.sort((a, b) => (Math.abs(a.c - near) + Math.abs(a.r - nearRow) * 0.5) - (Math.abs(b.c - near) + Math.abs(b.r - nearRow) * 0.5))[0];
+    const e = { type: 'shortcut', data: { region: s.region, side: 'deep' }, c: best.c, r: best.r, x: best.c * T + T / 2, y: (best.r + 1) * T };
+    (deep.extras || (deep.extras = [])).push(e);
+    graph.shortcuts[s.region] = { deep: deep.id, x: e.x, y: e.y, home: { x: (s.c + .5) * T, y: (s.r + 1) * T } };
+  }
 }
 
 // Every node a node leads to: edge exits, doorways and hub gates.
 function links(graph, node) {
   const out = [];
   for (const side of ['left', 'right', 'top', 'bottom']) if (node.exits[side]) out.push(node.exits[side].to);
+  for (const q of node.portals || []) out.push(q.dest);                                     // home-area portals
+  for (const e of node.extras || []) if (e.type === 'shortcut' && e.data.side === 'deep') out.push(graph.hub);   // loop-back hatches (always open from the deep side)
   for (const c of node.content) {
     if (c && c.type === 'door') out.push(c.data.to);
-    if (c && c.type === 'gate') out.push(graph.regions[c.data.region].first);
+    if (c && c.type === 'gate') out.push(graph.regions[c.data.region].mouth ? graph.regions[c.data.region].mouth.node : graph.regions[c.data.region].first);
   }
   return out;
 }
@@ -286,15 +356,21 @@ G.worldgen = {
      node = { id, def (room template id), region, exits: { left/right/top/bottom }, content: [per marker], seen, parent (branch rooms) }
      Main defs use route: [entrySide, exitSide] (default left -> right); every exit is { to: nodeId, entry }. Per region: `length` main rooms, then the arena; the
      main rooms' doorways lead to the trial room, the region's own branch room (its guarded plinth) and shared branch rooms. */
-  build(seed, cuts) {
-    // The world is built from the seed and the unlocked cuts only (cuts: the cuts whose rare tokens are in the pool; default: the save's).
-    G.items.cutsOverride = cuts || G.meta.cuts;
-    try { return G.worldgen.build0(seed); } finally { G.items.cutsOverride = null; }
+  build(seed, cuts, extra) {
+    // The world is built from the seed and the unlocked cuts only (cuts: the cuts whose rare tokens are in the pool; default: the save's), plus
+    // the ledger's part of the run code: extra = { unl: { tokens, cards }, opts: { express, start } } (default: what the save has unlocked and chosen).
+    // The Timetable card is rolled here from the seed and the unlocked cards, and the run's tokens are drawn (drawTokens).
+    if (!extra) { const unl = G.ledger.unlocked(); extra = { unl, opts: G.ledger.options(unl) }; }
+    G.items.cutsOverride = cuts || G.meta.cuts; G.items.ledgerOverride = extra.unl.tokens;
+    try { return G.worldgen.build0(seed, extra); } finally { G.items.cutsOverride = null; G.items.ledgerOverride = null; }
   },
   rollChart(seed) { return rollChart(seed, Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate)); },
-  build0(seed) {
+  build0(seed, extra) {
     const rng = U.makeRng(seed), nodes = {}, regions = {}, warnings = [], ctx = { own: new Set() };
-    const used = Object.values(G.regionDefs).map(r => r.fixedItem).filter(id => id && G.itemDefs[id]);   // fixed tokens are placed first: nothing else draws them
+    const rule = G.ledger.rollRule(seed, extra.unl.cards), chart = G.worldgen.rollChart(seed);
+    const picks = drawTokens(seed, chart, Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), rule, extra.opts.start);
+    ctx.rule = rule; ctx.draw = picks;
+    const used = picks.all.slice();                                                  // the run's drawn tokens are placed first: nothing else draws them
     // Still needed across the whole run (bible section 8): used to prefer shared branch rooms that hold a source we lack.
     const need = { R: 1, S: 1 };
     const srcs = d => { const o = {}; for (const m of d.marks) if (need[m.ch] !== undefined) o[m.ch] = 1; return o; };
@@ -320,6 +396,7 @@ G.worldgen = {
 
     order.slice(0, gateMarks.length).forEach((region, ri) => {
       const mains = defsOf('main', region.pool), arenas = defsOf('arena', region.pool);
+      const hubPortal = (hubDef.portals || []).find(q => q.id === region.id);
       if (!mains.length || !arenas.length) { G.fail('region ' + region.id + ' has no main rooms or no arena'); return; }
       // A shared branch room with a standpipe (H) is never drawn as an ordinary side room: it is the last region's pre-arena stop.
       const hasH = d => d.marks.some(m => m.ch === 'H'), isLast = ri === Math.min(order.length, gateMarks.length) - 1;
@@ -358,13 +435,35 @@ G.worldgen = {
       const routeOf = node => G.roomDefs[node.def].route || ['left', 'right'];
       chain.forEach((node, i) => {
         const [backSide, forwardSide] = routeOf(node), prev = chain[i - 1], next = chain[i + 1];
-        node.exits[backSide] = prev ? { to: prev.id, entry: { side: routeOf(prev)[1] } } : { to: hub.id, entry: { gate: region.id } };
+        node.exits[backSide] = prev ? { to: prev.id, entry: { side: routeOf(prev)[1] } } : { to: hub.id, entry: hubPortal ? { portal: region.id } : { gate: region.id } };
         node.exits[forwardSide] = next ? { to: next.id, entry: { side: routeOf(next)[0] } } : { to: arena.id, entry: { side: 'left' } };
       });
       const last = chain[chain.length - 1];
       arena.exits.left = { to: last.id, entry: { side: routeOf(last)[1] } };
       const g = regions[region.id] = { first: chain[0].id, arena: arena.id, nodes: chain.map(c => c.id).concat(arena.id) };
-      hub.content[gateMarks[ri]] = { type: 'gate', data: { region: region.id } };
+      // Home-area portal: the hub's opening for this region leads to the first room, through a connector room when it names one
+      // (a vertical approach: the hub's top or bottom edge cannot meet a first room that is entered from its left).
+      const firstSide = routeOf(chain[0])[0];
+      if (hubPortal) {
+        const via = hubPortal.via && G.roomDefs[hubPortal.via];
+        let dest = { node: chain[0].id, entry: { side: firstSide } };
+        if (hubPortal.via && !via) warnings.push('home portal ' + region.id + ' names a missing connector ' + hubPortal.via);
+        if (via) {
+          const k = add(via, 'hub'), [kIn, kOut] = via.route || ['left', 'right'];
+          k.connector = region.id; g.connector = k.id;
+          k.exits[kIn] = { to: hub.id, entry: { portal: region.id } };
+          k.exits[kOut] = { to: chain[0].id, entry: { side: firstSide } };
+          chain[0].exits[firstSide] = { to: k.id, entry: { side: kOut } };
+          if (OPP[kOut] !== firstSide) warnings.push('connector ' + via.id + ' leaves by its ' + kOut + ' edge but ' + chain[0].def + ' is entered from its ' + firstSide);
+          dest = { node: k.id, entry: { side: kIn } };
+        }
+        const inSide = via ? (via.route || ['left'])[0] : firstSide;
+        if (OPP[hubPortal.side] !== inSide) warnings.push('home portal ' + region.id + ' on the ' + hubPortal.side + ' edge meets a ' + inSide + ' entrance');
+        (hub.portals || (hub.portals = [])).push({ id: region.id, side: hubPortal.side, lo: hubPortal.from, hi: hubPortal.to, dest: dest.node, entry: dest.entry });
+        g.mouth = dest;
+      }
+      const gm = hubDef.gateFor && hubDef.gateFor[region.id] ? hubDef.marks.findIndex(m => m.ch === 'G' && m.c === hubDef.gateFor[region.id][0] && m.r === hubDef.gateFor[region.id][1]) : -1;
+      hub.content[gm >= 0 ? gm : gateMarks[ri]] = { type: 'gate', data: { region: region.id } };
 
       // Doorways: campaign mode uses only authored trial/own/standpipe rooms; generated mode may fill spare doors from shared pools.
       let slots = rng.shuffle(chain.flatMap(node => G.roomDefs[node.def].marks.map((m, i) => m.ch === 'D' ? { node, i } : null).filter(Boolean)));
@@ -398,8 +497,10 @@ G.worldgen = {
     });
     ctx.first = null;
     fillContent(hub, {}, rng, used, ctx);
-    const graph = { seed, hub: hub.id, nodes, regions, warnings, claimed: used, chart: G.worldgen.rollChart(seed) };
+    const graph = { seed, hub: hub.id, nodes, regions, warnings, claimed: used, chart, rule, draw: picks };
+    if (rule.region && regions[rule.region]) regions[rule.region].delayed = true;
     warnings.push(...balance(graph, rng, used, ctx));
+    placeShortcuts(graph, hubDef, warnings);
     return graph;
   },
   /* Everything a node holds as plain { type, data } entries: the template's markers plus the extras placed by balance(). */

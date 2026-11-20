@@ -36,12 +36,14 @@ export function lintRoom(r, abilityIds) {
   const SIDES = ['left', 'right', 'top', 'bottom'], route = r.kind === 'main' ? (r.route || ['left', 'right']) : [];
   if (r.kind === 'main' && (route.length !== 2 || route[0] === route[1] || route.some(s => !SIDES.includes(s)))) err.push('main route must be two different sides: left, right, top or bottom');
   const wantSide = side => r.kind === 'arena' ? side === 'left' : r.kind === 'main' && route.includes(side);
+  // the home area (kind 'hub') may open its edges only where it declares a portal: { id, side, from, to } (rows or columns)
+  const portalAt = (side, k) => r.kind === 'hub' && (r.portals || []).some(q => q.side === side && k >= q.from && k <= q.to);
   for (const [side, col] of [['left', 0], ['right', cols - 1]]) {
     const want = wantSide(side), bad = [];
     for (let y = 0; y < rows; y++) {
       const isExit = y >= base + 12 && y <= base + 14, open = grid[y][col] !== '#';
       if (isExit && want && !open) bad.push(y);
-      else if (!(isExit && want) && open && !(r.kind === 'arena' && side === 'left' && y === base + 11)) bad.push(y);
+      else if (!(isExit && want) && open && !(r.kind === 'arena' && side === 'left' && y === base + 11) && !portalAt(side, y)) bad.push(y);
     }
     if (bad.length) {
       const openRows = bad.filter(y => grid[y][col] !== '#'), shut = bad.filter(y => grid[y][col] === '#');
@@ -51,7 +53,7 @@ export function lintRoom(r, abilityIds) {
   }
   for (const side of ['top', 'bottom']) {
     const y = side === 'top' ? 0 : rows - 1, openCols = [];
-    for (let c = 0; c < cols; c++) if (grid[y][c] !== '#') openCols.push(c);
+    for (let c = 0; c < cols; c++) if (grid[y][c] !== '#' && !portalAt(side, c)) openCols.push(c);
     const want = wantSide(side);
     if (!want && openCols.length) err.push(r.kind + ' room: undeclared ' + side + ' edge opening at column ' + openCols[0]);
     if (want) {
@@ -75,7 +77,7 @@ export function lintRoom(r, abilityIds) {
   if (r.kind !== 'hub') { if (count('G')) err.push('G (region gate) outside the hub'); if (count('P')) err.push('P (party start) outside the hub'); }
   if (r.kind === 'hub' && count('P') !== 1) err.push('the hub needs exactly one P');
   const q = count('?'), ns = (r.signs || []).length;
-  if (q > ns) warn.push(q + ' sign markers ? but only ' + ns + ' signs[] texts');
+  if (q > ns && r.kind !== 'hub') warn.push(q + ' sign markers ? but only ' + ns + ' signs[] texts');
 
   // support: ground markers stand on solid or one-way; a marker is never inside a wall; spikes are not a floor
   for (const m of marks) {
@@ -164,7 +166,9 @@ export function pageTraverse(spec) {
   // --- jobs
   const jobs = [];
   const doorIdx = marks.findIndex(m => m.ch === 'D');
-  if (def.kind === 'main') {
+  if (spec.point) {    // one job: from spec.entry to stand at spec.point { x, y } (e.g. a hatch worldgen placed); used by home_area
+    jobs.push({ name: 'to point (' + Math.round(spec.point.x) + ', ' + Math.round(spec.point.y) + ')', entry: spec.entry, goal: { type: 'point', x: spec.point.x, y: spec.point.y } });
+  } else if (def.kind === 'main') {
     const route = def.route || ['left', 'right'], a = route[0], b = route[1];
     jobs.push({ name: a + ' to ' + b, entry: { side: a }, goal: { type: 'edge', side: b } });
     jobs.push({ name: b + ' to ' + a, entry: { side: b }, goal: { type: 'edge', side: a } });
@@ -179,6 +183,13 @@ export function pageTraverse(spec) {
     // the start area: every gate is reachable from the spawn with base moves (a sealed gate bay once trapped new players at the start)
     const startIdx = marks.findIndex(m => m.ch === 'P');
     if (startIdx >= 0) marks.forEach((m, i) => { if (m.ch === 'G') jobs.push({ name: 'start to gate (col ' + m.c + ')', entry: { mark: startIdx }, goal: { type: 'mark', i } }); });
+    // and out through every portal (a route's mouth), and back from it to the start. A bottom portal under a grating counts as reached
+    // standing on the grating (dropping through is Down + Jump, which the bot does not press).
+    if (startIdx >= 0) for (const q of def.portals || []) {
+      const goal = { type: 'portal', side: q.side, lo: q.from, hi: q.to };
+      jobs.push({ name: 'start to portal ' + q.id + ' (' + q.side + ')', entry: { mark: startIdx }, goal });
+      jobs.push({ name: 'portal ' + q.id + ' (' + q.side + ') to start', entry: { portal: q.id }, goal: { type: 'mark', i: startIdx } });
+    }
   } else if (def.kind === 'branch' || def.kind === 'trial') {
     if (doorIdx >= 0) marks.forEach((m, i) => {
       if (!'ICRSKMH'.includes(m.ch)) return;
@@ -196,6 +207,8 @@ export function pageTraverse(spec) {
       else { const p = def.ports[g.side], y = g.side === 'top' ? 0 : rows - 1; if (p) for (let c = Math.max(0, p.c - 1); c <= Math.min(cols - 1, p.c + 1); c++) out.push([c, y]); }
     }
     else if (g.type === 'door') for (const y of [12, 13, 14]) out.push([def.doorCol + 3, base + y]);
+    else if (g.type === 'point') out.push([Math.floor(g.x / T), Math.floor((g.y - 1) / T)]);
+    else if (g.type === 'portal') for (let k = g.lo; k <= g.hi; k++) out.push(g.side === 'left' ? [0, k] : g.side === 'right' ? [cols - 1, k] : g.side === 'top' ? [k, 0] : [k, rows - 5]);
     else out.push([marks[g.i].c, marks[g.i].r]);
     return out;
   };
@@ -207,6 +220,14 @@ export function pageTraverse(spec) {
       return p.y >= rows * T - 12;
     }
     if (g.type === 'door') return p.x > (def.doorCol + 2.6) * T && p.onGround;
+    if (g.type === 'point') return p.onGround && Math.abs(p.x - g.x) < 40 && Math.abs(p.y - g.y) < 10;
+    if (g.type === 'portal') {
+      const row = Math.floor((p.y - 1) / T), col = Math.floor(p.x / T);
+      if (g.side === 'left') return p.x <= 11.6 && row >= g.lo - 1 && row <= g.hi + 1;
+      if (g.side === 'right') return p.x >= cols * T - 11.6 && row >= g.lo - 1 && row <= g.hi + 1;
+      if (g.side === 'top') return p.y - p.h <= 12 && col >= g.lo - 1 && col <= g.hi + 1;
+      return p.onGround && col >= g.lo && col <= g.hi && p.y >= (rows - 6) * T;
+    }
     const m = marks[g.i], t = mpos(m);
     return p.onGround && Math.abs(p.x - t.x) < (spec.strict ? 72 : 24) && Math.abs(p.y - t.y) < 10;   // strict: on the same ledge, within two tiles of the mark
   };
@@ -419,7 +440,7 @@ export async function runRooms(page, opts = {}) {
   const filter = opts.filter || '', walk = opts.walk !== false, budget = opts.budget || 800000;
   const info = await page.evaluate(() => {
     if (!G.run || !G.run.graph) G.debug.newRun(1);
-    return { abil: Object.keys(G.abilityDefs), rooms: Object.values(G.roomDefs).map(r => ({ id: r.id, kind: r.kind, region: r.region, w: r.w, h: r.h, map: r.map, route: r.route, needs: r.needs, signs: r.signs, label: r.label })) };
+    return { abil: Object.keys(G.abilityDefs), rooms: Object.values(G.roomDefs).map(r => ({ id: r.id, kind: r.kind, region: r.region, w: r.w, h: r.h, map: r.map, route: r.route, needs: r.needs, signs: r.signs, label: r.label, portals: r.portals })) };
   });
   const errTexts = await page.evaluate(() => G.errors.slice());
   const out = [];
