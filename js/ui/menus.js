@@ -9,7 +9,7 @@ function panel(ctx, w, h, y = 0) {
   ctx.fillStyle = 'rgba(6,11,11,0.9)'; ctx.fillRect((W - w) / 2, (H - h) / 2 + y, w, h);
   ctx.strokeStyle = '#3f6b5a'; ctx.lineWidth = 1.5; ctx.strokeRect((W - w) / 2, (H - h) / 2 + y, w, h);
 }
-const premise = 'The sea is gone. The railway still obeys its last timetable. Carry the cancellation to the clock at the end of the line.';
+const premise = 'The sea is gone. The last timetable is not.';
 // The controls tables: what each action is on each kind of device, from the live bindings (so they follow a remap).
 const ROWS = [['Move', 'move'], ['Jump', 'jump'], ['Slash', 'attack'], ['Dash', 'dash'], ['Token', 'item'], ['Switch token', 'cycle'], ['Mend (hold)', 'heal'], ['Use, enter', 'interact'], ['Map', 'map'], ['Pause', 'pause']];
 function rowsFor(type) {
@@ -94,14 +94,16 @@ G.menus = {
   title(ctx) {
     art.backdrop(ctx, art.palette('hub'), G.time * 12, G.time, 'hub');
     ctx.fillStyle = 'rgba(6,11,11,0.6)'; ctx.fillRect(0, 0, W, H);
-    art.label(ctx, G.title.name && G.title.name !== 'Untitled' ? G.title.name : 'The Dry Line', W / 2, 62, 54, '#e9a23b', 'center', C.DISPLAY, 600);
-    art.label(ctx, premise, W / 2, 106, 14, '#e9e2cf');
-    if (Math.floor(G.time * 2) % 2) art.label(ctx, 'Click here, then press any button on the keyboard or a controller to begin: that device is player 1', W / 2, 146, 16, '#e9e2cf');
-    panel(ctx, 640, 212, -2);
-    table(ctx, rowsFor('keyboard'), 170, 188, 'Keyboard');
-    table(ctx, rowsFor('gamepad'), 520, 188, 'Gamepad');
-    art.label(ctx, 'Players 2 to 4: at the Junction, press Jump on any other device (keyboard or controller). Hold Pause for 1 second there to leave.', W / 2, 402, 13, '#e9e2cf');
-    art.label(ctx, 'The party carries three tokens. Each Warden has three fare slots, set by the lock chart; a punched token is void.', W / 2, 426, 13, '#9aa89f');
+    ctx.save();ctx.translate(W/2,28);ctx.rotate(-0.025);ctx.strokeStyle='#d9603a';ctx.lineWidth=2;ctx.strokeRect(-170,-12,340,24);art.label(ctx,'LAST SERVICE · CANCELLATION UNDELIVERED',0,0,12,'#e9663f','center',C.FONT,700);ctx.restore();
+    art.label(ctx, G.title.name && G.title.name !== 'Untitled' ? G.title.name : 'The Dry Line', W / 2, 72, 54, '#e9a23b', 'center', C.DISPLAY, 600);
+    art.label(ctx, premise, W / 2, 112, 15, '#e9e2cf');
+    art.label(ctx, 'Carry the cancellation through the five open lines to the Long Clock.', W / 2, 132, 12.5, '#9aa89f');
+    if (Math.floor(G.time * 2) % 2) art.label(ctx, 'Click the game, then press any keyboard key or controller button to begin', W / 2, 158, 15, '#fff3c4');
+    panel(ctx, 640, 212, 10);
+    table(ctx, rowsFor('keyboard'), 170, 200, 'Keyboard');
+    table(ctx, rowsFor('gamepad'), 520, 200, 'Gamepad');
+    art.label(ctx, 'Players 2 to 4: at the Junction, press Jump on any other device (keyboard or controller). Hold Pause for 1 second there to leave.', W / 2, 414, 13, '#e9e2cf');
+    art.label(ctx, 'The party carries three tokens. Each Warden has three fare slots, set by the lock chart; a punched token is void.', W / 2, 438, 13, '#9aa89f');
     const m = G.meta;
     art.label(ctx, 'Runs ' + m.runs + '   ·   Wins ' + m.wins + (m.best !== null ? '   ·   Best ' + clock(m.best) : '') + '   ·   Cuts punched ' + m.cuts.length + ' of 4', W / 2, H - 40, 13, '#9aa89f');
   },

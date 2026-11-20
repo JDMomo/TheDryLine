@@ -1,5 +1,7 @@
 # The Dry Line (working title)
 
+**Current narrative:** the sea is gone, but the railway still obeys its Last Timetable. Four Wardens continue enforcing an evacuation order whose cancellation never reached the Long Clock. Runs can tackle the lines in any order; leaving Wardens active makes the Long Clock borrow their attacks.
+
 A 2D action platformer for 1 to 4 local players, written in plain JavaScript for the browser. No build step and no dependencies.
 
 ## Play
