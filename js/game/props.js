@@ -40,7 +40,8 @@ const TEACH = {
   door: 'Doorways lead to side rooms. Every side room has a way back.',
   gate: 'Every gate is open. Each line ends at a Warden.',
   lever: 'Levers open their paired mechanical gate for a few seconds.',
-  plate: 'A pressure plate holds its paired gate open while someone stands on it.'
+  plate: 'A pressure plate holds its paired gate open while someone stands on it.',
+  rail_cart: 'Rail carts carry anything grounded on their deck. Ride with them or step off.'
 };
 // Layout of the lock chart board (pr.x centre, pr.y bottom edge): panel, and per region the name box and the three cut boxes. Used by draw and by boxes().
 const BOARD_W = 150, BOARD_ROW = 15;
@@ -370,6 +371,33 @@ const TYPES = {
       const lift=open?h-18:0;
       for(let i=-10;i<=10;i+=10){ctx.fillStyle='#776f58';ctx.fillRect(i-2,-h+lift,4,h-lift);ctx.strokeRect(i-2,-h+lift,4,h-lift);}
       ctx.fillStyle=open?'#f4e6b8':'#7e4c39';ctx.beginPath();ctx.arc(0,-h-3,4,0,6.283);ctx.fill();ctx.restore();
+    }
+  },
+  rail_cart: {
+    update(pr,dt) {
+      const d=pr.data;
+      if(d.home===undefined){d.home=pr.x;d.dir=1;d.speed=82;}
+      const span=(d.span||3)*C.T, old=pr.x;
+      pr.x+=d.dir*d.speed*dt;
+      if(pr.x<d.home-span){pr.x=d.home-span;d.dir=1;}
+      else if(pr.x>d.home+span){pr.x=d.home+span;d.dir=-1;}
+      const dx=pr.x-old;
+      const bodies=G.players.concat(G.rooms.current.enemies||[]);
+      for(const o of bodies) if(o&&!o.dead&&o.onGround&&Math.abs(o.x-old)<27&&Math.abs(o.y-pr.y)<10){
+        const nx=o.x+dx,c0=Math.floor((nx-o.w/2)/C.T),c1=Math.floor((nx+o.w/2)/C.T),r0=Math.floor((o.y-o.h)/C.T),r1=Math.floor((o.y-1)/C.T);
+        let blocked=false;for(let c=c0;c<=c1&&!blocked;c++)for(let r=r0;r<=r1;r++)if(G.tiles.solid(c,r)){blocked=true;break;}
+        if(!blocked)o.x=nx;
+      }
+    },
+    prompt(pr){return ['Rail cart','A short maintenance trolley runs this stretch automatically.','Stand on the deck to ride'];},
+    draw(pr,ctx){
+      const x=pr.x,y=pr.y;
+      ctx.save();ctx.translate(x,y);
+      ctx.fillStyle='#75513d';ctx.strokeStyle='#211a16';ctx.lineWidth=3;ctx.fillRect(-24,-16,48,10);ctx.strokeRect(-24,-16,48,10);
+      ctx.fillStyle='#8f8263';ctx.fillRect(-20,-20,40,5);
+      for(const wx of [-16,16]){ctx.fillStyle='#303735';ctx.beginPath();ctx.arc(wx,-4,7,0,6.283);ctx.fill();ctx.stroke();ctx.strokeStyle='#a58d60';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(wx-5,-4);ctx.lineTo(wx+5,-4);ctx.moveTo(wx,-9);ctx.lineTo(wx,1);ctx.stroke();}
+      ctx.strokeStyle='#a58d60';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-8,-20);ctx.lineTo(0,-32);ctx.lineTo(8,-20);ctx.stroke();
+      ctx.restore();
     }
   },
   sign: {       // data: { text }

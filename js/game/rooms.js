@@ -4,7 +4,7 @@
 const G = window.G, C = G.C, T = C.T, U = G.util, fx = G.fx, tiles = G.tiles, art = G.art;
 G.roomDefs = {};
 
-const MARKS = 'EFLICRSKMHDBG?PXYZ A'.replace(/ /g, '');
+const MARKS = 'EFLICRSKMHDBG?PXYZ AQ'.replace(/ /g, '');
 const KINDS = ['hub', 'main', 'branch', 'trial', 'arena'];
 const EXIT_ROWS = [12, 13, 14];       // left/right opening rows in the bottom screen cell
 const SIDES = ['left', 'right', 'top', 'bottom'];
@@ -24,6 +24,7 @@ const SIDES = ['left', 'right', 'top', 'bottom'];
      M  signal post    H  standpipe      D  doorway           B  boss (arena)    G  region gate (hub)    ?  sign (text from signs[])    P  party start (hub)
      X  cracked barrier (branch rooms): a wall three tiles tall standing on the tile below the marker; only a heavy cut breaks it
      Y  timed lever       A  pressure plate (held by a player)       Z  mechanical gate paired to Y/A in the same room
+     Q  short-span rail cart (optional moving accelerator; carries grounded bodies)
    A marker stands on the tile below it: put it in the empty tile directly above a floor.
    Main route ports: def.route = [entrySide, exitSide], using left/right/top/bottom; omitted means left -> right. Arenas still open on the left only.
    'branch' and 'trial' rooms have exactly one D (the way back) and closed edges.

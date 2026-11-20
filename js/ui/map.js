@@ -7,7 +7,7 @@
 const G = window.G, C = G.C, art = G.art;
 const W = C.W, H = C.H, X0 = 286;
 const REGION_TAGS = {
-  r1:'mud · wrecks · tar · crumble',
+  r1:'mud · carts · tar · crumble',
   r2:'vertical · steam · lamps',
   r3:'salt · exposed rails · springs',
   r4:'conveyors · canopies · machinery',

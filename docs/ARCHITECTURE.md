@@ -86,6 +86,7 @@ R  ticket machine    S  kiosk ware        K  clipping booth (unused: worldgen le
 H  standpipe         D  doorway           B  boss (arena)       G  region gate (hub)      ?  sign (text from signs[])    P  party start (hub)
 X  cracked barrier (guarded branch rooms): a wall 3 tiles tall on the marker's tile; only a heavy cut breaks it (prop `crack`, content type `crack`)
 Y  timed lever (4.5 s)     A  pressure plate (held while a player stands on it)     Z  mechanical gate paired to Y/A in that room
+Q  short-span rail cart; rides over a safe floor and carries grounded players/enemies on its deck
 ```
 - Terrain mutations are per live room instance: Wet puddles can dissolve `s` into empty space without changing the reusable room template. Grounded regular enemies share mud/conveyor motion with players, so terrain can shape encounters as well as traversal.
 - A marker stands on the tile below it: put it in the empty tile directly above a floor. The exception is L: it needs no floor, only a solid ceiling above it in the same column (the enemy climbs to the first solid tile above the marker, so put it in the empty tile just under the ceiling, within 6 tiles). L spawns an enemy defined with `ceiling: true` (the Hanging Lamp), taken from the region's `ceiling` list; it drops when a player passes under it. R needs 2 free tiles each side, K needs 3 (they spawn choices).
@@ -102,7 +103,7 @@ Y  timed lever (4.5 s)     A  pressure plate (held while a player stands on it) 
 - Reward pockets may contain a lost trunk/other optional source but must always allow escape back to the main room. They must not be required for worldgen connectivity.
 
 ### Regional terrain direction
-- Wreck Quay: mud/low hazards and hardened tar pockets; safer low paths trade speed for footing. `r1_dock` is the worked split-route example: slow mud floor, crumble high line, separate spring reward alcove.
+- Wreck Quay: mud/low hazards, hardened tar pockets, and short-span maintenance rail carts; safer low paths trade speed for footing. `r1_dock` is the worked split-route example: slow mud floor, crumble high line, separate spring reward alcove.
 - Signal Reef: vertical shafts and one-way shelves; `r2_shaft` keeps a base-move zig-zag while timed steam vents create a faster risky center line and Wall Grip remains the cleanest expert shortcut.
 - Salt Cutting: slippery/dissolvable salt and exposed ledges; `r3_trestle` uses salt-over-solid for the safe floor, a crumble rail line above, and a separate spring survey pocket.
 - Ticket Hall: conveyors and mechanical gates; `r4_concourse` uses opposing belts on the safe floor, a fast canopy route above them, and a separate maintenance reward pocket. `r4_switchyard` keeps the low route permanently open while a timed lever and co-op pressure plate control an optional upper shortcut.

@@ -142,6 +142,7 @@ G.defineRoom({
     put(8, 52, 'C');
 
     // Encounters bias the slow lane; the high lane trades footing risk for fewer bodies and speed.
+    put(14, 6, 'Q');                         // maintenance cart shuttles across the first mud stretch
     put(14, 9, 'E');
     put(14, 24, 'E');
     put(14, 42, 'E');

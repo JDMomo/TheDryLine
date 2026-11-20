@@ -69,6 +69,7 @@ function fillContent(node, region, rng, used, ctx) {
     else if (m.ch === 'Y') c = { type: 'lever', data: { channel: 'main' } };
     else if (m.ch === 'A') c = { type: 'plate', data: { channel: 'main' } };
     else if (m.ch === 'Z') c = { type: 'mech_gate', data: { channel: 'main' } };
+    else if (m.ch === 'Q') c = { type: 'rail_cart', data: { span: 3 } };
     else if (m.ch === 'C') c = { type: 'trunk', data: {} };                 // what they hold is drawn by balance() once the counts are trimmed
     else if (m.ch === 'I') {
       // Only the region's own branch room holds a plinth (its first one): the region's fixed token, guarded. Others are trimmed.
