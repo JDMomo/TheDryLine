@@ -93,19 +93,47 @@ G.menus = {
   },
   title(ctx) {
     art.backdrop(ctx, art.palette('hub'), G.time * 12, G.time, 'hub');
-    ctx.fillStyle = 'rgba(6,11,11,0.6)'; ctx.fillRect(0, 0, W, H);
-    ctx.save();ctx.translate(W/2,28);ctx.rotate(-0.025);ctx.strokeStyle='#d9603a';ctx.lineWidth=2;ctx.strokeRect(-170,-12,340,24);art.label(ctx,'LAST SERVICE · CANCELLATION UNDELIVERED',0,0,12,'#e9663f','center',C.FONT,700);ctx.restore();
-    art.label(ctx, G.title.name && G.title.name !== 'Untitled' ? G.title.name : 'The Dry Line', W / 2, 72, 54, '#e9a23b', 'center', C.DISPLAY, 600);
-    art.label(ctx, premise, W / 2, 112, 15, '#e9e2cf');
-    art.label(ctx, 'Carry the cancellation through the five open lines to the Long Clock.', W / 2, 132, 12.5, '#9aa89f');
-    if (Math.floor(G.time * 2) % 2) art.label(ctx, 'Click the game, then press any keyboard key or controller button to begin', W / 2, 158, 15, '#fff3c4');
-    panel(ctx, 640, 212, 10);
-    table(ctx, rowsFor('keyboard'), 170, 200, 'Keyboard');
-    table(ctx, rowsFor('gamepad'), 520, 200, 'Gamepad');
-    art.label(ctx, 'Players 2 to 4: at the Junction, press Jump on any other device (keyboard or controller). Hold Pause for 1 second there to leave.', W / 2, 414, 13, '#e9e2cf');
-    art.label(ctx, 'The party carries three tokens. Each Warden has three fare slots, set by the lock chart; a punched token is void.', W / 2, 438, 13, '#9aa89f');
-    const m = G.meta;
-    art.label(ctx, 'Runs ' + m.runs + '   ·   Wins ' + m.wins + (m.best !== null ? '   ·   Best ' + clock(m.best) : '') + '   ·   Cuts punched ' + m.cuts.length + ' of 4', W / 2, H - 40, 13, '#9aa89f');
+    // The title is a front door into the world, not the controls manual. Full bindings live in Pause -> Controls.
+    const grd=ctx.createLinearGradient(0,0,W,0);
+    grd.addColorStop(0,'rgba(6,11,11,0.20)');grd.addColorStop(.46,'rgba(6,11,11,0.74)');grd.addColorStop(1,'rgba(6,11,11,0.86)');
+    ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+
+    // Large watercolor Wanderer uses the same production strip as gameplay when available.
+    if(G.art.hasStrip('player_idle')){
+      ctx.save();ctx.globalAlpha=.96;
+      G.art.drawFrame('player_idle',ctx,G.time*2,{x:205,y:492,face:1,h:270,foot:4});
+      ctx.restore();
+    } else {
+      ctx.save();ctx.globalAlpha=.35;ctx.fillStyle='#d9c5a0';ctx.beginPath();ctx.arc(205,315,88,0,6.283);ctx.fill();ctx.restore();
+    }
+
+    const tx=590;
+    ctx.save();ctx.translate(tx,72);ctx.rotate(-.02);ctx.strokeStyle='#d9603a';ctx.lineWidth=2;ctx.strokeRect(-174,-14,348,28);
+    art.label(ctx,'LAST SERVICE · CANCELLATION UNDELIVERED',0,0,12,'#e9663f','center',C.FONT,700);ctx.restore();
+
+    art.label(ctx,G.title.name&&G.title.name!=='Untitled'?G.title.name:'The Dry Line',tx,132,58,'#e9a23b','center',C.DISPLAY,600);
+    art.label(ctx,premise,tx,177,17,'#fff3c4');
+    art.label(ctx,'Four Wardens still enforce an evacuation order that ended years ago.',tx,207,13,'#c8c1ad');
+    art.label(ctx,'Carry the missing cancellation to the Long Clock.',tx,228,13,'#c8c1ad');
+
+    ctx.fillStyle='rgba(6,11,11,.74)';ctx.fillRect(388,260,404,102);
+    ctx.strokeStyle='rgba(217,197,160,.40)';ctx.lineWidth=1.5;ctx.strokeRect(388,260,404,102);
+    if(Math.floor(G.time*2)%2)art.label(ctx,'PRESS ANY KEY OR CONTROLLER BUTTON',tx,291,17,'#fff3c4','center',C.FONT,700);
+    art.label(ctx,'The first device becomes Player 1.',tx,320,11.5,'#9aa89f');
+    art.label(ctx,'More players can join in the Junction.',tx,341,11.5,'#9aa89f');
+
+    const I=G.input, quick=[
+      'Move '+I.label('keyboard','left')+'/'+I.label('keyboard','right'),
+      'Jump '+I.label('keyboard','jump'),
+      'Slash '+I.label('keyboard','attack'),
+      'Map '+I.label('keyboard','map')
+    ];
+    art.label(ctx,quick.join('   ·   '),tx,400,12,'#e9e2cf');
+    art.label(ctx,'Full controls and remapping are available from Pause.',tx,423,10.5,'#9aa89f');
+
+    const m=G.meta;
+    art.label(ctx,'Runs '+m.runs+'   ·   Wins '+m.wins+(m.best!==null?'   ·   Best '+clock(m.best):'')+'   ·   Cuts punched '+m.cuts.length+'/4',tx,474,11.5,'#9aa89f');
+    art.label(ctx,'F2 toggles fallback art for development comparison.',W-18,H-14,9.5,'#58645f','right');
   },
   pause(ctx) {
     const PH = 490;
