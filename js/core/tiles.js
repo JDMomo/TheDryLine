@@ -9,12 +9,11 @@ const tiles = G.tiles = {
   blockers: [],                        // [{ c, r0, r1, on }] temporary walls, e.g. a locked arena exit
   load(grid) { tiles.grid = grid; tiles.rows = grid.length; tiles.cols = grid[0].length; tiles.blockers = []; },
   at(c, r) { return r < 0 || r >= tiles.rows || c < 0 || c >= tiles.cols ? '#' : tiles.grid[r][c]; },
-  // Past the left or right edge the edge column repeats, so an open exit stays open off-screen.
+  // Past an edge, repeat that edge tile. Closed borders stay solid; an open left/right/top/bottom port stays open long enough to cross.
   solid(c, r) {
-    if (r < 0 || r >= tiles.rows) return true;
-    const cc = c < 0 ? 0 : c >= tiles.cols ? tiles.cols - 1 : c;
-    for (const b of tiles.blockers) if (b.on && b.c === cc && r >= b.r0 && r <= b.r1) return true;
-    return tiles.grid[r][cc] === '#';
+    const cc = c < 0 ? 0 : c >= tiles.cols ? tiles.cols - 1 : c, rr = r < 0 ? 0 : r >= tiles.rows ? tiles.rows - 1 : r;
+    for (const b of tiles.blockers) if (b.on && b.c === cc && rr >= b.r0 && rr <= b.r1) return true;
+    return tiles.grid[rr][cc] === '#';
   },
   spike(c, r) { return tiles.at(c, r) === '^'; },
   oneway(c, r) { return tiles.at(c, r) === '='; },

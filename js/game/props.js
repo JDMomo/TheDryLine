@@ -242,7 +242,10 @@ const TYPES = {
     }
   },
   gate: {       // hub gate into a region, data: { region }. Shows the region's Warden sigil, dimmed once beaten. The Terminus also shows what the Long Clock will borrow.
-    interact(pr) { G.rooms.go(G.run.graph.regions[pr.data.region].first, { side: 'left' }); },
+    interact(pr) {
+      const id = G.run.graph.regions[pr.data.region].first, def = G.roomDefs[G.run.graph.nodes[id].def];
+      G.rooms.go(id, { side: def.route ? def.route[0] : 'left' });
+    },
     prompt(pr, p) {
       const r = G.regionDefs[pr.data.region], b = G.bossDefs[r.boss];
       const chart = (G.run.graph.chart || {})[r.id], bor = r.id === 'final' ? G.game.borrows() : null;

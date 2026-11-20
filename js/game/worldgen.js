@@ -217,11 +217,10 @@ function balance(graph, rng, used, ctx) {
   return warn;
 }
 
-// Every node a node leads to: side exits, doorways and hub gates.
+// Every node a node leads to: edge exits, doorways and hub gates.
 function links(graph, node) {
   const out = [];
-  if (node.exits.left) out.push(node.exits.left.to);
-  if (node.exits.right) out.push(node.exits.right.to);
+  for (const side of ['left', 'right', 'top', 'bottom']) if (node.exits[side]) out.push(node.exits[side].to);
   for (const c of node.content) {
     if (c && c.type === 'door') out.push(c.data.to);
     if (c && c.type === 'gate') out.push(graph.regions[c.data.region].first);
@@ -236,8 +235,8 @@ function reach(graph, from) {
 
 G.worldgen = {
   /* Returns { seed, hub, nodes: { id: node }, regions: { regionId: { first, arena, nodes: [ids] } }, warnings: [texts] }.
-     node = { id, def (room template id), region, exits: { left, right }, content: [per marker], seen, parent (branch rooms) }
-     exits.left / exits.right = { to: nodeId, entry }. Per region: `length` main rooms left to right, then the arena; the
+     node = { id, def (room template id), region, exits: { left/right/top/bottom }, content: [per marker], seen, parent (branch rooms) }
+     Main defs use route: [entrySide, exitSide] (default left -> right); every exit is { to: nodeId, entry }. Per region: `length` main rooms, then the arena; the
      main rooms' doorways lead to the trial room, the region's own branch room (its guarded plinth) and shared branch rooms. */
   build(seed, cuts) {
     // The world is built from the seed and the unlocked cuts only (cuts: the cuts whose rare tokens are in the pool; default: the save's).
@@ -284,11 +283,14 @@ G.worldgen = {
 
       chosen.forEach(take);
       const chain = chosen.map(d => add(d, region.id)), arena = add(rng.pick(arenas), region.id);
+      const routeOf = node => G.roomDefs[node.def].route || ['left', 'right'];
       chain.forEach((node, i) => {
-        node.exits.left = i ? { to: chain[i - 1].id, entry: { side: 'right' } } : { to: hub.id, entry: { gate: region.id } };
-        node.exits.right = { to: (chain[i + 1] || arena).id, entry: { side: 'left' } };
+        const [backSide, forwardSide] = routeOf(node), prev = chain[i - 1], next = chain[i + 1];
+        node.exits[backSide] = prev ? { to: prev.id, entry: { side: routeOf(prev)[1] } } : { to: hub.id, entry: { gate: region.id } };
+        node.exits[forwardSide] = next ? { to: next.id, entry: { side: routeOf(next)[0] } } : { to: arena.id, entry: { side: 'left' } };
       });
-      arena.exits.left = { to: chain[chain.length - 1].id, entry: { side: 'right' } };
+      const last = chain[chain.length - 1];
+      arena.exits.left = { to: last.id, entry: { side: routeOf(last)[1] } };
       const g = regions[region.id] = { first: chain[0].id, arena: arena.id, nodes: chain.map(c => c.id).concat(arena.id) };
       hub.content[gateMarks[ri]] = { type: 'gate', data: { region: region.id } };
 

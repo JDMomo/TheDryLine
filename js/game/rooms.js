@@ -6,7 +6,8 @@ G.roomDefs = {};
 
 const MARKS = 'EFLICRSKMHDBG?PX';
 const KINDS = ['hub', 'main', 'branch', 'trial', 'arena'];
-const EXIT_ROWS = [12, 13, 14];       // rows of the bottom screen cell that are open on a side exit (the floor is row 15)
+const EXIT_ROWS = [12, 13, 14];       // left/right opening rows in the bottom screen cell
+const SIDES = ['left', 'right', 'top', 'bottom'];
 
 /* G.defineRoom({ id, region, kind, w, h, label, map: [rows], signs: [texts] })
    region  a region id, 'shared' for branch rooms any region may use, or 'hub'
@@ -39,10 +40,28 @@ G.defineRoom = def => {
     }
     grid.push(out);
   });
-  const base = (h - 1) * C.CH, cols = C.CW * w, open = c => EXIT_ROWS.every(r => grid[base + r][c] === '.');
+  const base = (h - 1) * C.CH, cols = C.CW * w, rows = C.CH * h;
+  const openLR = side => EXIT_ROWS.every(r => grid[base + r][side === 'left' ? 0 : cols - 1] === '.');
+  const edgeRun = side => {
+    if (side === 'left' || side === 'right') return openLR(side) ? { c: side === 'left' ? 0 : cols - 1, r: base + 13 } : null;
+    const r = side === 'top' ? 0 : rows - 1, runs = []; let start = -1;
+    for (let c = 0; c <= cols; c++) {
+      const open = c < cols && grid[r][c] === '.';
+      if (open && start < 0) start = c;
+      if (!open && start >= 0) { runs.push([start, c - 1]); start = -1; }
+    }
+    const best = runs.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]))[0];
+    return best && best[1] - best[0] + 1 >= 3 ? { c: Math.floor((best[0] + best[1]) / 2), r } : null;
+  };
+  const route = def.kind === 'main' ? (def.route ? def.route.slice() : ['left', 'right']) : null;
+  if (route && (route.length !== 2 || route[0] === route[1] || route.some(x => !SIDES.includes(x)))) bad('main route must be two different sides: left, right, top or bottom');
+  const ports = {}; for (const side of SIDES) { const p = edgeRun(side); if (p) ports[side] = p; }
   const doors = marks.filter(m => m.ch === 'D').length, bMark = marks.find(m => m.ch === 'B');
-  const room = Object.assign({}, def, { w, h, marks, grid, doors, cols, rows: C.CH * h });
-  if (def.kind === 'main' && !(open(0) && open(cols - 1))) bad('main rooms must be open on both edges at rows 12 to 14');
+  const room = Object.assign({}, def, { w, h, marks, grid, doors, cols, rows, route, ports });
+  if (def.kind === 'main' && route) {
+    for (const side of route) if (!ports[side]) bad('main route ' + route.join(' -> ') + ' needs an open ' + side + ' edge');
+    for (const side of SIDES) if (!route.includes(side) && ports[side]) bad('main room has an undeclared open ' + side + ' edge; add it to route or close it');
+  }
   if (def.kind === 'arena') {
     if (!open(0) || !bMark) return bad('arenas need an open left edge and a B marker');
     room.doorCol = 0;
@@ -94,7 +113,11 @@ const rooms = G.rooms = {
     let x = 3 * T, y = groundY(room, 1), face = 1;
     if (entry.side === 'left') { x = 40; y = groundY(room, 1); }
     else if (entry.side === 'right') { x = room.cols * T - 40; y = groundY(room, room.cols - 2); face = -1; }
-    else {
+    else if (entry.side === 'top' || entry.side === 'bottom') {
+      const port = room.def.ports[entry.side];
+      x = ((port && port.c) !== undefined ? port.c + 0.5 : room.cols / 2) * T;
+      y = entry.side === 'top' ? 8 : room.rows * T - 6;
+    } else {
       let i = entry.mark;
       if (entry.gate) i = room.def.marks.findIndex((m, k) => node.content[k] && node.content[k].type === 'gate' && node.content[k].data.region === entry.gate);
       if (entry.start) i = room.def.marks.findIndex(m => m.ch === 'P');
@@ -102,7 +125,13 @@ const rooms = G.rooms = {
     }
     G.players.forEach((p, k) => {
       if (p.down && G.players.some(q => !q.down)) p.revive(1);   // co-op revive on entering a room
-      p.place(x - face * k * 14, y, face); p.inv = 0.5;
+      const vertical = entry.side === 'top' || entry.side === 'bottom';
+      p.place(x + (vertical ? (k - (G.players.length - 1) / 2) * 14 : -face * k * 14), vertical && entry.side === 'top' ? p.h + 8 : y, face); p.inv = 0.5;
+      if (vertical) {
+        p.onGround = false; p.safeX = p.x; p.safeY = p.y;
+        if (entry.side === 'top') p.vy = 140;
+        else { p.vy = -C.MOVE.JUMP_V * 0.82; p.jumping = true; p.airJ = true; }
+      }
     });
     if (!node.seen) {
       node.seen = true;
@@ -150,10 +179,12 @@ const rooms = G.rooms = {
     }
 
     // side exits, and the invisible wall where there is none
-    const W = room.cols * T;
+    const W = room.cols * T, H = room.rows * T;
     for (const p of live) {
       if (p.x < -6) { if (room.node.exits.left && !room.fight) { rooms.go(room.node.exits.left.to, room.node.exits.left.entry); break; } p.x = p.w / 2; }
       else if (p.x > W + 6) { if (room.node.exits.right && !room.fight) { rooms.go(room.node.exits.right.to, room.node.exits.right.entry); break; } p.x = W - p.w / 2; }
+      else if (p.y - p.h < -8) { if (room.node.exits.top && !room.fight) { rooms.go(room.node.exits.top.to, room.node.exits.top.entry); break; } p.y = p.h + 2; p.vy = Math.max(0, p.vy); }
+      else if (p.y > H + 8) { if (room.node.exits.bottom && !room.fight) { rooms.go(room.node.exits.bottom.to, room.node.exits.bottom.entry); break; } p.y = H - 2; p.vy = Math.min(0, p.vy); }
     }
     // co-op: the camera follows the party's middle; anyone left off-screen is pulled to the leader
     if (lead) {

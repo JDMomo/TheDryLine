@@ -31,25 +31,31 @@ export function lintRoom(r, abilityIds) {
   const count = ch => marks.filter(m => m.ch === ch).length;
   const loc = m => '(col ' + m.c + ', row ' + m.r + ')';
 
-  // borders: closed everywhere except the standard side exits
-  const wantLeft = r.kind === 'main' || r.kind === 'arena', wantRight = r.kind === 'main';
-  for (let c = 0; c < cols; c++) {
-    if (grid[0][c] !== '#') { err.push('top edge open at column ' + c); break; }
-  }
-  for (let c = 0; c < cols; c++) {
-    if (grid[rows - 1][c] !== '#') { err.push('bottom edge open at column ' + c); break; }
-  }
-  for (const [side, col, want] of [['left', 0, wantLeft], ['right', cols - 1, wantRight]]) {
-    const bad = [];
+  // borders: a main room declares exactly two route ports. Existing rooms default left -> right.
+  const SIDES = ['left', 'right', 'top', 'bottom'], route = r.kind === 'main' ? (r.route || ['left', 'right']) : [];
+  if (r.kind === 'main' && (route.length !== 2 || route[0] === route[1] || route.some(s => !SIDES.includes(s)))) err.push('main route must be two different sides: left, right, top or bottom');
+  const wantSide = side => r.kind === 'arena' ? side === 'left' : r.kind === 'main' && route.includes(side);
+  for (const [side, col] of [['left', 0], ['right', cols - 1]]) {
+    const want = wantSide(side), bad = [];
     for (let y = 0; y < rows; y++) {
       const isExit = y >= base + 12 && y <= base + 14, open = grid[y][col] !== '#';
       if (isExit && want && !open) bad.push(y);
-      else if (!(isExit && want) && open && !(r.kind === 'arena' && y === base + 11 && col === 0)) bad.push(y);   // the arena hall may be one row taller
+      else if (!(isExit && want) && open && !(r.kind === 'arena' && side === 'left' && y === base + 11)) bad.push(y);
     }
     if (bad.length) {
       const openRows = bad.filter(y => grid[y][col] !== '#'), shut = bad.filter(y => grid[y][col] === '#');
-      if (shut.length) err.push(r.kind + ' room: ' + side + ' exit is closed at row' + (shut.length > 1 ? 's ' : ' ') + shut.join(', ') + ' (rows ' + (base + 12) + ' to ' + (base + 14) + ' must be open on the ' + side + ' edge)');
-      if (openRows.length) err.push(r.kind + ' room: ' + side + ' edge is open at row' + (openRows.length > 1 ? 's ' : ' ') + openRows.join(', ') + (want ? ' (only rows ' + (base + 12) + ' to ' + (base + 14) + ' may be open)' : ' (a ' + r.kind + ' room has no ' + side + ' exit; close it with #)'));
+      if (shut.length) err.push(r.kind + ' room: ' + side + ' exit is closed at row' + (shut.length > 1 ? 's ' : ' ') + shut.join(', '));
+      if (openRows.length) err.push(r.kind + ' room: undeclared ' + side + ' edge opening at row' + (openRows.length > 1 ? 's ' : ' ') + openRows.join(', '));
+    }
+  }
+  for (const side of ['top', 'bottom']) {
+    const y = side === 'top' ? 0 : rows - 1, openCols = [];
+    for (let c = 0; c < cols; c++) if (grid[y][c] !== '#') openCols.push(c);
+    const want = wantSide(side);
+    if (!want && openCols.length) err.push(r.kind + ' room: undeclared ' + side + ' edge opening at column ' + openCols[0]);
+    if (want) {
+      if (openCols.length < 3) err.push(side + ' exit needs at least 3 open edge tiles');
+      else for (let i = 1; i < openCols.length; i++) if (openCols[i] !== openCols[i - 1] + 1) { err.push(side + ' exit must be one contiguous opening'); break; }
     }
   }
 
@@ -101,13 +107,15 @@ export function lintRoom(r, abilityIds) {
     if (fr < 0) err.push(label + ': no floor under the entrance (column ' + col + ')');
     else if (solid(col, fr - 1) || solid(col, fr - 2) || at(col, fr - 1) === '^') err.push(label + ': the player cannot stand at column ' + col + ' (floor at row ' + fr + ' has no 2-tile headroom)');
   };
-  if (wantLeft) entrance(1, 'left entrance');
-  if (wantRight) entrance(cols - 2, 'right entrance');
+  if (wantSide('left')) entrance(1, 'left entrance');
+  if (wantSide('right')) entrance(cols - 2, 'right entrance');
+  const verticalEntrance = side => { if (!wantSide(side)) return; const y = side === 'top' ? 0 : rows - 1, cs = []; for (let c = 0; c < cols; c++) if (grid[y][c] === '.') cs.push(c); if (!cs.length) return; const c = cs[Math.floor(cs.length / 2)], dir = side === 'top' ? 1 : -1; for (let k = 1; k <= 3; k++) if (at(c, y + dir * k) === '#') { err.push(side + ' entrance has no clear vertical lane at column ' + c); break; } };
+  verticalEntrance('top'); verticalEntrance('bottom');
   const spikesNear = (c0, c1, y0, y1, label) => {
     for (let y = y0; y <= y1; y++) for (let c = c0; c <= c1; c++) if (at(c, y) === '^') { err.push('spikes at (col ' + c + ', row ' + y + ') are directly at ' + label); return; }
   };
-  if (wantLeft) spikesNear(0, 2, base + 10, base + 16, 'the left entrance (keep columns 0 to 2 clear)');
-  if (wantRight) spikesNear(cols - 3, cols - 1, base + 10, base + 16, 'the right entrance (keep the last 3 columns clear)');
+  if (wantSide('left')) spikesNear(0, 2, base + 10, base + 16, 'the left entrance (keep columns 0 to 2 clear)');
+  if (wantSide('right')) spikesNear(cols - 3, cols - 1, base + 10, base + 16, 'the right entrance (keep the last 3 columns clear)');
   for (const m of marks.filter(m => m.ch === 'D' && r.kind !== 'main')) spikesNear(m.c - 2, m.c + 2, m.r - 1, m.r + 1, 'the doorway at ' + loc(m));
 
   // arena
@@ -156,12 +164,13 @@ export function pageTraverse(spec) {
   const jobs = [];
   const doorIdx = marks.findIndex(m => m.ch === 'D');
   if (def.kind === 'main') {
-    jobs.push({ name: 'left to right', entry: { side: 'left' }, goal: { type: 'edge', side: 'right' } });
-    jobs.push({ name: 'right to left', entry: { side: 'right' }, goal: { type: 'edge', side: 'left' } });
-    if (spec.strict) marks.forEach((m, i) => {      // strict: every doorway and trunk must be reachable too (run and jump only)
+    const route = def.route || ['left', 'right'], a = route[0], b = route[1];
+    jobs.push({ name: a + ' to ' + b, entry: { side: a }, goal: { type: 'edge', side: b } });
+    jobs.push({ name: b + ' to ' + a, entry: { side: b }, goal: { type: 'edge', side: a } });
+    if (spec.strict) marks.forEach((m, i) => {
       if (!'DC'.includes(m.ch)) return;
-      jobs.push({ name: 'left to ' + m.ch + ' (col ' + m.c + ', row ' + m.r + ')', entry: { side: 'left' }, goal: { type: 'mark', i } });
-      jobs.push({ name: 'right to ' + m.ch + ' (col ' + m.c + ', row ' + m.r + ')', entry: { side: 'right' }, goal: { type: 'mark', i } });   // both directions
+      jobs.push({ name: a + ' to ' + m.ch + ' (col ' + m.c + ', row ' + m.r + ')', entry: { side: a }, goal: { type: 'mark', i } });
+      jobs.push({ name: b + ' to ' + m.ch + ' (col ' + m.c + ', row ' + m.r + ')', entry: { side: b }, goal: { type: 'mark', i } });
     });
   } else if (def.kind === 'arena') {
     jobs.push({ name: 'entrance to boss door', entry: { side: 'left' }, goal: { type: 'door' } });
@@ -177,13 +186,21 @@ export function pageTraverse(spec) {
   // --- goal test and distance field (tile BFS that ignores jump limits: only a heuristic to point the search the right way)
   const goalTiles = g => {
     const out = [];
-    if (g.type === 'edge') for (const y of [12, 13, 14]) out.push([g.side === 'left' ? 0 : cols - 1, base + y]);
+    if (g.type === 'edge') {
+      if (g.side === 'left' || g.side === 'right') for (const y of [12, 13, 14]) out.push([g.side === 'left' ? 0 : cols - 1, base + y]);
+      else { const p = def.ports[g.side], y = g.side === 'top' ? 0 : rows - 1; if (p) for (let c = Math.max(0, p.c - 1); c <= Math.min(cols - 1, p.c + 1); c++) out.push([c, y]); }
+    }
     else if (g.type === 'door') for (const y of [12, 13, 14]) out.push([def.doorCol + 3, base + y]);
     else out.push([marks[g.i].c, marks[g.i].r]);
     return out;
   };
   const isWin = (p, g) => {
-    if (g.type === 'edge') return g.side === 'left' ? p.x <= 11.6 : p.x >= cols * T - 11.6;
+    if (g.type === 'edge') {
+      if (g.side === 'left') return p.x <= 11.6;
+      if (g.side === 'right') return p.x >= cols * T - 11.6;
+      if (g.side === 'top') return p.y - p.h <= 12;
+      return p.y >= rows * T - 12;
+    }
     if (g.type === 'door') return p.x > (def.doorCol + 2.6) * T && p.onGround;
     const m = marks[g.i], t = mpos(m);
     return p.onGround && Math.abs(p.x - t.x) < (spec.strict ? 72 : 24) && Math.abs(p.y - t.y) < 10;   // strict: on the same ledge, within two tiles of the mark
@@ -289,8 +306,9 @@ export function pageTraverse(spec) {
     const t0 = performance.now(); let used = 0;
     const res = { name: job.name, ok: false, steps: 0, ms: 0, msg: '' };
     const dist = field(job.goal);
-    const sc = p => { const c = Math.max(0, Math.min(cols - 1, Math.floor(p.x / T))), y = Math.max(0, Math.min(rows - 1, Math.floor((p.y - 16) / T))); const d = dist[y * cols + c]; return (d === Infinity ? 1e6 : d * 1000) + Math.abs(p.x - goalX(job)) * 0.5; };
-    const goalX = j => { const g = goalTiles(j.goal)[0]; return j.goal.type === 'edge' ? (j.goal.side === 'left' ? 0 : cols * T) : g[0] * T + T / 2; };
+    const goalPoint = j => { const g = goalTiles(j.goal)[0] || [Math.floor(cols / 2), Math.floor(rows / 2)]; return { x: g[0] * T + T / 2, y: g[1] * T + T / 2 }; };
+    const sc = p => { const c = Math.max(0, Math.min(cols - 1, Math.floor(p.x / T))), y = Math.max(0, Math.min(rows - 1, Math.floor((p.y - 16) / T))); const d = dist[y * cols + c], gp = goalPoint(job); return (d === Infinity ? 1e6 : d * 1000) + Math.hypot(p.x - gp.x, p.cy - gp.y) * 0.5; };
+    const goalX = j => goalPoint(j).x;
     fresh(job);
     const startDist = dist[Math.floor((P().y - 16) / T) * cols + Math.floor(P().x / T)];
     if (startDist === Infinity) { res.msg = 'the goal cannot be reached even by walking through open air: it is walled off or the start is enclosed'; res.ms = performance.now() - t0; results.push(res); continue; }
@@ -384,7 +402,7 @@ export async function runRooms(page, opts = {}) {
   const filter = opts.filter || '', walk = opts.walk !== false, budget = opts.budget || 800000;
   const info = await page.evaluate(() => {
     if (!G.run || !G.run.graph) G.debug.newRun(1);
-    return { abil: Object.keys(G.abilityDefs), rooms: Object.values(G.roomDefs).map(r => ({ id: r.id, kind: r.kind, region: r.region, w: r.w, h: r.h, map: r.map, needs: r.needs, signs: r.signs, label: r.label })) };
+    return { abil: Object.keys(G.abilityDefs), rooms: Object.values(G.roomDefs).map(r => ({ id: r.id, kind: r.kind, region: r.region, w: r.w, h: r.h, map: r.map, route: r.route, needs: r.needs, signs: r.signs, label: r.label })) };
   });
   const errTexts = await page.evaluate(() => G.errors.slice());
   const out = [];

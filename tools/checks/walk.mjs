@@ -1,6 +1,5 @@
-// Walk every region's chain, hub gate to arena, on the real graph of 5 seeds. Each main room is crossed left to right with the
-// validator's route search (pageTraverse in rooms.mjs: a cheap run-and-jump pass, then a beam search, base moves only), then the
-// bot keeps walking right and must arrive in the next node of the chain; the arena is crossed to the boss door and the fight must start.
+// Walk every region's chain, hub gate to arena, on the real graph of 5 seeds. Each main room is crossed from its declared route entry
+// to route exit with the validator's search (base moves only); the arena is crossed to the boss door and the fight must start.
 import { pageTraverse } from './rooms.mjs';
 
 export default async ({ page }) => {
@@ -11,8 +10,8 @@ export default async ({ page }) => {
       const g = G.run.graph;
       return Object.entries(g.regions).map(([rid, reg]) => {
         const ids = []; let id = reg.first;
-        while (id) { ids.push(id); const n = g.nodes[id]; id = G.roomDefs[n.def].kind === 'arena' ? null : n.exits.right && n.exits.right.to; }
-        return { rid, ids: ids.map(i => ({ id: i, def: g.nodes[i].def, kind: G.roomDefs[g.nodes[i].def].kind, next: g.nodes[i].exits.right && g.nodes[i].exits.right.to })) };
+        while (id) { ids.push(id); const n = g.nodes[id], d = G.roomDefs[n.def]; if (d.kind === 'arena') id = null; else { const route = d.route || ['left', 'right']; id = n.exits[route[1]] && n.exits[route[1]].to; } }
+        return { rid, ids: ids.map(i => { const n = g.nodes[i], d = G.roomDefs[n.def], route = d.route || ['left', 'right']; return { id: i, def: n.def, kind: d.kind, route, next: d.kind === 'arena' ? null : n.exits[route[1]] && n.exits[route[1]].to }; }) };
       });
     }, seed);
     for (const ch of chains) {
@@ -25,7 +24,7 @@ export default async ({ page }) => {
         stats.rooms++;
         // the search tries walking off both edges: with real exits that would change rooms mid-search, so close them while it runs
         await page.evaluate(id => { const n = G.run.graph.nodes[id]; n.savedExits = n.exits; n.exits = {}; }, n.id);
-        const jobs = await page.evaluate(pageTraverse, { id: n.def, nodeId: n.id, abil: [], budget: 800000, only: n.kind === 'arena' ? 'boss door' : 'left to right' });
+        const jobs = await page.evaluate(pageTraverse, { id: n.def, nodeId: n.id, abil: [], budget: 800000, only: n.kind === 'arena' ? 'boss door' : n.route[0] + ' to ' + n.route[1] });
         await page.evaluate(id => { const n = G.run.graph.nodes[id]; n.exits = n.savedExits; delete n.savedExits; }, n.id);
         if (!jobs.length || !jobs.every(j => j.ok)) { bad.push(`seed ${seed} ${ch.rid} ${n.def}: ${jobs.map(j => j.msg || 'ok').join('; ') || 'no route job'}`); continue; }
         if (n.kind === 'arena') {   // two steps past the boss door the fight starts and the door closes
@@ -33,8 +32,17 @@ export default async ({ page }) => {
           if (!r.fight) bad.push(`seed ${seed} ${ch.rid}: the fight did not start after crossing the arena hall`);
           continue;
         }
-        const r = await page.evaluate(() => { const D = G.debug; D.setInput(0, { right: true }); D.step(150); D.setInput(0, { right: false }); return D.state().room.id; });
-        if (r !== n.next) bad.push(`seed ${seed} ${ch.rid} ${n.def}: walking off the right edge led to ${r}, wanted ${n.next}`);
+        const r = await page.evaluate(({ side }) => {
+          const D = G.debug, p = G.players[0], room = G.rooms.current, port = room.def.ports[side], T = G.C.T;
+          if (side === 'left') { D.place(0, 8, p.y, -1); p.vx = -400; p.onGround = false; }
+          else if (side === 'right') { D.place(0, room.cols * T - 8, p.y, 1); p.vx = 400; p.onGround = false; }
+          else if (side === 'top') { D.place(0, (port.c + 0.5) * T, p.h + 5, 1); p.vy = -500; p.onGround = false; }
+          else { D.place(0, (port.c + 0.5) * T, room.rows * T - 4, 1); p.vy = 500; p.onGround = false; }
+          for (let i = 0; i < 90 && G.rooms.current === room; i++) D.step(1);
+          for (let i = 0; i < 90 && G.rooms.trans; i++) D.step(1);
+          return D.state().room.id;
+        }, { side: n.route[1] });
+        if (r !== n.next) bad.push(`seed ${seed} ${ch.rid} ${n.def}: leaving the ${n.route[1]} edge led to ${r}, wanted ${n.next}`);
       }
     }
   }

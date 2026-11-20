@@ -52,12 +52,14 @@ function playSeed(seed) {
           use(back);
           if (!landed(id)) break;
         }
-        // leave through the right edge, as a player does
-        const t = G.tiles, W = room().cols * T, base = room().rows - G.C.CH, r = floorRow(room().cols - 2, base + 12);
-        D.place(0, W - 40, r * T, 1); D.setInput(0, { right: true });
+        // leave through the room's declared forward edge, as a player does
+        const def = G.roomDefs[node.def], side = (def.route || ['left', 'right'])[1], want = node.exits[side].to, p = G.players[0], port = def.ports[side], W = room().cols * T, H = room().rows * T;
+        if (side === 'right') { const r = floorRow(room().cols - 2, room().rows - G.C.CH + 12); D.place(0, W - 8, r * T, 1); p.vx = 420; p.onGround = false; }
+        else if (side === 'left') { const r = floorRow(1, room().rows - G.C.CH + 12); D.place(0, 8, r * T, -1); p.vx = -420; p.onGround = false; }
+        else if (side === 'top') { D.place(0, (port.c + 0.5) * T, p.h + 5, 1); p.vy = -520; p.onGround = false; }
+        else { D.place(0, (port.c + 0.5) * T, H - 4, 1); p.vy = 520; p.onGround = false; }
         for (let i = 0; i < 90 && G.rooms.current.id === id && !G.rooms.trans; i++) D.step(1);
-        D.setInput(0, { right: false }); settle();
-        const want = node.exits.right.to;
+        settle();
         if (!landed(want)) break;
         id = want;
       } else break;
