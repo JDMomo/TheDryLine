@@ -260,10 +260,14 @@ export function pageTraverse(spec) {
   };
 
   const fresh = job => {
+    // Timed terrain must begin every search branch family and replay at the same phase.
+    // Otherwise a valid route found on one steam-vent cycle may fail when replayed on another.
+    if (job._qaTime === undefined) { job._qaTime = G.time; job._qaRunTime = G.run.time; }
     D.setInput(0, { left: false, right: false, jump: false, down: false, attack: false, dash: false });
     D.gotoRoom(nid, job.entry);
+    G.time = job._qaTime; G.run.time = job._qaRunTime;
     setAbil();
-    const p = P(); p.hp = p.maxHp; p.down = false; p.inv = 0; p.stun = 0; p.dashCd = 0;
+    const p = P(); p.hp = p.maxHp; p.down = false; p.inv = 0; p.stun = 0; p.dashCd = 0; p._ventCd = 0;
     G.run.rooms[nid].enemies.length = 0;
     G.run.rooms[nid].terrain = { crumble: {} }; G.tiles.terrain = G.run.rooms[nid].terrain;
     // Heavy Cut is modelled as "can break cracked barriers" (the bot has no heavy slash; the unlocks check drives a real one)

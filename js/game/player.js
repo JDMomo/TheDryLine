@@ -30,7 +30,7 @@ class Player {
   place(x, y, face = 1) {
     Object.assign(this, { x, y, vx: 0, vy: 0, face, onGround: true, coyote: 0, jbuf: 0, dbuf: 0, abuf: 0, jumping: false, airJ: false,
       canDash: true, canDouble: true, dashT: 0, dashCd: 0, dashDir: 1, wall: 0, sliding: false, wlock: 0, atkCd: 0, slash: null, charge: 0,
-      inv: 0, stun: 0, healT: 0, recoilT: 0, recoilV: 0, safeX: x, safeY: y, groundT: 0, squash: 0, itemCd: 0, ghostT: 0, dropT: 0, dropThru: false });
+      inv: 0, stun: 0, healT: 0, recoilT: 0, recoilV: 0, safeX: x, safeY: y, groundT: 0, squash: 0, itemCd: 0, ghostT: 0, dropT: 0, dropThru: false, _ventCd: 0 });
     for (const s of this.scarf) { s.x = x; s.y = y - 30; }
   }
 
