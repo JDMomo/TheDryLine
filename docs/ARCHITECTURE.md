@@ -101,9 +101,9 @@ X  cracked barrier (guarded branch rooms): a wall 3 tiles tall on the marker's t
 
 ### Regional terrain direction
 - Wreck Quay: mud/low hazards and later rail carts; safer low paths trade speed for footing. `r1_dock` is the worked split-route example: slow mud floor, crumble high line, separate spring reward alcove.
-- Signal Reef: vertical shafts, one-way shelves, springs/steam later; Wall Grip creates faster optional lines.
-- Salt Cutting: slippery/dissolvable salt and exposed ledges; Double Jump opens faster/high reward lines without gating the Warden.
-- Ticket Hall: conveyors and mechanical gates; moving floors reshape enemy lanes.
+- Signal Reef: vertical shafts and one-way shelves; `r2_shaft` keeps a base-move zig-zag while timed steam vents create a faster risky center line and Wall Grip remains the cleanest expert shortcut.
+- Salt Cutting: slippery/dissolvable salt and exposed ledges; `r3_trestle` uses salt-over-solid for the safe floor, a crumble rail line above, and a separate spring survey pocket.
+- Ticket Hall: conveyors and mechanical gates; `r4_concourse` uses opposing belts on the safe floor, a fast canopy route above them, and a separate maintenance reward pocket.
 
 ## World generation
 `G.worldgen.build(seed)` returns `{ seed, hub, nodes, regions, warnings }`:
