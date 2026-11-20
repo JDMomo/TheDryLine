@@ -15,21 +15,26 @@ function paint(w, h, rects, marks) {
   return g.map(r => r.join(''));
 }
 
-// Buffers: two buffer stops (2 and 3 tiles high) to hop, a spout at the end. Planks above for a quicker line.
+// Last Buffers: a quiet synthesis opener. Low floor alternates old salt and mud; a clean upper plank line bypasses both.
 G.defineRoom({ id: 'final_buffers', region: 'final', kind: 'main',
-  map: paint(1, 1, [[9, 13, 12, 14, '#'], [18, 12, 21, 14, '#'], [11, 9, 19, 9, '='], [4, 1, 8, 2, '#'], [22, 1, 27, 3, '#']],
-    [[7, 14, 'E'], [15, 14, 'E'], [23, 14, 'E'], [27, 14, 'D'], [15, 6, 'F']]) });
+  map: paint(1, 1, [[4, 15, 8, 15, 's'], [12, 15, 16, 15, 'm'], [20, 15, 24, 15, 's'],
+      [9, 13, 11, 14, '#'], [18, 13, 20, 14, '#'], [7, 10, 12, 10, '='], [14, 8, 19, 8, '='], [21, 10, 25, 10, '='],
+      [4, 1, 8, 2, '#'], [22, 1, 27, 3, '#']],
+    [[6, 14, 'E'], [15, 14, 'E'], [23, 14, 'E'], [27, 14, 'D'], [16, 6, 'F']]) });
 
-// Steam pipes: a short spiked trench with a spout on a pipe stub, a handcar on the far run.
+// Steam Gallery: the floor is always safe. A spring reaches the pipewalk; a timed vent can boost from there to the upper shortcut.
 G.defineRoom({ id: 'final_vents', region: 'final', kind: 'main',
-  map: paint(1, 1, [[10, 15, 13, 15, '^'], [16, 13, 18, 14, '#'], [10, 10, 14, 10, '='], [3, 1, 6, 2, '#'], [20, 1, 26, 4, '#']],
-    [[7, 14, 'E'], [17, 12, 'E'], [22, 14, 'E'], [26, 14, 'D'], [12, 7, 'F']]) });
+  map: paint(1, 1, [[8, 15, 8, 15, 'j'], [8, 10, 13, 10, '='], [14, 10, 14, 10, 'v'], [16, 6, 22, 6, '='],
+      [17, 13, 19, 14, '#'], [3, 1, 6, 2, '#'], [22, 1, 26, 3, '#']],
+    [[6, 14, 'E'], [18, 12, 'E'], [23, 14, 'E'], [26, 14, 'D'], [19, 5, 'F']]) });
 
-// The stopped clockwork, two screens wide: a spiked gap, a gear hill that climbs and falls, a second gap. Planks run over the top.
+// Clockworks, two screens wide: conveyors make the low route active but non-lethal; a crumble rail above is faster and riskier.
 G.defineRoom({ id: 'final_gearworks', region: 'final', kind: 'main', w: 2,
-  map: paint(2, 1, [[12, 15, 16, 15, '^'], [20, 12, 23, 14, '#'], [27, 14, 28, 14, '#'], [29, 13, 30, 14, '#'], [31, 12, 33, 14, '#'], [34, 13, 35, 14, '#'], [36, 14, 37, 14, '#'],
-      [44, 15, 47, 15, '^'], [10, 11, 18, 11, '='], [36, 9, 46, 9, '='], [10, 1, 13, 3, '#'], [26, 1, 34, 4, '#']],
-    [[8, 14, 'E'], [25, 14, 'E'], [40, 14, 'E'], [51, 14, 'E'], [55, 14, 'D'], [45, 7, 'F']]) });
+  map: paint(2, 1, [[6, 15, 17, 15, '>'], [23, 15, 34, 15, '<'], [40, 15, 51, 15, '>'],
+      [19, 13, 21, 14, '#'], [36, 13, 38, 14, '#'],
+      [9, 11, 16, 11, '='], [19, 9, 24, 9, '='], [27, 10, 28, 10, 'c'], [31, 8, 37, 8, '='], [40, 10, 41, 10, 'c'], [44, 11, 50, 11, '='],
+      [10, 1, 13, 3, '#'], [26, 1, 34, 4, '#']],
+    [[8, 14, 'E'], [25, 14, 'E'], [40, 14, 'E'], [51, 14, 'E'], [55, 14, 'D'], [35, 6, 'F']]) });
 
 // The tower of the great clock, one cell wide and two tall: planks climb to a doorway, a spiked pit below.
 G.defineRoom({ id: 'final_tower', region: 'final', kind: 'main', h: 2,
