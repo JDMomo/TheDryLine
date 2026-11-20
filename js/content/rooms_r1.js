@@ -69,7 +69,7 @@ G.defineRoom({
   id: 'r1_gangway', region: 'r1', kind: 'main',
   map: paint(1, false, ({ put, fill }) => {
     fill(1, 9, 1, 28, '#');                   // roof of the corridor (rows 10 to 14 stay open)
-    fill(12, 14, 14, 15, '#');                // threshold block
+    fill(14, 14, 14, 15, '#');                // onboarding threshold: one-tile hop under the low roof
     put(14, 10, 'E');
     put(14, 19, 'E');
     put(14, 23, 'E');
