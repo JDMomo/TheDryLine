@@ -227,4 +227,68 @@ G.defineRoom({
     WALL, WALL
   ]
 });
+
+/* ---------- Authored Ticket Hall campaign spine ---------- */
+(() => {
+  const wide=(id,build,signs=[])=>{
+    const W=60,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+    g[0].fill('#');g[15].fill('#');g[16].fill('#');
+    for(let r=0;r<H;r++)if(r<12||r>14){g[r][0]='#';g[r][W-1]='#';}
+    const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+    const put=(r,c,ch)=>g[r][c]=ch;
+    build({g,fill,put,W,H});
+    G.defineRoom({id,region:'r4',kind:'main',w:2,map:g.map(x=>x.join('')),signs});
+  };
+
+  // 1. Grand Concourse — teaches conveyor reading with a calm upper canopy route.
+  wide('r4_concourse',({fill,put})=>{
+    fill(15,15,4,16,'>'); fill(15,15,23,35,'<'); fill(15,15,42,53,'>');
+    // Ticket booth masses create recognizable bays but never close the floor.
+    fill(12,14,18,20,'#'); fill(12,14,37,39,'#');
+    fill(10,10,7,15,'='); fill(9,9,23,31,'='); fill(10,10,40,48,'=');
+    // Separate maintenance shelf / first secret.
+    put(15,55,'j'); fill(8,8,51,57,'='); put(7,55,'C');
+    put(14,12,'E'); put(14,30,'E'); put(14,47,'E');
+    put(14,56,'D'); put(14,5,'?');
+  },['GRAND CONCOURSE — all departures remain posted until formally cancelled.']);
+
+  // 2. Switchyard — mechanical interaction lesson. The floor route never closes; the upper shortcut uses Y/Z/A.
+  wide('r4_switchyard',({fill,put})=>{
+    fill(15,15,4,17,'>'); fill(15,15,22,35,'<'); fill(15,15,40,52,'>');
+    fill(12,14,19,21,'#'); fill(12,14,38,40,'#');
+    fill(11,11,7,18,'='); fill(11,11,22,30,'='); fill(11,11,31,40,'='); fill(11,11,43,52,'=');
+    put(10,14,'Y'); put(10,30,'Z'); put(10,36,'A');
+    // The lever side has a spring that makes the shortcut obvious but not mandatory.
+    put(15,10,'j');
+    put(14,11,'E'); put(14,27,'E'); put(14,46,'E'); put(8,48,'F');
+    put(14,56,'D'); put(14,5,'?');
+  },['SWITCHYARD — maintenance gates may be held locally when central power fails.']);
+
+  // 3. Ticket Booths — a denser social/administrative space with multiple short lanes and support enemies.
+  wide('r4_booths',({fill,put})=>{
+    // Booth banks. Gaps between them are wide enough for combat and camera readability.
+    fill(11,14,8,12,'#'); fill(11,14,20,24,'#'); fill(11,14,32,36,'#'); fill(11,14,44,48,'#');
+    fill(9,9,6,14,'='); fill(8,8,18,26,'='); fill(9,9,30,38,'='); fill(8,8,42,50,'=');
+    fill(15,15,14,18,'>'); fill(15,15,26,30,'<'); fill(15,15,38,42,'>');
+    // Counter windows / small upper passage.
+    fill(6,6,10,22,'='); fill(6,6,34,46,'=');
+    put(14,16,'E'); put(14,28,'E'); put(14,40,'E'); put(14,52,'E');
+    put(7,22,'F'); put(7,43,'F');
+    put(14,56,'D'); put(14,5,'?');
+  },['Every booth is closed. Every validator is still powered.']);
+
+  // 4. Gate Line — formal final approach: long sightline, armored lanes, optional high bypass, no mandatory spike trench.
+  wide('r4_gateline',({fill,put})=>{
+    fill(15,15,5,16,'>'); fill(15,15,21,33,'<'); fill(15,15,39,51,'>');
+    // Three gatehouse masses divide the room into deliberate encounter arenas.
+    fill(12,14,17,19,'#'); fill(11,14,34,37,'#'); fill(12,14,52,54,'#');
+    fill(9,9,7,16,'='); fill(8,8,21,31,'='); fill(7,7,38,48,'=');
+    // Short crumble transfers make the high line faster but visibly risky.
+    fill(9,9,18,19,'c'); fill(8,8,32,33,'c'); fill(7,7,49,50,'c');
+    put(14,12,'E'); put(14,27,'E'); put(14,45,'E');
+    put(8,14,'F'); put(6,44,'F');
+    put(14,56,'D'); put(14,5,'?');
+  },['GATE LINE — TICKET INVALID until the final authority is punched.']);
+})();
+
 })();
