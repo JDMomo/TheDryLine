@@ -67,4 +67,54 @@ G.defineRoom({
     '##############################', '##############################'
   ]
 });
+
+/* ---------- Authored Terminus campaign spine ---------- */
+(() => {
+  const wide=(id,build,signs=[])=>{
+    const W=60,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+    g[0].fill('#');g[15].fill('#');g[16].fill('#');
+    for(let r=0;r<H;r++)if(r<12||r>14){g[r][0]='#';g[r][W-1]='#';}
+    const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+    const put=(r,c,ch)=>g[r][c]=ch;
+    build({g,fill,put,W,H});
+    G.defineRoom({id,region:'final',kind:'main',w:2,map:g.map(x=>x.join('')),signs});
+  };
+
+  // 1. Last Buffers — recognition room. Familiar materials appear in calm, non-lethal combinations.
+  wide('final_buffers',({fill,put})=>{
+    fill(14,14,5,11,'m'); fill(14,14,17,23,'s'); fill(15,15,30,38,'>'); fill(15,15,42,50,'<');
+    fill(12,14,13,15,'#'); fill(12,14,25,27,'#'); fill(12,14,52,54,'#');
+    fill(10,10,8,14,'='); fill(9,9,19,26,'='); fill(10,10,35,42,'='); fill(9,9,47,54,'=');
+    // One familiar attacker from the old lines at a time; this room is about recognition, not attrition.
+    put(13,9,'E'); put(13,22,'E'); put(14,37,'E'); put(14,50,'E');
+    put(14,56,'D'); put(13,5,'?');
+  },['TERMINUS BUFFER ROAD — all local services feed the final clock.']);
+
+  // 2. Steam Gallery — movement payoff. Low route is always valid; spring/vent timing creates a faster upper transit line.
+  wide('final_vents',({fill,put})=>{
+    fill(13,14,13,15,'#'); fill(12,14,27,29,'#'); fill(13,14,43,45,'#');
+    put(15,9,'j'); put(15,24,'v'); put(15,39,'j'); put(15,50,'v');
+    fill(10,10,7,14,'='); fill(8,8,18,27,'='); fill(7,7,32,41,'='); fill(9,9,45,54,'=');
+    // Overhead pipe masses define chambers without blocking the floor.
+    fill(4,4,4,19,'#'); fill(3,3,25,40,'#'); fill(4,4,46,56,'#');
+    put(14,17,'E'); put(14,34,'E'); put(8,23,'F'); put(8,49,'F');
+    put(14,56,'D'); put(14,5,'?');
+  },['Steam pressure remains scheduled even though no train has arrived in years.']);
+
+  // 3. Clockworks — compression/payoff. All learned movement language appears, but the required route remains readable and fair.
+  wide('final_gearworks',({fill,put})=>{
+    fill(15,15,5,15,'>'); fill(15,15,21,31,'<'); fill(15,15,38,49,'>');
+    fill(14,14,16,20,'s'); fill(14,14,32,36,'m');
+    fill(12,14,18,20,'#'); fill(11,14,34,36,'#'); fill(12,14,51,53,'#');
+    // High rail: stable -> crumble -> stable -> crumble -> final stable line.
+    fill(10,10,7,14,'='); fill(9,9,16,22,'='); fill(10,10,24,25,'c');
+    fill(8,8,28,35,'='); fill(10,10,38,39,'c'); fill(9,9,42,49,'='); fill(8,8,51,56,'=');
+    put(15,27,'j'); put(15,46,'v');
+    // Final optional cache uses tar as a material-memory check, never a key.
+    fill(5,7,55,56,'t'); put(4,56,'C');
+    put(13,10,'E'); put(13,25,'E'); put(13,41,'E'); put(13,52,'E'); put(7,33,'F');
+    put(14,56,'D'); put(14,5,'?');
+  },['The maintenance slate is explicit: a valid timetable can only be cancelled by final authority.']);
+})();
+
 })();
