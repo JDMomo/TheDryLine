@@ -79,7 +79,9 @@ class Player {
   }
 
   update(dt) {
-    const p = this, inp = p.in, held = inp.held, pressed = inp.pressed, abil = G.run.abil, run = M.RUN * G.run.mods.speed;
+    const p = this, inp = p.in, held = inp.held, pressed = inp.pressed, abil = G.run.abil;
+    const surface = p.onGround ? tiles.surfaceUnder(p) : '.', salt = surface === 's', mud = surface === 'm', belt = p.onGround ? tiles.conveyor(p) : 0;
+    const run = M.RUN * G.run.mods.speed * (mud ? 0.58 : 1), groundAcc = M.GACC * (salt ? 0.18 : mud ? 0.72 : 1);
     if (p.down) { p.vy = Math.min(p.vy + M.GRAV * dt, M.MAXFALL); p.vx = U.approach(p.vx, 0, M.GACC * dt); const r = tiles.moveBox(p, p.vx * dt, p.vy * dt); if (r.hy === 1) p.vy = 0; return; }
     p.coyote -= dt; p.jbuf -= dt; p.dbuf -= dt; p.abuf -= dt; p.dashCd -= dt; p.atkCd -= dt; p.inv -= dt; p.wlock -= dt; p.stun -= dt;
     p.recoilT -= dt; p.itemCd -= dt; p.dropT -= dt; p.squash = U.approach(p.squash, 0, dt * 6);
@@ -114,8 +116,8 @@ class Player {
       }
       if (p.dashT <= 0) p.vx = p.dashDir * run * (ax === p.dashDir ? 1 : 0.35);
     } else {
-      if (p.onGround && ax && p.vx * ax < 0 && p.wlock <= 0 && p.stun <= 0) p.vx = ax * Math.min(Math.abs(p.vx), run * M.QUICK_TURN);   // quick stop: turn at once
-      if (p.wlock <= 0 && p.stun <= 0) p.vx = U.approach(p.vx, ax * run, (p.onGround ? M.GACC : M.AACC) * dt);
+      if (p.onGround && !salt && ax && p.vx * ax < 0 && p.wlock <= 0 && p.stun <= 0) p.vx = ax * Math.min(Math.abs(p.vx), run * M.QUICK_TURN);   // quick stop: turn at once
+      if (p.wlock <= 0 && p.stun <= 0) p.vx = U.approach(p.vx, ax * run, (p.onGround ? groundAcc : M.AACC) * dt);
       if (ax && !p.slash && p.wlock <= 0) p.face = ax;
       if (!held.jump) p.airJ = false;
       let g = M.GRAV;
@@ -147,7 +149,7 @@ class Player {
 
     const was = p.onGround, fallV = p.vy;
     p.dropThru = p.dropT > 0;
-    const mdx = (p.vx + (p.recoilT > 0 ? p.recoilV : 0)) * dt, mdy = p.vy * dt, sx0 = p.x, sy0 = p.y;
+    const mdx = (p.vx + (p.recoilT > 0 ? p.recoilV : 0) + belt * 105) * dt, mdy = p.vy * dt, sx0 = p.x, sy0 = p.y;
     const res = tiles.moveBox(p, mdx, mdy);
     // corner correction: nudge past a clipped ceiling corner (jump) or ledge corner (dash) instead of stopping
     if (res.hy === -1 && mdy < 0) {

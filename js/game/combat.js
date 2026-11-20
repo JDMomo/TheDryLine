@@ -25,7 +25,7 @@ G.MATERIALS = {
   heavy:    { name: 'Heavy',    color: '#a9b2bd', hint: 'breaks brittle things; Lead Boot and Punch Glove' },
   metal:    { name: 'Metal',    color: '#7fc4e8', hint: 'conducts through wet; pulled by magnets' },
   flammable:{ name: 'Flammable',color: '#ff9a3c', hint: 'a spark lights it' },
-  wet:      { name: 'Wet',      color: '#6fb6d9', hint: 'puts out fire; lets metal conduct' },
+  wet:      { name: 'Wet',      color: '#6fb6d9', hint: 'puts out fire; conducts metal; dissolves salt' },
   slick:    { name: 'Slick',    color: '#d6b25a', hint: 'ground shots slide further' },
   brittle:  { name: 'Brittle',  color: '#e6dcc4', hint: 'shatters when struck by something heavy' },
   magnetic: { name: 'Magnetic', color: '#e0705f', hint: 'pulls metal shots and scrip' },
@@ -61,7 +61,11 @@ const M = G.materials = {
   // A sulphur or cinder cloud: harmless until a spark reaches it.
   cloud(x, y, owner, r = 60, life = 3, cls = 'arc', itemId = 'sulphur_kettle') { clouds.push({ x, y, r, life, owner, cls, itemId }); },
   // A brine puddle on the floor: douses clouds and unlights shots, soaks enemies standing in it.
-  puddle(x, y, owner, r = 56, life = 4) { puddles.push({ x, y, r, life, owner }); },
+  puddle(x, y, owner, r = 56, life = 4) {
+    puddles.push({ x, y, r, life, owner });
+    const n = tiles.dissolveSalt(x, y, r);
+    if (n) { M.word(x, y, 'Dissolve', 'wet'); fx.spark(x, y - 4, Math.min(18, n * 3), '#e6dcc4', 120, 0.3); }
+  },
   ignite(s, src) {
     if (!M.has(s, 'flammable') || s.ignited || s.doused || s === src) return false;
     if (G.run.mods.conduct) { s.doused = true; M.word(s.x, s.y, 'Douse', 'wet'); fx.spark(s.x, s.y, 6, '#6fb6d9', 160, 0.3); return false; }

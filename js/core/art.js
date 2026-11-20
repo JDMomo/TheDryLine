@@ -125,6 +125,19 @@ const art = G.art = {
       } else if (ch === '=') {
         ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 5); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
         ctx.fillStyle = pal.side; ctx.fillRect(x + 4, y + 5, 3, 5); ctx.fillRect(x + T - 7, y + 5, 3, 5);
+      } else if (ch === 's') {
+        ctx.fillStyle = '#e8e2cf'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        ctx.fillStyle = '#f7f3e6'; ctx.fillRect(x, y, T + 0.5, 4);
+        ctx.strokeStyle = '#b9b39f'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + 5, y + 12); ctx.lineTo(x + 13, y + 17); ctx.lineTo(x + 9, y + 25); ctx.moveTo(x + 22, y + 8); ctx.lineTo(x + 18, y + 19); ctx.lineTo(x + 27, y + 24); ctx.stroke();
+      } else if (ch === 'm') {
+        ctx.fillStyle = '#4d4035'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        ctx.fillStyle = '#766253'; ctx.fillRect(x, y, T + 0.5, 5);
+        ctx.globalAlpha = 0.55; ctx.fillStyle = '#2f2925'; ctx.beginPath(); ctx.ellipse(x + 10, y + 12, 6, 2, 0, 0, 6.283); ctx.ellipse(x + 24, y + 22, 5, 2, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+      } else if (ch === '>' || ch === '<') {
+        ctx.fillStyle = '#394442'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        ctx.fillStyle = '#687672'; ctx.fillRect(x, y, T + 0.5, 5);
+        ctx.strokeStyle = '#b6c0b9'; ctx.lineWidth = 2; const d = ch === '>' ? 1 : -1, cx = x + 16;
+        ctx.beginPath(); ctx.moveTo(cx - d * 6, y + 12); ctx.lineTo(cx + d * 3, y + 17); ctx.lineTo(cx - d * 6, y + 22); ctx.stroke();
       }
     }
     ctx.fillStyle = pal.accent;

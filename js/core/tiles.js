@@ -3,6 +3,7 @@
 (() => {
 'use strict';
 const G = window.G, T = G.C.T;
+const SOLID_TERRAIN = '#sm<>';
 
 const tiles = G.tiles = {
   grid: null, cols: 0, rows: 0,
@@ -13,10 +14,28 @@ const tiles = G.tiles = {
   solid(c, r) {
     const cc = c < 0 ? 0 : c >= tiles.cols ? tiles.cols - 1 : c, rr = r < 0 ? 0 : r >= tiles.rows ? tiles.rows - 1 : r;
     for (const b of tiles.blockers) if (b.on && b.c === cc && rr >= b.r0 && rr <= b.r1) return true;
-    return tiles.grid[rr][cc] === '#';
+    return SOLID_TERRAIN.includes(tiles.grid[rr][cc]);
   },
   spike(c, r) { return tiles.at(c, r) === '^'; },
   oneway(c, r) { return tiles.at(c, r) === '='; },
+  surfaceUnder(o) { return tiles.at(Math.floor(o.x / T), Math.floor((o.y + 1) / T)); },
+  conveyor(o) { const ch = tiles.surfaceUnder(o); return ch === '>' ? 1 : ch === '<' ? -1 : 0; },
+  replace(c, r, ch) {
+    if (r < 0 || r >= tiles.rows || c < 0 || c >= tiles.cols) return false;
+    const row = tiles.grid[r]; if (row[c] === ch) return false;
+    tiles.grid[r] = row.slice(0, c) + ch + row.slice(c + 1); return true;
+  },
+  dissolveSalt(x, y, radius) {
+    let n = 0;
+    const c0 = Math.max(0, Math.floor((x - radius) / T)), c1 = Math.min(tiles.cols - 1, Math.floor((x + radius) / T));
+    const r0 = Math.max(0, Math.floor((y - 12) / T)), r1 = Math.min(tiles.rows - 1, Math.floor((y + 20) / T));
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+      if (tiles.at(c, r) !== 's') continue;
+      const cx = c * T + T / 2, cy = r * T;
+      if (Math.abs(cx - x) <= radius + T / 2 && Math.abs(cy - y) <= 24) { tiles.replace(c, r, '.'); n++; }
+    }
+    return n;
+  },
   // Moves the box, stopping at solids. Returns { hx: -1|0|1, hy: -1|0|1 }. o.dropThru lets it fall through one-way platforms.
   moveBox(o, dx, dy) {
     let hx = 0, hy = 0;

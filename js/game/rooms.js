@@ -16,6 +16,7 @@ const SIDES = ['left', 'right', 'top', 'bottom'];
    label   name shown on the doorway that leads to this room (branch and trial rooms)
    Characters:
      #  solid          .  empty          ^  spikes (hurt, can be bounced on with a down slash)      =  one-way platform
+     s  slippery salt crust (solid; wet dissolves it)    m  mud (solid; slows movement)    >/<  right/left conveyor (solid; pushes grounded bodies)
      E  ground enemy   F  flying enemy   L  ceiling enemy (hangs from the ceiling above it)   I  plinth (token)    C  lost trunk (opens when the room is clear)
      R  ticket machine (needs 2 free tiles each side)        S  kiosk ware (priced plinth)       K  clipping booth (needs 3 free tiles each side)
      M  signal post    H  standpipe      D  doorway           B  boss (arena)    G  region gate (hub)    ?  sign (text from signs[])    P  party start (hub)
@@ -35,7 +36,7 @@ G.defineRoom = def => {
     for (let c = 0; c < row.length; c++) {
       const ch = row[c];
       if (MARKS.includes(ch)) { marks.push({ ch, c, r }); out += '.'; }
-      else if ('#.^='.includes(ch)) out += ch;
+      else if ('#.^=sm<>'.includes(ch)) out += ch;
       else { bad('unknown character "' + ch + '" at row ' + r + ', column ' + c); out += '.'; }
     }
     grid.push(out);
@@ -80,7 +81,7 @@ const markPos = m => ({ x: m.c * T + T / 2, y: (m.r + 1) * T });
 // Build the live room for a graph node: props, enemies and the boss come from the node's pre-rolled content.
 function instance(node) {
   const def = G.roomDefs[node.def];
-  const room = { node, id: node.id, def, region: node.region, kind: def.kind, grid: def.grid, cols: def.cols, rows: def.rows,
+  const room = { node, id: node.id, def, region: node.region, kind: def.kind, grid: def.grid.slice(), cols: def.cols, rows: def.rows,
     props: [], enemies: [], boss: null, cleared: false, fight: false };
   tiles.load(room.grid);                 // enemy and boss constructors read the room size
   def.marks.forEach((m, i) => {
