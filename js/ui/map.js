@@ -31,7 +31,7 @@ function inline(ctx, parts, x, y, maxX, size = 10.5) {
 function box(ctx, x, y, w, h, node, here, label) {
   ctx.fillStyle = node.seen ? '#22322e' : 'rgba(0,0,0,0.3)'; ctx.fillRect(x, y, w, h);
   ctx.strokeStyle = here ? '#fff3c4' : node.seen ? '#3f6b5a' : '#2a3a35'; ctx.lineWidth = here ? 2.5 : 1.5; ctx.strokeRect(x, y, w, h);
-  if (label) art.label(ctx, label, x + w / 2, y + h / 2, 10.5, node.seen ? '#e9e2cf' : '#5c6a63');
+  if (label) art.label(ctx, label, x + w / 2, y + h / 2, label.length > 11 ? 8.5 : 10.5, node.seen ? '#e9e2cf' : '#5c6a63');
 }
 
 // The Warden's sigil: the diamond shown on its gate in the Junction. Dim with a cross once the Warden has fallen.
@@ -99,8 +99,8 @@ G.map = {
       chain.forEach((id, i) => {
         const node = graph.nodes[id], isArena = id === g.arena, x = X0 + i * 100;
         if (i) { ctx.fillStyle = '#2a3a35'; ctx.fillRect(x - 30, y + 24, 30, 2); }
-        const d=G.roomDefs[node.def], nm=G.story ? G.story.roomName(node.def) : 'Room ' + (++mainN);
         if (!isArena) mainN++;
+        const d=G.roomDefs[node.def], nm=G.story ? G.story.roomName(node.def) : 'Room ' + mainN;
         box(ctx, x, y + 14, 70, 22, node, id === here, isArena ? '' : nm);
         if (!isArena && node.seen) art.label(ctx, routeGlyph(d), x + 62, y + 25, 10, '#9aa89f');
         if (isArena) sigil(ctx, x + 35, y + 25, pal.accent, done);

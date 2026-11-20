@@ -199,6 +199,7 @@ const game = G.game = {
     const loot = U.makeRng((run.seed ^ 0x5bd1e995 ^ [...boss.region].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7)) >>> 0);
     for (let i = 0; i < 3; i++) { const t = G.trinkets.roll(loot, picks); if (t) picks.push(t); }
     picks.forEach((t, i) => room.props.push(G.props.make('plinth', mid + (i - 1) * 58, boss.floor, { trinket: t, group: 'reward' })));
+    if (G.story) G.story.wardenFell(boss.region);
   },
   // Token slots (cut and name) the party holds, for the map and screens.
   heldTokens() { return game.partyItems().map(id => ({ id, name: G.itemDefs[id].name, cls: G.itemDefs[id].cls, color: G.CLASSES[G.itemDefs[id].cls].color, shape: G.CLASSES[G.itemDefs[id].cls].shape })); },
