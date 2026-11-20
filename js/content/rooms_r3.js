@@ -23,14 +23,21 @@ const fill = (g, r0, r1, c0, c1, ch) => { for (let r = r0; r <= r1; r++) for (le
 const put = (g, r, c, ch) => { g[r][c] = ch; };
 const out = g => g.map(r => r.join(''));
 
-// Brine pools: a spiked pool to cross on stepping pillars, a lost trunk on a plank above it.
+// Brine Flats — two-screen Salt Cutting arrival.
+// The basin is safe: long salt shelves teach slide/dissolve over permanent floor. A single upper plank gives a clean route
+// and one enemy is staged on each half so the player reads the material before combat density rises.
 {
-  const g = mk(1);
-  fill(g, 15, 15, 9, 21, '^');
-  fill(g, 14, 15, 11, 12, '#'); fill(g, 13, 15, 15, 16, '#'); fill(g, 14, 15, 19, 20, '#');
-  fill(g, 10, 10, 13, 18, '=');
-  put(g, 9, 15, 'C'); put(g, 14, 7, 'E'); put(g, 13, 20, 'E'); put(g, 14, 23, 'E'); put(g, 14, 26, 'D');
-  G.defineRoom({ id: 'r3_brines', region: 'r3', kind: 'main', map: out(g) });
+  const g=mk(2);
+  fill(g,14,14,6,15,'s');
+  fill(g,14,14,21,31,'s');
+  fill(g,14,14,38,49,'s');
+  fill(g,11,11,10,18,'=');
+  fill(g,10,10,27,35,'=');
+  fill(g,11,11,44,52,'=');
+  put(g,13,18,'E');
+  put(g,13,42,'E');
+  put(g,9,31,'C');
+  G.defineRoom({id:'r3_brines',region:'r3',kind:'main',w:2,map:out(g)});
 }
 
 // Crystal terraces: two steps up, a drop, a short spiked trench, a trunk on the top terrace.
@@ -39,7 +46,7 @@ const out = g => g.map(r => r.join(''));
   fill(g, 13, 15, 8, 13, '#'); fill(g, 11, 15, 14, 19, '#');
   fill(g, 13, 13, 8, 13, 's'); fill(g, 11, 11, 14, 19, 's');       // exposed salt crust: fast but slippery; Wet erodes the top layer
   fill(g, 15, 15, 3, 7, 's'); fill(g, 15, 15, 24, 27, 's');       // low salt shelves bookend the safer stepped route
-  fill(g, 15, 15, 22, 23, '^'); fill(g, 12, 12, 20, 22, '=');   // a step so the 4-tile terrace face can be climbed from the right
+  fill(g, 12, 12, 20, 22, '=');   // a step so the 4-tile terrace face can be climbed from the right
   put(g, 10, 15, 'C'); put(g, 12, 10, 'E'); put(g, 10, 18, 'E'); put(g, 14, 21, 'E'); put(g, 14, 27, 'D'); put(g, 2, 7, 'L');
   G.defineRoom({ id: 'r3_terraces', region: 'r3', kind: 'main', map: out(g) });
 }
@@ -74,14 +81,20 @@ const out = g => g.map(r => r.join(''));
   G.defineRoom({ id: 'r3_trestle', region: 'r3', kind: 'main', w: 2, map: out(g) });
 }
 
-// A narrow cutting: spouts on the ledges, a spiked floor between, a trunk on the high plank.
+// White Cutting — compressed pre-Warden corridor.
+// Canyon walls squeeze the view, but the floor stays fair. One exposed upper survey shelf holds the guarded-branch doorway;
+// the last enemy has a long empty lane so Mirage/Boiler tells remain readable.
 {
-  const g = mk(1);
-  fill(g, 1, 4, 1, 8, '#'); fill(g, 1, 4, 21, 28, '#');
-  fill(g, 15, 15, 13, 17, '^');
-  fill(g, 12, 12, 6, 9, '='); fill(g, 9, 9, 10, 13, '='); fill(g, 6, 6, 14, 18, '='); fill(g, 12, 12, 21, 24, '=');
-  put(g, 11, 8, 'E'); put(g, 11, 22, 'E'); put(g, 14, 11, 'E'); put(g, 5, 16, 'C'); put(g, 14, 27, 'D'); put(g, 5, 7, 'L');
-  G.defineRoom({ id: 'r3_cutting', region: 'r3', kind: 'main', map: out(g) });
+  const g=mk(1);
+  fill(g,1,8,1,6,'#');
+  fill(g,1,7,23,28,'#');
+  fill(g,12,14,8,10,'#');
+  fill(g,11,14,19,21,'#');
+  fill(g,9,9,11,18,'=');
+  put(g,8,15,'D');
+  put(g,14,12,'E');
+  put(g,14,24,'E');
+  G.defineRoom({id:'r3_cutting',region:'r3',kind:'main',map:out(g)});
 }
 
 // A toad pond under a low ceiling: a shallow dip, a hanging crystal, a shelf with a trunk.

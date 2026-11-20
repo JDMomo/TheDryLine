@@ -24,22 +24,45 @@ function exits(g, left, right) {
   return g;
 }
 
-// The Coral Stair: a lopsided spire climbed by zigzag one-way shelves; a lost trunk sits on the crown.
+// Coral Stair — two-screen arrival along the reef face.
+// First screen is broad and quiet enough to read the painted cavern; the second screen introduces a single elevated flyer
+// and a rising lamp-stair. The upper line is optional and reconnects to the floor before the exit.
 (() => {
-  const g = exits(blank(1, 1), true, true);
-  put(g, 12, 13, 18, '='); put(g, 9, 6, 11, '='); put(g, 6, 13, 18, '='); put(g, 3, 7, 12, '=');
-  mark(g, 2, 10, 'C'); mark(g, 14, 27, 'D'); mark(g, 2, 16, 'L');
-  mark(g, 14, 20, 'E'); mark(g, 11, 16, 'E'); mark(g, 8, 8, 'F'); mark(g, 5, 22, 'F');
-  G.defineRoom({ id: 'r2_spire', region: 'r2', kind: 'main', map: done(g) });
+  const g=exits(blank(2,1),true,true);
+  // calm reef shelf / old signal landing
+  fill(g,13,14,8,11,'#');
+  put(g,11,15,20,'=');
+  mark(g,14,22,'E');
+
+  // second-screen stair: alternating coral shelves with safe floor beneath
+  put(g,12,32,38,'=');
+  put(g,9,40,46,'=');
+  put(g,6,48,54,'=');
+  put(g,11,51,57,'=');
+  mark(g,8,43,'F');
+  mark(g,5,51,'C');
+  mark(g,14,56,'D');
+  G.defineRoom({id:'r2_spire',region:'r2',kind:'main',w:2,map:done(g)});
 })();
 
-// Stepped coral shelves: a broad hill of coral to climb and drop down; the doorway sits on the crest, a trunk on the far shelf.
+// Signal Shelves — a deliberate rise to the old relay terrace.
+// Low route stays on solid coral steps; the high route uses broad one-way shelves and sees the branch doorway early.
+// Enemies are separated by elevation so ranged/flying jobs do not stack on the entrance.
 (() => {
-  const g = exits(blank(1, 1), true, true);
-  fill(g, 13, 14, 5, 8, '#'); fill(g, 10, 14, 9, 12, '#'); fill(g, 8, 14, 13, 18, '#'); fill(g, 10, 14, 19, 22, '#'); fill(g, 13, 14, 23, 25, '#');
-  mark(g, 7, 17, 'D'); mark(g, 9, 20, 'C'); mark(g, 2, 15, 'L');
-  mark(g, 9, 11, 'E'); mark(g, 7, 14, 'E'); mark(g, 12, 24, 'E'); mark(g, 6, 22, 'F');
-  G.defineRoom({ id: 'r2_shelves', region: 'r2', kind: 'main', map: done(g) });
+  const g=exits(blank(2,1),true,true);
+  fill(g,13,14,7,11,'#');
+  fill(g,11,14,12,18,'#');
+  fill(g,13,14,19,23,'#');
+  put(g,10,12,20,'=');
+  put(g,8,24,31,'=');
+  fill(g,12,14,33,37,'#');
+  put(g,9,39,46,'=');
+  fill(g,13,14,48,52,'#');
+  mark(g,7,27,'D');
+  mark(g,14,16,'E');
+  mark(g,7,42,'F');
+  mark(g,12,50,'E');
+  G.defineRoom({id:'r2_shelves',region:'r2',kind:'main',w:2,map:done(g)});
 })();
 
 // The Lamp Shaft: a true two-screen vertical route. It enters from below and leaves through the roof.
@@ -92,7 +115,7 @@ function exits(g, left, right) {
   const L = [[29, 5, 8], [26, 8, 10], [23, 4, 7], [20, 8, 10], [17, 4, 7], [14, 8, 10], [11, 6, 10]];
   for (const [r, c0, c1] of L) { put(g, r, c0, c1, '='); put(g, r, 29 - c1, 29 - c0, '='); }
   mark(g, 9, 14, 'D'); mark(g, 16, 23, 'C');
-  mark(g, 9, 17, 'E'); mark(g, 22, 5, 'E'); mark(g, 28, 24, 'E'); mark(g, 5, 7, 'F');
+  mark(g, 22, 5, 'E'); mark(g, 28, 24, 'E');
   G.defineRoom({ id: 'r2_tower', region: 'r2', kind: 'main', h: 2, map: done(g) });
 })();
 

@@ -37,29 +37,25 @@ const WALL = '##############################';
   G.defineRoom({ id: 'r4_concourse', region: 'r4', kind: 'main', w: 2, map: g.map(row => row.join('')) });
 })();
 
-// A row of ticket booths as stepping platforms, with canopies above; a trunk on the highest awning.
-G.defineRoom({
-  id: 'r4_booths', region: 'r4', kind: 'main',
-  map: [
-    '##############################',
-    '#............................#',
-    '#............................#',
-    '#............................#',
-    '#............................#',
-    '#............................#',
-    '#............F...............#',
-    '#............................#',
-    '#........................C...#',
-    '#......................====..#',
-    '#.............=====..........#',
-    '#............................#',
-    '...................####.......',
-    '.........####......####.......',
-    '.......E.####..E...####....D..',
-    '##############################',
-    '##############################'
-  ]
-});
+// Ticket Booth Row — two-screen public hall rather than a stack of boxes.
+// Low floor threads through booth islands; their awnings form a continuous optional high route.
+// The lost trunk sits above the closed central booth, visible early but reached from the second awning.
+(() => {
+  const W=60,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+  g[0].fill('#');g[15].fill('#');g[16].fill('#');
+  for(let r=0;r<H;r++)if(r<12||r>14){g[r][0]='#';g[r][W-1]='#';}
+  const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+  const line=(r,c0,c1,ch)=>fill(r,r,c0,c1,ch);
+
+  // three booth islands with generous aisles
+  fill(12,14,10,14,'#'); fill(12,14,27,32,'#'); fill(12,14,45,49,'#');
+  line(10,7,17,'='); line(9,24,35,'='); line(10,42,52,'=');
+  line(7,29,33,'='); g[6][31]='C';
+
+  g[14][19]='E'; g[14][39]='E'; g[8][47]='F';
+  G.defineRoom({id:'r4_booths',region:'r4',kind:'main',w:2,map:g.map(row=>row.join(''))});
+})();
+
 // A balcony above a turnstile line: climb the steps, walk the balcony, drop to the doorway.
 G.defineRoom({
   id: 'r4_balcony', region: 'r4', kind: 'main',
@@ -83,29 +79,28 @@ G.defineRoom({
     '##############################'
   ]
 });
-// A clock gallery: a stopped clock hangs from the ceiling and one-way ledges climb past it to a trunk.
-G.defineRoom({
-  id: 'r4_clocks', region: 'r4', kind: 'main',
-  map: [
-    '##############################',
-    '#.............#####..........#',
-    '#.............#####..........#',
-    '#.............#####..........#',
-    '#............................#',
-    '#.................C..........#',
-    '#...............======.......#',
-    '#.......................F....#',
-    '#............................#',
-    '#.........=====.......=====..#',
-    '#............................#',
-    '#............................#',
-    '.....=====....................',
-    '..............................',
-    '..........E.....E...E......D..',
-    '##############################',
-    '##############################'
-  ]
-});
+// Clock Gallery — two-screen pre-Warden hall with one monumental stopped-clock bay.
+// The required floor is quiet and broad. Upper maintenance walks frame the clock and lead to the guarded fixed-token doorway.
+(() => {
+  const W=60,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+  g[0].fill('#');g[15].fill('#');g[16].fill('#');
+  for(let r=0;r<H;r++)if(r<12||r>14){g[r][0]='#';g[r][W-1]='#';}
+  const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+
+  // clock housing silhouette hangs above the middle but leaves the floor open.
+  fill(1,4,26,33,'#');
+  fill(8,8,18,26,'=');
+  fill(8,8,34,42,'=');
+  fill(6,6,27,32,'=');
+  fill(11,11,44,53,'=');
+
+  g[5][30]='D';
+  g[14][20]='E';
+  g[14][46]='E';
+  g[10][50]='F';
+  G.defineRoom({id:'r4_clocks',region:'r4',kind:'main',w:2,map:g.map(row=>row.join(''))});
+})();
+
 // A low baggage tunnel with two spike beds; a trunk on a crate stack between them.
 G.defineRoom({
   id: 'r4_baggage', region: 'r4', kind: 'main',
