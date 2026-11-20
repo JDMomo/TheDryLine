@@ -33,19 +33,29 @@ export default async ({ page }) => {
     };
     const right = belt(19), left = belt(25);
 
+    if (!G.enemyDefs.qa_terrain_dummy) G.defineEnemy({ id:'qa_terrain_dummy', name:'Terrain Dummy', hp:100, w:24, h:32, touch:0, shards:[0,0], update(e){ e.vx = 120; }, draw(){} });
+    const enemyOn = c => {
+      G.rooms.current.enemies.length = 0;
+      const e = new G.Enemy(G.enemyDefs.qa_terrain_dummy, (c + 0.5) * T, floorY); e.onGround = true;
+      G.rooms.current.enemies.push(e); const x0 = e.x; D.step(24); return e.x - x0;
+    };
+    const enemyPlain = enemyOn(1), enemyMud = enemyOn(12), enemyBelt = enemyOn(19);
+    G.rooms.current.enemies.length = 0;
+
     const defBefore = G.roomDefs.qa_terrain.grid[15][5];
     D.place(0, 5.5 * T, floorY, 1); G.materials.puddle(p.x, floorY, p, 24, 1); D.step(1);
     const liveAfter = G.tiles.at(5, 15), defAfter = G.roomDefs.qa_terrain.grid[15][5], dissolved = G.materials.fired.Dissolve || 0;
 
     delete G.run.graph.nodes[node.id]; delete G.run.rooms[node.id];
-    return { plain, salt, plainRun, mudRun, right, left, defBefore, liveAfter, defAfter, dissolved, errors: G.errors.slice() };
+    return { plain, salt, plainRun, mudRun, right, left, enemyPlain, enemyMud, enemyBelt, defBefore, liveAfter, defAfter, dissolved, errors: G.errors.slice() };
   });
   const bad = [];
   if (!(Math.abs(r.salt) > Math.abs(r.plain) * 1.8)) bad.push('salt is not slippery enough: ' + JSON.stringify({ plain:r.plain, salt:r.salt }));
   if (!(Math.abs(r.mudRun) < Math.abs(r.plainRun) * 0.75)) bad.push('mud did not slow movement: ' + JSON.stringify({ plain:r.plainRun, mud:r.mudRun }));
   if (!(r.right > 8 && r.left < -8)) bad.push('conveyors did not push both ways: ' + JSON.stringify({ right:r.right, left:r.left }));
+  if (!(r.enemyMud < r.enemyPlain * 0.8 && r.enemyBelt > r.enemyPlain * 1.35)) bad.push('enemy terrain response wrong: ' + JSON.stringify({ plain:r.enemyPlain, mud:r.enemyMud, belt:r.enemyBelt }));
   if (!(r.defBefore === 's' && r.liveAfter === '.' && r.defAfter === 's' && r.dissolved >= 1)) bad.push('wet salt mutation/template isolation wrong: ' + JSON.stringify(r));
   if (r.errors.length) bad.push('G.errors: ' + r.errors.join(' | '));
   if (bad.length) throw new Error(bad.join(' ; '));
-  return 'salt slide, mud slow, conveyors, wet dissolves salt, template preserved';
+  return 'salt slide, mud slow, conveyors, enemy terrain response, wet dissolves salt, template preserved';
 };
