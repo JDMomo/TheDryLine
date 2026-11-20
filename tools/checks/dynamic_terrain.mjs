@@ -6,25 +6,25 @@ export default async ({ page }) => {
     const g=Array.from({length:CH},()=>Array(CW).fill('.'));
     g[0].fill('#'); g[15].fill('#'); g[16].fill('#');
     for(let rr=0;rr<CH;rr++) if(rr<12||rr>14){g[rr][0]='#';g[rr][CW-1]='#';}
-    g[15][6]='c'; g[15][12]='j'; g[15][18]='v';
+    g[10][6]='c'; g[15][12]='j'; g[15][18]='v';
     G.defineRoom({id:'qa_dynamic_terrain',region:'r2',kind:'main',map:g.map(row=>row.join(''))});
     const node={id:'qa_dynamic_terrain_node',def:'qa_dynamic_terrain',region:'r2',exits:{},content:[],seen:true};
     G.run.graph.nodes[node.id]=node; G.rooms.enter(node.id,{side:'left'});
-    const p=G.players[0], floorY=15*T;
+    const p=G.players[0], floorY=15*T, crumbleY=10*T;
 
     // Crumble starts warning while stood on, then becomes non-solid.
-    D.place(0,6.5*T,floorY,1); p.onGround=true; D.step(2);
-    const warn=G.tiles.crumbleState(6,15) && G.tiles.crumbleState(6,15).phase;
+    D.place(0,6.5*T,crumbleY,1); p.vx=0; p.vy=0; p.onGround=true; D.step(2);
+    const warn=G.tiles.crumbleState(6,10) && G.tiles.crumbleState(6,10).phase;
     D.step(Math.ceil(0.55/G.C.STEP));
-    const gone=G.tiles.crumbleGone(6,15), solidGone=G.tiles.solid(6,15);
+    const gone=G.tiles.crumbleGone(6,10), solidGone=G.tiles.solid(6,10);
 
     // Keep a dummy overlapping the tile when rebuild time expires; it must stay gone until clear.
-    const dummy={x:6.5*T,y:15*T+18,w:20,h:28,dead:false,onGround:false,vy:0,update(){}};
+    const dummy={x:6.5*T,y:10*T+18,w:20,h:28,dead:false,onGround:false,vy:0,update(){}};
     G.rooms.current.enemies.push(dummy);
     D.step(Math.ceil(2.8/G.C.STEP));
-    const heldGone=G.tiles.crumbleGone(6,15);
+    const heldGone=G.tiles.crumbleGone(6,10);
     G.rooms.current.enemies.length=0; D.step(2);
-    const rebuilt=!G.tiles.crumbleState(6,15) && G.tiles.solid(6,15);
+    const rebuilt=!G.tiles.crumbleState(6,10) && G.tiles.solid(6,10);
 
     // Spring: player launches above normal jump speed threshold.
     D.place(0,12.5*T,floorY,1); p.vy=0; p.onGround=true; D.step(2);
