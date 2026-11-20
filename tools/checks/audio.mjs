@@ -259,6 +259,12 @@ export default async ({ page }) => {
       const r = await G.audio.renderOffline('sfx', n, 2.8); out.sfx++;
       if (r.peak < 0.05) bad.push('effect ' + n + ' is silent'); if (r.clipped) bad.push('effect ' + n + ' clips'); if (r.seconds > 2.6) bad.push('effect ' + n + ' lasts ' + r.seconds.toFixed(1) + ' s');
     }
+    // many echo effects in a row (a door, a standpipe, tokens, a boss) must still die away: the reverb send once fed back into itself
+    const seq = []; for (let i = 0; i < 24; i++) seq.push([['door', 'mend', 'pickupToken', 'slotPunch', 'bossIntro', 'bossDefeat'][i % 6], i * 0.25]);
+    const st = await G.audio.renderOffline('sfxSeq', seq, 16, { tailFrom: 13 });
+    out.stressTail = +st.tail.toFixed(4);
+    if (!(st.peak < 2) || !isFinite(st.rms)) bad.push('a run of echo effects runs away (peak ' + st.peak + ', rms ' + st.rms + '): a feedback loop in the effects graph');
+    if (!(st.tail <= 0.003)) bad.push('sound keeps ringing after a run of echo effects (tail peak ' + st.tail.toFixed(3) + ' ten seconds later)');
     out.bad = bad; return out;
   });
   if (!render.skip) {

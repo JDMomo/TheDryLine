@@ -168,6 +168,8 @@ const SFX = {
 
 /* ---------------------------------------------------------------- 4. engine */
 const LEVEL = {jump: 4.38, doubleJump: 1.82, land: 2.33, dash: 5.0, slash: 4.38, heavyCut: 2.78, hitEnemy: 4.44, enemyDefeat: 2.81, hurt: 3.67, down: 0.67, revive: 1.33, mend: 0.98, mendTick: 3.75, cutPierce: 4.44, cutArc: 3.33, cutBurst: 1.92, cutGround: 3.08, slotCrack: 2.86, sealed: 4.17, slotPunch: 1.2, tokenVoid: 1.55, pickupScrip: 1.67, pickupToken: 1.15, propUse: 2.5, door: 2.92, bossIntro: 0.87, bossStagger: 1.62, bossDefeat: 1.07, menuMove: 3.33, menuSelect: 1.67, pause: 3.75, unpause: 3.75};   // per-effect trim so every effect peaks near its target at full volume (set by measuring an offline render)
+const REV_SFX = new Set(['door', 'bossIntro', 'bossDefeat', 'slotPunch', 'pickupToken', 'mend']);
+const SFX_LIFE = { bossIntro: 3, bossDefeat: 3.5, down: 1, mend: 1.4, pickupToken: 1.6, slotPunch: 1.3, door: 1 };   // seconds an effect can ring, before its nodes are let go
 function makeImpulse(c, secs, decay) {
   const rate = c.sampleRate, n = Math.floor(rate * secs), b = c.createBuffer(2, n, rate);
   for (let ch = 0; ch < 2; ch++) {
@@ -184,6 +186,15 @@ function createEngine(ctx, opt = {}) {
   e.master = gain(ctx, 1); e.limiter = ctx.createDynamicsCompressor();
   if (e.limiter.threshold) { e.limiter.threshold.value = -3; e.limiter.knee.value = 0; e.limiter.ratio.value = 20; e.limiter.attack.value = 0.003; e.limiter.release.value = 0.12; }
   e.master.connect(e.limiter); e.limiter.connect(ctx.destination);
+  if (ctx.createAnalyser) { e.watch = ctx.createAnalyser(); e.watch.fftSize = 2048; e.limiter.connect(e.watch); e.watchBuf = new Float32Array(2048); e.hot = 0; }
+  // Watchdog: true when the output has gone bad (NaN, or near full scale for three seconds straight), so the caller can rebuild the engine.
+  e.broken = () => {
+    if (!e.watch || ctx.state !== 'running') return false;
+    e.watch.getFloatTimeDomainData(e.watchBuf); let sum = 0;
+    for (let i = 0; i < e.watchBuf.length; i++) { const v = e.watchBuf[i]; if (v !== v) return true; sum += v * v; }
+    e.hot = Math.sqrt(sum / e.watchBuf.length) > 0.5 ? e.hot + 1 : 0;
+    return e.hot >= 3;
+  };
   e.musicBus = gain(ctx, 1); e.duck = gain(ctx, 1); e.pauseF = filt(ctx, 'lowpass', 20000, 0.5); e.musicBus.connect(e.duck); e.duck.connect(e.pauseF); e.pauseF.connect(e.master);
   e.sfxBus = gain(ctx, 1); e.sfxBus.connect(e.master);
   e.musicRev = { input: gain(ctx, 1) }; const mc = ctx.createConvolver(); mc.buffer = makeImpulse(ctx, 2.8, 3); e.musicRev.input.connect(mc); const mr = gain(ctx, 0.9); mc.connect(mr); mr.connect(e.musicBus);
@@ -304,13 +315,17 @@ function createEngine(ctx, opt = {}) {
     const now = ctx.currentTime, list = (e.voices[name] || (e.voices[name] = [])).filter(x => x > now);
     if (list.length >= VOICE_CAP || now - (e.lastSfx[name] || -1) < (o.gap == null ? 0.03 : o.gap)) { e.voices[name] = list; return false; }
     e.lastSfx[name] = now; list.push(now + 0.6); e.voices[name] = list;
-    let d = e.sfxBus; const p = pan(ctx, o.pan);
-    if (p) { p.connect(e.sfxBus); d = p; }
-    const rs = e.sfxRev.input; if (name === 'door' || name === 'bossIntro' || name === 'bossDefeat' || name === 'slotPunch' || name === 'pickupToken' || name === 'mend') note(() => { const s = gain(ctx, 0.5); d.connect(s); s.connect(rs); });
+    // Each effect gets its own output node; the reverb send taps that node, never the bus itself (a send from the bus feeds the reverb back
+    // into its own input, and every effect that added one made the loop louder until it rang forever).
+    const d = gain(ctx, 1), p = pan(ctx, o.pan);
+    if (p) { d.connect(p); p.connect(e.sfxBus); } else d.connect(e.sfxBus);
+    if (REV_SFX.has(name)) note(() => { const s = gain(ctx, 0.5); d.connect(s); s.connect(e.sfxRev.input); });
+    const life = (SFX_LIFE[name] || 1.2) + 1.5 + (o.delay || 0);
+    setTimeout(() => note(() => { d.disconnect(); if (p) p.disconnect(); }), life * 1000);
     fn({ e, t: (o.at == null ? now : o.at) + 0.005 + (o.delay || 0), d, r: o.rate || 1 + (Math.random() - 0.5) * 0.06, v: (o.vel == null ? 1 : o.vel) * (LEVEL[name] || 1), o });
     return true;
   };
-  e.dispose = () => { if (e.timer) clearInterval(e.timer); e.timer = null; };
+  e.dispose = () => { if (e.timer) clearInterval(e.timer); e.timer = null; note(() => e.master.disconnect()); note(() => e.limiter.disconnect()); };
   e.state = () => ({ time: ctx.currentTime, tracks: e.insts.map(i => ({ id: i.id, variant: i.variant, start: i.start, stepDur: i.stepDur, stopping: i.stopping, mode: i.mode, current: i === e.cur,
     layers: Object.fromEntries(i.order.map(L => [L.id, { on: L.target == null ? L.initial : L.target, initial: L.initial, changes: L.changes.map(c => ({ t: c.t, gateT: c.gateT, on: c.on })) }])) })) });
   e.applyVolumes();
@@ -322,11 +337,14 @@ function renderOffline(kind, id, seconds, opts) {
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   if (!OAC) return Promise.resolve(null);
   const rate = 32000, ctx = new OAC(2, Math.floor(rate * seconds), rate), e = createEngine(ctx, { manual: true, vol: { master: 1, music: 1, sfx: 1 } });
-  if (kind === 'track') { e.play(id, Object.assign({ at: 0, fade: 0 }, opts)); e.tick(seconds); } else e.sfx(id, Object.assign({ at: 0, gap: 0 }, opts));
+  if (kind === 'track') { e.play(id, Object.assign({ at: 0, fade: 0 }, opts)); e.tick(seconds); }
+  else if (kind === 'sfxSeq') for (const [name, at] of id) e.sfx(name, Object.assign({ gap: 0 }, opts, { at }));   // id: [[effect, start seconds], ...]
+  else e.sfx(id, Object.assign({ at: 0, gap: 0 }, opts));
+  const tailFrom = opts && opts.tailFrom;
   return ctx.startRendering().then(buf => {
-    let peak = 0, sum = 0, n = 0, last = 0;
-    for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a; sum += d[i] * d[i]; n++; if (a > 0.003 && ch === 0) last = i; } }
-    return { peak, rms: Math.sqrt(sum / n), seconds: last / rate, clipped: peak >= 0.999 };
+    let peak = 0, sum = 0, n = 0, last = 0, tail = 0;
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a; sum += d[i] * d[i]; n++; if (a > 0.003 && ch === 0) last = i; if (tailFrom != null && i >= tailFrom * rate && a > tail) tail = a; } }
+    return { peak, rms: Math.sqrt(sum / n), seconds: last / rate, clipped: peak >= 0.999, tail };
   });
 }
 
@@ -413,9 +431,17 @@ const A = G.audio = {
     }
     return out;
   },
+  // Throw the engine away and build a fresh one on a fresh context (the watchdog's cure); the director restarts the music.
+  rebuild() {
+    note(() => { if (engine) engine.dispose(); });
+    const old = ctx; ctx = null; engine = null; A._lastWant = null; A.rebuilds = (A.rebuilds || 0) + 1;
+    note(() => { if (old && old.close) { const r = old.close(); if (r && r.catch) r.catch(() => {}); } });
+    return A.unlock();
+  },
   update() {
     note(() => {
       if (!engine) return;
+      if ((A._watchN = (A._watchN || 0) + 1) % 10 === 0 && note(() => engine.broken())) { A.rebuild(); return; }
       if (!A.unlocked) { if (ctx && ctx.state === 'suspended' && !hiddenSusp && G.input && G.input.any && Object.values(G.input.any.pressed).some(Boolean)) A.unlock(); return; }
       engine.setPaused(G.state === 'pause' || G.state === 'map', G.state === 'map');
       const d = A.decide(), T0 = M.tracks[d.track]; if (!T0) return;
