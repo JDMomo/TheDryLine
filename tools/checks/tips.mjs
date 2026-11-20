@@ -31,18 +31,20 @@ export default async ({ page }) => {
     G.input.last = 'gamepad'; ok(/Hold LB/.test(G.tips.text('mend')), 'gamepad mend wording');
     G.tips.clear(); p.inv = 0; p.hp = p.maxHp; p.glow = 40; p.hurt(p.x + 30); run(1); ok(!has('mend'), 'the mend tip came twice');
 
-    // 3. first spike pit: the bounce
+    // 3. first spike pit: the bounce. Campaign composition may contain no spikes, so teach/test the hazard in a deterministic room.
     fresh(); D.newRun(7); D.god(true);
-    const spiky = Object.values(G.run.graph.nodes).find(n => G.roomDefs[n.def].kind === 'main' && G.roomDefs[n.def].grid.some(r => r.includes('^')));
-    D.gotoRoom(spiky.id); G.rooms.current.enemies.length = 0; G.tips.clear(); run(5);
-    ok(!has('bounce'), 'bounce tip at the room entrance, far from the spikes');
-    const g = G.rooms.current.grid; let sp = null;
-    for (let r = 0; r < g.length && !sp; r++) { const c = g[r].indexOf('^'); if (c >= 0) sp = { c, r }; }
-    D.place(0, sp.c * 32 - 90, (sp.r + 1) * 32); run(3);
-    // stand on any floor near it: the tip needs the player near the spikes, not above them
-    ok(has('bounce'), 'no bounce tip beside the first spike pit');
-    ok(/Down/.test(text().join(' ')) && /bounce/.test(text().join(' ')), 'bounce wording: ' + text().join(' '));
-    G.tips.clear(); D.place(0, sp.c * 32 - 90, (sp.r + 1) * 32); run(3); ok(!has('bounce'), 'the bounce tip came twice');
+    {
+      const g=Array.from({length:17},(_,r)=>Array.from({length:30},(_,c)=>(r===0||r>=15||((c===0||c===29)&&(r<12||r>14)))?'#':'.'));
+      for(let c=12;c<=15;c++)g[15][c]='^';
+      if(!G.roomDefs.qa_spike_tip)G.defineRoom({id:'qa_spike_tip',region:'r1',kind:'main',map:g.map(row=>row.join(''))});
+      const id='qa_spike_tip_node';G.run.graph.nodes[id]={id,def:'qa_spike_tip',region:'r1',exits:{},content:[],seen:true,parent:null};
+      G.rooms.enter(id,{side:'left'});G.rooms.current.enemies.length=0;G.tips.clear();run(3);
+      ok(!has('bounce'),'bounce tip at the room entrance, far from spikes');
+      D.place(0,12*32-90,16*32);run(3);
+      ok(has('bounce'),'no bounce tip beside the deterministic spike bed');
+      ok(/Down/.test(text().join(' '))&&/bounce/.test(text().join(' ')),'bounce wording: '+text().join(' '));
+      G.tips.clear();D.place(0,12*32-90,16*32);run(3);ok(!has('bounce'),'the bounce tip came twice');
+    }
 
     // 4. first fare slot opened
     fresh(); D.newRun(7); D.god(true); D.startBoss('r1'); run(2);

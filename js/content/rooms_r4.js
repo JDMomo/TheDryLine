@@ -88,7 +88,7 @@ G.defineRoom({
   const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
 
   // clock housing silhouette hangs above the middle but leaves the floor open.
-  fill(1,4,26,33,'#');
+  fill(1,3,26,33,'#');
   fill(8,8,18,26,'=');
   fill(8,8,34,42,'=');
   fill(6,6,27,32,'=');

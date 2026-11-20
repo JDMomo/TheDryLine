@@ -34,7 +34,7 @@ G.defineRoom({
  signs:[
   'The Last Timetable names one service that was never cancelled. The five lit gates still obey it.',
   'Each Warden holds one local order. Releasing them makes the Long Clock less dangerous.',
-  'The lines are places, not stages. Follow the lamps, machinery and old public signs when the route forks.',
+  'Tokens turn up on plinths and in lost trunks; ticket machines and kiosks offer more. The lock chart shows three cuts per Warden.',
   'The Terminus is open now. It is also strongest now.'
  ],
  map:g.map(row=>row.join(''))

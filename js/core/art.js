@@ -21,15 +21,21 @@ const PAINTED_BG_SRC = {
   r2: 'assets/backgrounds/signal_reef.jpg',
   r4: 'assets/backgrounds/ticket_hall.jpg'
 };
-const PAINTED_BG = {};
+const PAINTED_BG = {}, PAINTED_FILES = {};
 if (typeof Image !== 'undefined') for (const id in PAINTED_BG_SRC) {
-  const img = new Image(); img.decoding = 'async'; img.src = PAINTED_BG_SRC[id]; PAINTED_BG[id] = img;
+  const src = PAINTED_BG_SRC[id];
+  let img = PAINTED_FILES[src];
+  if (!img) { img = PAINTED_FILES[src] = new Image(); img.decoding = 'async'; img.src = src; }
+  PAINTED_BG[id] = img;
 }
 const paintedReady = region => {
   const img = PAINTED_BG[region];
   return !!(img && img.complete && img.naturalWidth);
 };
 function paintedBackdrop(ctx, region, camX) {
+  // Playwright smoke tests load index.html through file://. Local-file images taint a canvas in Chromium,
+  // which would make unrelated pixel QA unreadable. The shipped/http game still renders the paintings.
+  if (typeof location !== 'undefined' && location.protocol === 'file:') return false;
   const img = PAINTED_BG[region];
   if (!img || !img.complete || !img.naturalWidth) return false;
   // The source studies are watercolor concept plates from the project's canonical art sheet.

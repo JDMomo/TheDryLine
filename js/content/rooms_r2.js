@@ -59,7 +59,7 @@ function exits(g, left, right) {
   put(g,9,39,46,'=');
   fill(g,13,14,48,52,'#');
   mark(g,7,27,'D');
-  mark(g,14,16,'E');
+  mark(g,14,25,'E');
   mark(g,7,42,'F');
   mark(g,12,50,'E');
   G.defineRoom({id:'r2_shelves',region:'r2',kind:'main',w:2,map:done(g)});
@@ -82,7 +82,7 @@ function exits(g, left, right) {
   mark(g, 29, 13, 'v'); mark(g, 21, 13, 'v'); mark(g, 12, 13, 'v');
 
   // Optional reward pocket: a lateral jump off the safe stair, visually away from the central vent line.
-  put(g, 18, 19, 23, '='); mark(g, 17, 21, 'C');
+  put(g, 19, 19, 23, '='); mark(g, 18, 21, 'C');
   mark(g, 11, 9, 'D');
   mark(g, 28, 10, 'E'); mark(g, 23, 17, 'F'); mark(g, 14, 11, 'F'); mark(g, 8, 17, 'F');
 

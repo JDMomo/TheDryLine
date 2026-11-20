@@ -119,8 +119,8 @@ G.defineRoom({
     // Bow descent and final open fight lane.
     fill(12, 14, 42, 46, '#');
     fill(14, 14, 47, 49, '#');
-    put(14, 45, 'E');
-    put(14, 53, 'E');
+    put(14, 50, 'E');
+    put(14, 54, 'E');
   })
 });
 
