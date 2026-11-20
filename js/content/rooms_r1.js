@@ -98,7 +98,8 @@ G.defineRoom({
 // A continuous upper mast/plank route is faster and carries the signal-trial doorway; falling from it returns to the safe deck.
 G.defineRoom({
   id: 'r1_wreck', region: 'r1', kind: 'main', w: 2,
-  decor:[{type:'banner_decor',c:16,r:10},{type:'crate_decor',c:31,r:11},{type:'crate_decor',c:45,r:11}],
+  signs:['QUAY SERVICE — potable brine. Emergency passengers first.'],
+  decor:[{type:'banner_decor',c:16,r:10},{type:'crate_decor',c:31,r:11},{type:'crate_decor',c:45,r:11},{type:'lamp_decor',c:39,r:14}],
   map: paint(2, false, ({ put, fill }) => {
     // Stern ascent and broad deck: chunky ship silhouette, not a scatter of unrelated boxes.
     fill(13, 14, 7, 10, '#');
@@ -117,7 +118,11 @@ G.defineRoom({
     put(7, 34, 'D');                          // signal-mast access: authored parent for Dash trial
     put(9, 38, '======');
 
-    // Bow descent and final open fight lane.
+    // Quiet service pocket: one deliberate breath after the landmark climb and before the final encounter lane.
+    put(14, 39, 'H');
+    put(14, 40, '?');
+
+    // Bow descent and final open fight lane. No enemy can pressure the repair point.
     fill(12, 14, 42, 46, '#');
     fill(14, 14, 47, 49, '#');
     put(14, 49, 'E');
