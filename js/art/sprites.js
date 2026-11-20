@@ -17,6 +17,20 @@ const load = (key, dir, id) => {
 };
 for (const id of Object.keys(G.itemDefs || {})) load('item_' + id, 'tokens', id);
 for (const id of Object.keys(G.trinketDefs || {})) load('trinket_' + id, 'trinkets', id);
+// Static watercolor props cut from the owner's canonical concept sheet. They use the same sprite-first/fallback-second path as items.
+const loadStatic = (key, file) => {
+  const img = new Image();
+  G.spritesPending = (G.spritesPending || 0) + 1;
+  const done = ok => { if (ok && img.naturalWidth > 0) G.sprites[key] = img; else delete G.sprites[key]; G.spritesPending--; };
+  img.onload = () => { (img.decode ? img.decode() : Promise.resolve()).then(() => done(true), () => done(true)); };
+  img.onerror = () => done(false);
+  img.src = 'assets/props/' + file;
+};
+loadStatic('prop_trunk', 'chest.webp');
+loadStatic('prop_ticket', 'ticket_machine.webp');
+loadStatic('prop_sign', 'signpost.webp');
+loadStatic('prop_post', 'signpost.webp');
+
 // Strips: one image holding n frames side by side (frame width = width / n). A missing file leaves G.strips empty: the code-drawn art shows.
 const loadStrip = (key, file, frames) => {
   const img = new Image();

@@ -182,6 +182,8 @@ Trinkets: Brass Buckle, Oiled Strap, Whetstone Chip, Lead Boot, Magnet Tooth, Pu
 
 # 5. Props
 
+> **Watercolor props now in the build.** Clean concept-sheet cuts are used directly for lost trunks, ticket machines, world signs and movement signal posts (`assets/props/*.webp`). Code painters remain as load-failure fallbacks. Other interactables still need dedicated production sprites before their placeholders should be considered final.
+
 | Prop | Size | Frames | Description |
 |---|---|---|---|
 | Plinth | 38 x 18 | 1 | low stone stand a token floats above |
