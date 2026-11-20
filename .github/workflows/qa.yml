@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   browser-qa:
@@ -24,4 +25,29 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run fast browser suite
-        run: npm run test:fast
+        id: qa
+        shell: bash
+        run: |
+          set +e
+          npm run test:fast 2>&1 | tee qa.log
+          code=${PIPESTATUS[0]}
+          exit "$code"
+      - name: Publish QA failure lines
+        if: failure() && steps.qa.outcome == 'failure'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t fails < <(grep -E '^(FAIL |[0-9]+ of [0-9]+ checks failed)' qa.log | head -20)
+          if [ ${#fails[@]} -eq 0 ]; then
+            fails=("Fast suite failed; no FAIL line was captured")
+          fi
+          i=0
+          for line in "${fails[@]}"; do
+            i=$((i+1))
+            desc=$(printf '%s' "$line" | tr '\n\r' '  ' | cut -c1-130)
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+              -f state='failure' \
+              -f context="qa/failure-$i" \
+              -f description="$desc" >/dev/null
+          done
