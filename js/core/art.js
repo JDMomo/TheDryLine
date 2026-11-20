@@ -186,14 +186,26 @@ const art = G.art = {
     const tl = G.tiles, grid = tl.grid;
     const c0 = Math.max(0, Math.floor(G.cam.x / T)), c1 = Math.min(tl.cols - 1, Math.floor((G.cam.x + C.W) / T));
     const r0 = Math.max(0, Math.floor(G.cam.y / T)), r1 = Math.min(tl.rows - 1, Math.floor((G.cam.y + C.H) / T));
+    const region=G.rooms&&G.rooms.current&&G.rooms.current.region, watercolor=paintedReady(region);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const x = c * T, y = r * T, ch = grid[r][c];
       if (ch === '#') {
-        ctx.fillStyle = pal.tile; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        if (watercolor) {
+          // On the shipped/http build the collision mass supports the painting instead of becoming a black debug wall.
+          // Deterministic translucent patches mimic uneven wash while the dark edge keeps platform reads crisp.
+          ctx.globalAlpha=.86;ctx.fillStyle=pal.side;ctx.fillRect(x,y,T+.5,T+.5);
+          ctx.globalAlpha=.18;ctx.fillStyle=pal.edge;
+          const bx=4+Math.floor(hash1(c*31+r,5.4)*9), by=8+Math.floor(hash1(c+r*17,9.1)*12);
+          ctx.fillRect(x+bx,y+by,14+Math.floor(hash1(c*7+r,2.6)*10),5);
+          ctx.globalAlpha=.14;ctx.fillStyle=pal.tile;ctx.fillRect(x+2,y+T-8,T-4,7);
+          ctx.globalAlpha=1;
+        } else {
+          ctx.fillStyle = pal.tile; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        }
         if (r > 0 && grid[r - 1][c] !== '#') {
           ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 4); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
           if ((c * 7 + r) % 3 === 0) { ctx.fillStyle = pal.edge; ctx.fillRect(x + 6, y - 3, 2, 3); ctx.fillRect(x + 19, y - 4, 2, 4); }
-          const reg=G.rooms&&G.rooms.current&&G.rooms.current.region;
+          const reg=region;
           if(reg==='r1' && (c+r)%4===0){ ctx.fillStyle=pal.edgeHi; ctx.globalAlpha=.45; ctx.fillRect(x+8,y+7,3,3); ctx.fillRect(x+22,y+7,3,3); ctx.globalAlpha=1; }
           else if(reg==='r2' && (c+r)%3===0){ ctx.strokeStyle=pal.edgeHi; ctx.globalAlpha=.35; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x+9,y+4); ctx.lineTo(x+6,y-5); ctx.moveTo(x+22,y+4); ctx.lineTo(x+26,y-7); ctx.stroke(); ctx.globalAlpha=1; }
           else if(reg==='r3' && (c+r)%3===0){ ctx.fillStyle=pal.edgeHi; ctx.globalAlpha=.38; ctx.beginPath(); ctx.moveTo(x+7,y+4); ctx.lineTo(x+12,y-5); ctx.lineTo(x+16,y+4); ctx.fill(); ctx.globalAlpha=1; }
