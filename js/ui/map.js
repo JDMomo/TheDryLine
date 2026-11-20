@@ -13,6 +13,14 @@ const REGION_TAGS = {
   r4:'conveyors · canopies · machinery',
   final:'steam · clockwork · borrowed attacks'
 };
+const ROUTE_SHAPES = {
+  // Small but stable offsets: enough to make each authored line memorable without colliding with the information rows.
+  r1:[[0,5],[0,0],[0,-9],[0,4],[0,4]],          // quay -> dock -> beached deck -> tunnel -> toll house
+  r2:[[0,10],[0,4],[0,-9],[0,-14],[0,-14]],     // visibly climbs toward the beacon / Heron
+  r3:[[0,8],[0,1],[0,-6],[0,-11],[0,-11]],      // stepped cutting / terraces
+  r4:[[0,2],[0,2],[0,-3],[0,-3],[0,-3]],        // station plan stays comparatively architectural
+  final:[[0,10],[0,2],[0,-8],[0,-13]]            // buffers and machinery converge on the Clock
+};
 const routeGlyph = d => {
   const r=d.route||['left','right'], k=r.join('>');
   return ({'left>right':'→','right>left':'←','bottom>top':'↑','top>bottom':'↓','left>top':'↗','top>right':'↘','right>top':'↖','top>left':'↙','left>bottom':'↘','bottom>right':'↗','right>bottom':'↙','bottom>left':'↖'})[k] || '·';
@@ -112,22 +120,26 @@ G.map = {
       const gr = (run.grades || {})[reg.id];
       if (gr) art.label(ctx, G.game.gradeText(gr), 206, y + 57, 10.5, gr.clean ? '#fff3c4' : '#e9a23b', 'right', C.FONT, 600);
 
-      const chain = g.nodes.filter(id => !graph.nodes[id].parent);
-      let mainN = 0;
+      const chain = g.nodes.filter(id => !graph.nodes[id].parent), shape=ROUTE_SHAPES[reg.id]||[];
+      let mainN = 0, prevPt=null;
       chain.forEach((id, i) => {
-        const node = graph.nodes[id], isArena = id === g.arena, x = X0 + i * 100;
-        if (i) { ctx.fillStyle = '#2a3a35'; ctx.fillRect(x - 30, y + 24, 24, 2); }
+        const node = graph.nodes[id], isArena = id === g.arena, off=shape[i]||[0,0], x = X0 + i * 100 + off[0], ry=y+off[1];
+        if (prevPt) {
+          ctx.strokeStyle='#2a3a35';ctx.lineWidth=2;ctx.beginPath();
+          ctx.moveTo(prevPt.x+76,prevPt.y+24);ctx.lineTo(x,ry+24);ctx.stroke();
+        }
         if (!isArena) mainN++;
         const d=G.roomDefs[node.def], known=node.seen||run.mods.revealMap, nm=known ? (G.story ? G.story.roomName(node.def) : 'Room ' + mainN) : '?';
-        box(ctx, x, y + 12, 76, 24, node, id === here, isArena ? '' : nm);
-        if (!isArena && node.seen) art.label(ctx, routeGlyph(d), x + 68, y + 24, 10, '#9aa89f');
-        if (isArena) sigil(ctx, x + 38, y + 24, pal.accent, done);
+        box(ctx, x, ry + 12, 76, 24, node, id === here, isArena ? '' : nm);
+        if (!isArena && node.seen) art.label(ctx, routeGlyph(d), x + 68, ry + 24, 10, '#9aa89f');
+        if (isArena) sigil(ctx, x + 38, ry + 24, pal.accent, done);
         g.nodes.filter(b => graph.nodes[b].parent === id).forEach((b, k) => {
           if (!node.seen && !run.mods.revealMap) return;
           const bn = graph.nodes[b], letter = String.fromCharCode(65 + g.nodes.filter(q => graph.nodes[q].parent).indexOf(b));
           const known = bn.seen || run.mods.revealMap;
-          box(ctx, x + k * 24, y - 3, 20, 13, bn, bn.id === here, known ? letter : '?');
+          box(ctx, x + k * 24, ry - 3, 20, 13, bn, bn.id === here, known ? letter : '?');
         });
+        prevPt={x,y:ry};
       });
       if (reg.id === 'final') {                                // what the Long Clock will borrow, shown before the player commits
         const bs = G.game.borrows(run);
