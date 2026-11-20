@@ -10,6 +10,7 @@ export default async ({page})=>{
     if(mains.length!==len)out.push('seed '+seed+' '+rid+' length '+mains.length+' wanted '+len);
     if(!defs.includes(landmark))out.push('seed '+seed+' '+rid+' missing '+landmark);
     if(new Set(defs).size!==defs.length)out.push('seed '+seed+' '+rid+' repeated main '+defs.join(','));
+    if(rid==='r1'&&defs[0]!=='r1_gangway')out.push('seed '+seed+' r1 onboarding room '+defs[0]+' wanted r1_gangway');
    }
   }
   return out;

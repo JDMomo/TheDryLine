@@ -289,10 +289,17 @@ G.worldgen = {
       const pipes = isLast ? defsOf('branch', 'shared').filter(hasH) : [], pipeDef = pipes.length ? rng.pick(pipes) : null;
       const want = [trials, own, shared].filter(p => p.length).length + (pipeDef ? 1 : 0);
       const chooseMains = () => {
+        const intro = region.introRoom && mains.find(d => d.id === region.introRoom);
         const landmark = region.landmark && mains.find(d => d.id === region.landmark);
-        if (!landmark) return draw(rng, mains, region.length);
-        const rest = mains.filter(d => d !== landmark), out = [landmark].concat(draw(rng, rest, Math.max(0, region.length - 1)));
-        return rng.shuffle(out);
+        const pinned = [];
+        if (intro) pinned.push(intro);
+        if (landmark && landmark !== intro) pinned.push(landmark);
+        if (!pinned.length) return draw(rng, mains, region.length);
+        const rest = mains.filter(d => !pinned.includes(d));
+        const picked = pinned.concat(draw(rng, rest, Math.max(0, region.length - pinned.length)));
+        if (!intro) return rng.shuffle(picked);
+        const tail = picked.filter(d => d !== intro);
+        return [intro].concat(rng.shuffle(tail));
       };
       let chosen = chooseMains();
       for (let tries = 0; tries < 30 && chosen.reduce((s, d) => s + d.doors, 0) < want; tries++) chosen = chooseMains();

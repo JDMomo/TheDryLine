@@ -9,7 +9,7 @@ const G = window.G;
 Object.assign(G.title, { name: 'The Dry Line', tagline: 'Every Warden is open from the start. Every token is punched once.',
   winText: 'The Long Clock stops', loseText: 'The line goes quiet' });
 
-G.defineRegion({ id: 'r1', name: 'Wreck Quay', blurb: 'Beached hulls, ribs and chains.', gate: 0, boss: 'tollkeeper', ability: 'dash', length: 4, landmark: 'r1_dock',
+G.defineRegion({ id: 'r1', name: 'Wreck Quay', blurb: 'Beached hulls, ribs and chains.', gate: 0, boss: 'tollkeeper', ability: 'dash', length: 4, introRoom: 'r1_gangway', landmark: 'r1_dock',
   fixedItem: 'pumice_crawler',
   enemies: ['ballast_crab', 'brine_spout', 'turnstile', 'sapper'], pool: 'r1',
   scale: { hp: 0.8, aggro: 0.85 },                                     // a gentle first region: 20% less health, a 15% slower tempo

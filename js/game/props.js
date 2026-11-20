@@ -355,7 +355,9 @@ const TYPES = {
   mech_gate: {
     update(pr) {
       const room=G.rooms.current,ch=pr.data.channel||'main', st=room.mech&&room.mech[ch];
-      const plate=room.props.some(o=>o.type==='plate'&&!o.gone&&(o.data.channel||'main')===ch&&o.data.active);
+      const plates=room.props.filter(o=>o.type==='plate'&&!o.gone&&(o.data.channel||'main')===ch);
+      const plate=plates.some(o=>G.players.some(p=>!p.down&&p.onGround&&Math.abs(p.x-o.x)<18&&Math.abs(p.y-o.y)<12));
+      for(const o of plates)o.data.active=G.players.some(p=>!p.down&&p.onGround&&Math.abs(p.x-o.x)<18&&Math.abs(p.y-o.y)<12);
       const open=!!(plate||(st&&st.timer>0));
       const r1=Math.round(pr.y/C.T)-1;
       if(!pr.bl) pr.bl={c:Math.floor(pr.x/C.T),r0:r1-2,r1,on:!open,mech:true};
