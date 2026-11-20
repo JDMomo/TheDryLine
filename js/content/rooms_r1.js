@@ -133,7 +133,10 @@ G.defineRoom({
 // 5. A low tunnel with brine spouts; a chimney in the roof holds a trunk.
 G.defineRoom({
   id: 'r1_tunnel', region: 'r1', kind: 'main',
-  signs:['BRINE PURGE — keep the service lane clear. Pressure equipment may vent without warning.'],
+  signs:[
+    'BRINE PURGE — keep the service lane clear. Pressure equipment may vent without warning.',
+    'TOLL HOUSE AHEAD — present fare authority at the inspection line.'
+  ],
   decor:[{type:'lamp_decor',c:5,r:14},{type:'crate_decor',c:25,r:14}],
   map: paint(1, false, ({ put, fill }) => {
     fill(1, 10, 1, 28, '#');                  // roof (rows 11 to 14 open)
@@ -144,9 +147,10 @@ G.defineRoom({
     put(10, 14, '====');                      // 3 tiles above the step
     put(9, 15, 'C');
     put(14, 4, '?');                           // same emergency-sign language as the arrival/service rooms
-    put(14, 10, 'E');
-    put(14, 19, 'E');
-    put(14, 24, 'E');
+    put(14, 9, 'E');
+    put(14, 16, 'E');
+    put(14, 21, 'E');
+    put(14, 25, '?');                           // quiet final warning before the main exit / Toll House
     put(14, 27, 'D');
   })
 });
