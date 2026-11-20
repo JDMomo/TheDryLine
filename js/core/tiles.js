@@ -3,7 +3,7 @@
 (() => {
 'use strict';
 const G = window.G, T = G.C.T;
-const SOLID_TERRAIN = '#sm<>cjv';
+const SOLID_TERRAIN = '#sm<>cjvt';
 
 const tiles = G.tiles = {
   grid: null, cols: 0, rows: 0, terrain: null,
@@ -85,6 +85,17 @@ const tiles = G.tiles = {
     if (r < 0 || r >= tiles.rows || c < 0 || c >= tiles.cols) return false;
     const row = tiles.grid[r]; if (row[c] === ch) return false;
     tiles.grid[r] = row.slice(0, c) + ch + row.slice(c + 1); return true;
+  },
+  burnTar(x, y, radius) {
+    let n=0;
+    const c0=Math.max(0,Math.floor((x-radius)/T)), c1=Math.min(tiles.cols-1,Math.floor((x+radius)/T));
+    const r0=Math.max(0,Math.floor((y-radius)/T)), r1=Math.min(tiles.rows-1,Math.floor((y+radius)/T));
+    for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){
+      if(tiles.at(c,r)!=='t')continue;
+      const cx=c*T+T/2,cy=r*T+T/2;
+      if(Math.hypot(cx-x,cy-y)<=radius+T*.7){tiles.replace(c,r,'.');n++;}
+    }
+    return n;
   },
   dissolveSalt(x, y, radius) {
     let n = 0;

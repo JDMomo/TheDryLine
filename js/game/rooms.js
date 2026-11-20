@@ -18,6 +18,7 @@ const SIDES = ['left', 'right', 'top', 'bottom'];
      #  solid          .  empty          ^  spikes (hurt, can be bounced on with a down slash)      =  one-way platform
      s  slippery salt crust (solid; wet dissolves it)    m  mud (solid; slows movement)    >/<  right/left conveyor (solid; pushes grounded bodies)
      c  crumbling ledge (warns, falls, rebuilds)          j  launch spring                 v  timed steam vent
+     t  hardened tar block (solid; spark/fire burns it away for this live room)
      E  ground enemy   F  flying enemy   L  ceiling enemy (hangs from the ceiling above it)   I  plinth (token)    C  lost trunk (opens when the room is clear)
      R  ticket machine (needs 2 free tiles each side)        S  kiosk ware (priced plinth)       K  clipping booth (needs 3 free tiles each side)
      M  signal post    H  standpipe      D  doorway           B  boss (arena)    G  region gate (hub)    ?  sign (text from signs[])    P  party start (hub)
@@ -38,7 +39,7 @@ G.defineRoom = def => {
     for (let c = 0; c < row.length; c++) {
       const ch = row[c];
       if (MARKS.includes(ch)) { marks.push({ ch, c, r }); out += '.'; }
-      else if ('#.^=sm<>cjv'.includes(ch)) out += ch;
+      else if ('#.^=sm<>cjvt'.includes(ch)) out += ch;
       else { bad('unknown character "' + ch + '" at row ' + r + ', column ' + c); out += '.'; }
     }
     grid.push(out);
@@ -191,7 +192,7 @@ const rooms = G.rooms = {
     if (live.length) {
       if (!room.terrainTips) {
         room.terrainTips = {};
-        const kinds = { c:'crumble', j:'spring', v:'steam', s:'salt', m:'mud', '>':'belt', '<':'belt' };
+        const kinds = { c:'crumble', j:'spring', v:'steam', s:'salt', m:'mud', t:'tar', '>':'belt', '<':'belt' };
         room.grid.forEach((row,r)=>{ for(let c=0;c<row.length;c++){ const id=kinds[row[c]]; if(id)(room.terrainTips[id]||(room.terrainTips[id]=[])).push({x:(c+.5)*T,y:(r+.5)*T}); } });
       }
       for (const id in room.terrainTips) {

@@ -2,7 +2,7 @@
    Lint runs in Node on the template text. The traversal runs inside the page: it drives player 1 only through G.debug
    (newRun, gotoRoom, setInput, step, place, probe) and searches over short input segments (beam search). Documented in docs/ARCHITECTURE.md. */
 
-const CHARS = '#.^=sm<>cjvEFLICRSKMHDBG?PXYZ A'.replace(/ /g, '');
+const CHARS = '#.^=sm<>cjvtEFLICRSKMHDBG?PXYZ A'.replace(/ /g, '');
 const SOLID = '#sm<>cjv'; 
 const GROUND = 'EICRSKMHDBGP?XYAZ';         // markers that stand on the tile below them
 const TARGETS = 'ICRSKMH';              // things a bot must be able to walk up to in branch and trial rooms
@@ -208,7 +208,7 @@ export function pageTraverse(spec) {
   };
   const field = g => {
     const dist = new Float64Array(cols * rows).fill(Infinity), qu = [];
-    const open = (c, y) => c >= 0 && c < cols && y >= 0 && y < rows && !'#sm<>cjv^'.includes(def.grid[y][c]);
+    const open = (c, y) => c >= 0 && c < cols && y >= 0 && y < rows && !'#sm<>cjvt^'.includes(def.grid[y][c]);
     for (const [c, y] of goalTiles(g)) if (open(c, y)) { dist[y * cols + c] = 0; qu.push(c, y); }
     for (let i = 0; i < qu.length; i += 2) {
       const c = qu[i], y = qu[i + 1], d = dist[y * cols + c];
@@ -299,15 +299,15 @@ export function pageTraverse(spec) {
     for (let k = 1; k < 20; k++) {
       const c = fc + dir * k;
       if (c < 0 || c >= cols) break;
-      if ('#sm<>cjv'.includes(at(c, fr)) || '#sm<>cjv'.includes(at(c, fr - 1))) {
-        let top = fr; while ('#sm<>cjv'.includes(at(c, top - 1)) && top > 0) top--;
-        let flr = fr; while (flr < rows && !'#sm<>cjv'.includes(at(fc, flr)) && at(fc, flr) !== '=') flr++;      // floor under the player
+      if ('#sm<>cjvt'.includes(at(c, fr)) || '#sm<>cjvt'.includes(at(c, fr - 1))) {
+        let top = fr; while ('#sm<>cjvt'.includes(at(c, top - 1)) && top > 0) top--;
+        let flr = fr; while (flr < rows && !'#sm<>cjvt'.includes(at(fc, flr)) && at(fc, flr) !== '=') flr++;      // floor under the player
         const hgt = Math.max(1, flr - top);
         return 'a wall ' + hgt + ' tile' + (hgt > 1 ? 's' : '') + ' high at column ' + c + ' blocks the way ' + (dir > 0 ? 'right' : 'left') + ' (a base jump rises about 4 tiles)';
       }
-      let floor = false; for (let y = fr + 1; y <= fr + 3; y++) if ('#sm<>cjv'.includes(at(c, y)) || at(c, y) === '=') { floor = true; break; }
+      let floor = false; for (let y = fr + 1; y <= fr + 3; y++) if ('#sm<>cjvt'.includes(at(c, y)) || at(c, y) === '=') { floor = true; break; }
       if (!floor) {
-        let wdt = 0; while (true) { const cc = c + dir * wdt; let f = false; for (let y = fr + 1; y <= fr + 3; y++) if ('#sm<>cjv'.includes(at(cc, y)) || at(cc, y) === '=') { f = true; break; } if (f || cc < 0 || cc >= cols) break; wdt++; if (wdt > 40) break; }
+        let wdt = 0; while (true) { const cc = c + dir * wdt; let f = false; for (let y = fr + 1; y <= fr + 3; y++) if ('#sm<>cjvt'.includes(at(cc, y)) || at(cc, y) === '=') { f = true; break; } if (f || cc < 0 || cc >= cols) break; wdt++; if (wdt > 40) break; }
         return 'a gap or pit ' + wdt + ' tile' + (wdt > 1 ? 's' : '') + ' wide starts at column ' + c + ' (a base jump carries about 6)';
       }
     }

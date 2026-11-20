@@ -102,6 +102,7 @@ G.defineRoom({
     fill(1, 10, 1, 28, '#');                  // roof (rows 11 to 14 open)
     fill(1, 10, 1, 28, '#');
     fill(6, 10, 14, 17, '.');                 // chimney
+    fill(8, 10, 18, 19, 't');                 // optional tar pocket beside the chimney; fire opens it, main route ignores it
     fill(13, 14, 14, 17, '#');                // low step under the chimney
     put(10, 14, '====');                      // 3 tiles above the step
     put(9, 15, 'C');

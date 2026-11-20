@@ -78,6 +78,7 @@ tools/smoke.mjs, tools/checks/*.mjs   headless test harness (not shipped)
 ```
 #  solid             .  empty             ^  spikes (hurt; a down slash bounces off)     =  one-way platform
 s  slippery salt crust (solid; Wet dissolves it)    m  mud (solid; slows movement)    >/<  conveyors (solid; push grounded bodies)
+t  hardened tar (solid; spark/fire burns it away for that live room)
 c  crumbling ledge (0.45 s warning, then gone until its 2.6 s rebuild timer has elapsed and the tile volume is clear)
 j  launch spring (launches players/enemies upward)   v  timed steam vent (deterministic pulse, launches bodies in the column above)
 E  ground enemy      F  flying enemy      L  ceiling enemy      I  plinth (a token)                             C  lost trunk (becomes a plinth when the room is clear)
@@ -101,7 +102,7 @@ Y  timed lever (4.5 s)     A  pressure plate (held while a player stands on it) 
 - Reward pockets may contain a lost trunk/other optional source but must always allow escape back to the main room. They must not be required for worldgen connectivity.
 
 ### Regional terrain direction
-- Wreck Quay: mud/low hazards and later rail carts; safer low paths trade speed for footing. `r1_dock` is the worked split-route example: slow mud floor, crumble high line, separate spring reward alcove.
+- Wreck Quay: mud/low hazards and hardened tar pockets; safer low paths trade speed for footing. `r1_dock` is the worked split-route example: slow mud floor, crumble high line, separate spring reward alcove.
 - Signal Reef: vertical shafts and one-way shelves; `r2_shaft` keeps a base-move zig-zag while timed steam vents create a faster risky center line and Wall Grip remains the cleanest expert shortcut.
 - Salt Cutting: slippery/dissolvable salt and exposed ledges; `r3_trestle` uses salt-over-solid for the safe floor, a crumble rail line above, and a separate spring survey pocket.
 - Ticket Hall: conveyors and mechanical gates; `r4_concourse` uses opposing belts on the safe floor, a fast canopy route above them, and a separate maintenance reward pocket. `r4_switchyard` keeps the low route permanently open while a timed lever and co-op pressure plate control an optional upper shortcut.

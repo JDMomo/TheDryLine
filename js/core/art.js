@@ -194,6 +194,11 @@ const art = G.art = {
         ctx.fillStyle = '#303b39'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
         ctx.strokeStyle = '#d9b85b'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 5, y + 23); ctx.lineTo(x + 11, y + 11); ctx.lineTo(x + 17, y + 23); ctx.lineTo(x + 23, y + 11); ctx.lineTo(x + 28, y + 23); ctx.stroke();
         ctx.fillStyle = '#d9b85b'; ctx.fillRect(x + 3, y + 3, T - 6, 4);
+      } else if (ch === 't') {
+        ctx.fillStyle='#211915';ctx.fillRect(x,y,T+0.5,T+0.5);
+        ctx.fillStyle='#3b2820';ctx.globalAlpha=.82;ctx.fillRect(x+2,y+3,T-4,8);
+        ctx.fillStyle='#6b3b25';ctx.globalAlpha=.42;ctx.beginPath();ctx.arc(x+8,y+9,3,0,6.283);ctx.arc(x+23,y+6,2.5,0,6.283);ctx.fill();
+        ctx.globalAlpha=1;ctx.strokeStyle='#0f0c0a';ctx.lineWidth=2;ctx.strokeRect(x,y,T+0.5,T+0.5);
       } else if (ch === 'v') {
         ctx.fillStyle = '#3a4644'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
         ctx.fillStyle = '#8d9b96'; for (let k = 0; k < 3; k++) ctx.fillRect(x + 5 + k * 9, y + 5, 4, 12);

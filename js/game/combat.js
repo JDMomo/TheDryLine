@@ -83,6 +83,7 @@ const M = G.materials = {
   spark(x, y, r, src) {
     for (const s of shots.slice()) if (!s.hostile && s !== src && Math.hypot(s.x - x, s.y - y) < r + s.r) M.ignite(s, src);
     for (const c of clouds.slice()) if (Math.hypot(c.x - x, c.y - y) < r + c.r) M.flare(c);
+    const n=tiles.burnTar(x,y,r); if(n) M.word(x,y,'Burn','flammable');
   },
   douse(x, y, r) {
     for (const c of clouds.slice()) if (Math.hypot(c.x - x, c.y - y) < r + c.r) { clouds.splice(clouds.indexOf(c), 1); fx.spark(c.x, c.y, 8, '#6fb6d9', 160, 0.3); M.word(c.x, c.y, 'Douse', 'wet'); }
@@ -266,6 +267,7 @@ const combat = G.combat = {
       s.age += dt; s.life -= dt; if (s.life <= 0) end = true;
       if (!s.hostile) {
         if (M.has(s, 'spark')) M.spark(s.x, s.y, s.r + 38, s);
+        if (s.ignited) { const n=tiles.burnTar(s.x,s.y,s.r+20); if(n) M.word(s.x,s.y,'Burn','flammable'); }
         if (G.run.mods.magnetic && M.has(s, 'metal') && !s.free) {          // Pull: turn towards the nearest enemy or open slot by up to 2.4 rad/s
           const t = M.pullTarget(s), sp = Math.hypot(s.vx, s.vy);
           if (t && sp > 0) {

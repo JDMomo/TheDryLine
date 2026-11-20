@@ -42,7 +42,8 @@ const TIPS = {
   steam: () => 'Steam vents pulse on a fixed rhythm. Ride the burst, or wait it out.',
   salt: () => 'Salt crust is slippery. Wet effects dissolve it, exposing whatever lies below.',
   mud: () => 'Mud is safe but slow. High routes usually trade safety for speed.',
-  belt: () => 'Conveyors push anything grounded. Use the direction instead of fighting it.'
+  belt: () => 'Conveyors push anything grounded. Use the direction instead of fighting it.',
+  tar: () => 'Old tar has hardened into blocks. Spark or fire burns it out of the room.'
 };
 const tipQ = [];
 G.tips = {
