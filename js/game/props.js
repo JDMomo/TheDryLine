@@ -452,16 +452,25 @@ const TYPES = {
       return ['Station Keeper',state,(G.input&&G.input.name?G.input.name('interact',p):'Up')+' to talk'];
     },
     draw(pr,ctx) {
-      const x=pr.x,y=pr.y,bob=Math.sin(G.time*1.8)*0.7;
-      ctx.save();ctx.translate(x,y+bob);
-      // Watercolor-like fallback silhouette. Production art may replace this through the same prop.
-      ctx.globalAlpha=.2;ctx.fillStyle='#6f8277';ctx.beginPath();ctx.ellipse(-2,-25,18,29,0,0,6.283);ctx.fill();
-      ctx.globalAlpha=.9;ctx.fillStyle='#4e5d59';ctx.beginPath();ctx.moveTo(-16,0);ctx.quadraticCurveTo(-19,-28,-10,-42);ctx.quadraticCurveTo(0,-55,12,-42);ctx.quadraticCurveTo(18,-22,15,0);ctx.closePath();ctx.fill();
-      ctx.globalAlpha=.75;ctx.fillStyle='#586b65';ctx.beginPath();ctx.arc(0,-43,13,0,6.283);ctx.fill();
-      ctx.fillStyle='#7f4f3f';ctx.globalAlpha=.88;ctx.fillRect(-13,-31,26,5);
-      ctx.strokeStyle='#c2a56a';ctx.lineWidth=3;ctx.globalAlpha=.9;ctx.beginPath();ctx.moveTo(12,-27);ctx.lineTo(23,-17);ctx.lineTo(18,-5);ctx.stroke();
-      ctx.fillStyle='#e5d5a4';ctx.beginPath();ctx.arc(23,-17,3,0,6.283);ctx.fill();
-      ctx.fillStyle='#d9c17d';ctx.globalAlpha=.75;ctx.beginPath();ctx.arc(5,-44,2.5,0,6.283);ctx.fill();
+      const x=pr.x,y=pr.y,bob=Math.sin(G.time*1.8)*0.5,img=G.sprites&&G.sprites.portrait_guide;
+      ctx.save();ctx.translate(x,y);
+      // The canonical sheet only defines the Guide as a portrait, so the Keeper works from a service window.
+      // This uses the owner's actual watercolor face instead of inventing a non-canonical full-body design.
+      ctx.globalAlpha=.72;ctx.fillStyle='#273632';ctx.fillRect(-43,-82,86,62);
+      ctx.strokeStyle='#7b6545';ctx.lineWidth=4;ctx.strokeRect(-43,-82,86,62);
+      if(img&&img.naturalWidth){
+        ctx.save();ctx.beginPath();ctx.rect(-37,-77+bob,74,55);ctx.clip();
+        ctx.globalAlpha=.96;ctx.drawImage(img,-38,-89+bob,76,76);ctx.restore();
+      } else {
+        // Fallback keeps dialogue usable if the portrait asset fails.
+        ctx.globalAlpha=.9;ctx.fillStyle='#586b65';ctx.beginPath();ctx.arc(0,-50+bob,19,0,6.283);ctx.fill();
+        ctx.fillStyle='#d9c17d';ctx.beginPath();ctx.arc(7,-53+bob,3,0,6.283);ctx.fill();
+      }
+      // Counter in front makes the crop intentional and gives the Junction a railway-service silhouette.
+      ctx.globalAlpha=.94;ctx.fillStyle='#66513a';ctx.fillRect(-52,-25,104,25);
+      ctx.fillStyle='#8a704e';ctx.fillRect(-55,-29,110,7);
+      ctx.strokeStyle='#2a211a';ctx.lineWidth=3;ctx.strokeRect(-52,-25,104,25);
+      ctx.fillStyle='#c0a568';ctx.globalAlpha=.75;ctx.fillRect(-17,-19,34,3);
       ctx.globalAlpha=1;ctx.restore();
     }
   },
