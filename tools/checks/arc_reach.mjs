@@ -8,10 +8,13 @@ export default async ({ page }) => {
   // 1. how the Ladle lands on flat ground, per aim
   const lob = await page.evaluate(() => {
     const D = G.debug, out = {};
-    D.newRun(5); D.god(true); D.gotoRoom('junction'); D.step(2); G.rooms.current.enemies.length = 0;
-    const p = G.players[0];
-    const flat = () => { const t = G.tiles; for (let r = t.rows - 1; r > 8; r--) for (let c = 4; c < t.cols - 16; c++) { let ok = true; for (let k = 0; k < 14 && ok; k++) ok = t.solid(c + k, r) && !t.solid(c + k, r - 1) && !t.solid(c + k, r - 6); if (ok) return { x: (c + 1) * 32, y: r * 32 }; } return null; };
-    const spot = flat(); if (!spot) return { noSpot: true };
+    D.newRun(5); D.god(true);
+    // Aim physics must not depend on whatever architecture the campaign hub currently has.
+    const g=Array.from({length:17},(_,r)=>Array.from({length:30},(_,c)=>(r===0||r>=15||((c===0||c===29)&&(r<12||r>14)))?'#':'.').join(''));
+    if(!G.roomDefs.qa_arc_flat)G.defineRoom({id:'qa_arc_flat',region:'r1',kind:'main',map:g});
+    const qid='qa_arc_flat_node';G.run.graph.nodes[qid]={id:qid,def:'qa_arc_flat',region:'r1',exits:{},content:[],seen:true,parent:null};
+    G.rooms.enter(qid,{side:'left'});D.step(2);G.rooms.current.enemies.length=0;
+    const p=G.players[0],spot={x:8*32,y:15*32};
     for (const id of ARC_IDS()) for (const aim of ['neutral', 'up', 'fwd', 'down']) {
       G.combat.clear(); p.items = [id]; p.sel = 0; p.itemCd = 0; D.place(0, spot.x, spot.y, 1); D.step(2);
       D.setInput(0, aim === 'up' ? { up: true } : aim === 'fwd' ? { right: true } : aim === 'down' ? { down: true } : {});
@@ -25,7 +28,6 @@ export default async ({ page }) => {
     return out;
     function ARC_IDS() { return ['ochre_ladle', 'sulphur_kettle', 'chalk_skipstone']; }
   });
-  if (lob.noSpot) throw new Error('no flat floor for the lob test');
   const L = k => lob[k];
   if (L('ochre_ladle neutral').range < 110 || L('ochre_ladle neutral').range > 150) throw new Error('Ochre Ladle lands ' + L('ochre_ladle neutral').range + ' px ahead by default, wanted 110 to 150');
   if (L('ochre_ladle up').apex < L('ochre_ladle neutral').apex + 120) throw new Error('holding Up does not lob higher: ' + JSON.stringify([L('ochre_ladle up'), L('ochre_ladle neutral')]));

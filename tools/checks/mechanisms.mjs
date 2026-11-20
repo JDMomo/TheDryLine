@@ -22,7 +22,11 @@ export default async ({page})=>{
     while(G.players.length<2)G.debug.addPlayer();
     const p2=G.players[1];D.place(0,plate.x,plate.y,1);p.onGround=true;D.place(1,plate.x+80,plate.y,1);p2.onGround=true;D.step(3);
     if(gate.bl.on||!plate.data.active)bad.push('pressure plate did not hold gate open');
-    D.place(0,plate.x-100,plate.y,1);p.onGround=true;D.step(8);
+    D.setInput(0,{left:false,right:false,jump:false,down:false,attack:false,dash:false});
+    D.setInput(1,{left:false,right:false,jump:false,down:false,attack:false,dash:false});
+    D.place(0,plate.x-120,plate.y,1);p.onGround=true;
+    D.place(1,plate.x+120,plate.y,-1);p2.onGround=true;
+    D.step(8);
     if(!gate.bl.on||plate.data.active)bad.push('gate did not close when plate was released: '+JSON.stringify({
       gateOn:!!gate.bl.on,plateActive:!!plate.data.active,timer:room.mech&&room.mech.main&&room.mech.main.timer,
       players:G.players.map(q=>({x:Math.round(q.x),y:Math.round(q.y),ground:!!q.onGround,down:!!q.down})),
