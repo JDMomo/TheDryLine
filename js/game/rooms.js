@@ -112,7 +112,7 @@ const rooms = G.rooms = {
     const node = G.run.graph.nodes[nodeId];
     const room = G.run.rooms[nodeId] || (G.run.rooms[nodeId] = instance(node));
     if (rooms.current && rooms.current !== room) G.combat.leave();         // scrip on the floor goes with the party
-    rooms.current = room; tiles.load(room.grid, room.terrain); G.combat.clear(); fx.clear();
+    rooms.current = room; room.enterAt = G.time; tiles.load(room.grid, room.terrain); G.combat.clear(); fx.clear();
     let x = 3 * T, y = groundY(room, 1), face = 1;
     if (entry.side === 'left') { x = 40; y = groundY(room, 1); }
     else if (entry.side === 'right') { x = room.cols * T - 40; y = groundY(room, room.cols - 2); face = -1; }
@@ -151,6 +151,7 @@ const rooms = G.rooms = {
     room.fight = true;
     tiles.blockers.push({ c: door, r0: base + EXIT_ROWS[0], r1: base + EXIT_ROWS[2], on: true });
     for (const p of G.players) if (!p.down && p.x < (door + 1) * T + p.w) p.place(lead.x, lead.y, lead.face);
+    if (G.story) G.story.wardenAwake(room.region);
     room.boss.start();
   },
   // The boss is down: open the door and add a doorway straight back to the hub.
@@ -182,6 +183,19 @@ const rooms = G.rooms = {
     if (!G.meta.taught.tip_bounce && live.length) {         // the first spike pit a player comes up to: tell them about the bounce
       if (!room.spikes) { room.spikes = []; room.grid.forEach((row, r) => { for (let c = 0; c < row.length; c++) if (row[c] === '^') room.spikes.push({ x: c * T + T / 2, y: r * T + T / 2 }); }); }
       if (room.spikes.some(k => live.some(p => Math.abs(p.x - k.x) < 190 && Math.abs(p.cy - k.y) < 150))) G.tips.fire('bounce');
+    }
+
+    // Teach authored terrain where it first matters. Positions are cached once per live room.
+    if (live.length) {
+      if (!room.terrainTips) {
+        room.terrainTips = {};
+        const kinds = { c:'crumble', j:'spring', v:'steam', s:'salt', m:'mud', '>':'belt', '<':'belt' };
+        room.grid.forEach((row,r)=>{ for(let c=0;c<row.length;c++){ const id=kinds[row[c]]; if(id)(room.terrainTips[id]||(room.terrainTips[id]=[])).push({x:(c+.5)*T,y:(r+.5)*T}); } });
+      }
+      for (const id in room.terrainTips) {
+        if (G.meta.taught['tip_'+id]) continue;
+        if (room.terrainTips[id].some(k=>live.some(p=>Math.abs(p.x-k.x)<120&&Math.abs(p.cy-k.y)<105))) G.tips.fire(id);
+      }
     }
 
     // side exits, and the invisible wall where there is none

@@ -37,6 +37,13 @@ const FALL = {
   r4:['Gatewhale stopped','Behind its jaw is the original cancellation punch, never delivered to the Terminus.'],
   final:['The final bell','For the first time since the sea withdrew, the railway has no order left to obey.']
 };
+const ORDERS = {
+  r1:['Tollkeeper','FARE UNPAID. PASSAGE DENIED.'],
+  r2:['Lamp-Heron','SIGNAL UNRESOLVED. HOLD POSITION.'],
+  r3:['Switchman Idol','ROUTE CONFLICT. AWAIT SWITCHING.'],
+  r4:['Gatewhale','TICKET INVALID. GATE REMAINS CLOSED.'],
+  final:['Long Clock','TIMETABLE VALID. SERVICE CONTINUES.']
+};
 
 function ensure() {
   const r=G.run;
@@ -72,6 +79,9 @@ const story=G.story={
         else if(n===4) add('hub:4','All local orders cleared','Nothing remains between the Junction and the Long Clock except the last timetable itself.',true);
       }
     }
+  },
+  wardenAwake(region) {
+    const x=ORDERS[region]; if(x && G.fx) G.fx.say(x[0],x[1],2.8);
   },
   wardenFell(region) {
     const x=FALL[region]; if(x) add('fall:'+region,x[0],x[1],true);

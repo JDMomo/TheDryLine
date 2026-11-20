@@ -36,7 +36,13 @@ const TIPS = {
   bounce: () => 'In the air over spikes, hold ' + N('down') + ' and slash (' + N('attack') + ') to bounce off them.',
   fare: () => 'A lit fare slot takes the token with the same shape. Not every cut has a slot: see the board and the map.',
   crack: () => G.run.abil.heavy ? 'Cracked barriers break to Heavy Cut: hold ' + N('attack') + ', then release.' : 'Cracked barriers need Heavy Cut. Its signal post is in Ticket Hall.',
-  grade: () => 'Warden fights earn Par for speed and Clean for no hits. Clean refunds one token punched in that fight.'
+  grade: () => 'Warden fights earn Par for speed and Clean for no hits. Clean refunds one token punched in that fight.',
+  crumble: () => 'Cracked ledges give way after a warning. Keep moving; they rebuild when clear.',
+  spring: () => 'Gold springs launch anything standing on them — you and enemies alike.',
+  steam: () => 'Steam vents pulse on a fixed rhythm. Ride the burst, or wait it out.',
+  salt: () => 'Salt crust is slippery. Wet effects dissolve it, exposing whatever lies below.',
+  mud: () => 'Mud is safe but slow. High routes usually trade safety for speed.',
+  belt: () => 'Conveyors push anything grounded. Use the direction instead of fighting it.'
 };
 const tipQ = [];
 G.tips = {
@@ -99,6 +105,16 @@ G.hud = {
       ctx.globalAlpha = 0.55; run.spent.forEach((id, i) => G.items.icon(ctx, id, W - 30 - (run.spent.length - 1 - i) * 20, ry, 0.6)); ctx.globalAlpha = 1; ry += 20;
     }
     run.trinkets.forEach((id, i) => G.trinkets.icon(ctx, id, W - 30 - i * 20, ry, 0.7));
+
+    // A small location card makes procedural travel feel authored without interrupting control.
+    if (room.enterAt !== undefined && G.time - room.enterAt < 2.6 && !fx.banner) {
+      const a=U.clamp((2.6-(G.time-room.enterAt))*2,0,1)*U.clamp((G.time-room.enterAt)*5,0,1);
+      const reg=G.regionDefs[room.region], nm=G.story ? G.story.roomName(room.def.id) : room.def.id;
+      ctx.globalAlpha=a*0.9; ctx.fillStyle='rgba(6,11,11,0.72)'; ctx.fillRect(18,H-94,250,48);
+      art.label(ctx,nm,30,H-76,16,reg?art.palette(room.region).accent:'#e9a23b','left',C.DISPLAY,600);
+      art.label(ctx,reg?reg.name:'The Dry Line',30,H-58,10.5,'#9aa89f','left');
+      ctx.globalAlpha=1;
+    }
 
     const b = room.boss;
     if (b && (room.fight || (b.state === 'dead' && b.t > -1.2))) {
