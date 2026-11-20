@@ -15,12 +15,19 @@ function paint(w, h, rects, marks) {
   return g.map(r => r.join(''));
 }
 
-// Last Buffers: a quiet synthesis opener. Low floor alternates old salt and mud; a clean upper plank line bypasses both.
-G.defineRoom({ id: 'final_buffers', region: 'final', kind: 'main',
-  map: paint(1, 1, [[4, 15, 8, 15, 's'], [12, 15, 16, 15, 'm'], [20, 15, 24, 15, 's'],
-      [9, 13, 11, 14, '#'], [18, 13, 20, 14, '#'], [7, 10, 12, 10, '='], [14, 8, 19, 8, '='], [21, 10, 25, 10, '='],
-      [4, 1, 8, 2, '#'], [22, 1, 27, 3, '#']],
-    [[6, 14, 'E'], [15, 14, 'E'], [23, 14, 'E'], [27, 14, 'D'], [16, 6, 'F']]) });
+// Last Buffers — two-screen Terminus arrival.
+// The first half is almost empty: old platform, dead signal, long view. The second half quietly reprises salt/mud and one enemy.
+// This is the breath before the final machine sequence, not another gauntlet.
+G.defineRoom({ id: 'final_buffers', region: 'final', kind: 'main', w: 2,
+  signs: ['TERMINUS. LAST SERVICE STILL POSTED. No arrivals recorded after the sea withdrew.'],
+  map: paint(2, 1, [
+      [9, 13, 11, 14, '#'], [18, 12, 20, 14, '#'],
+      [7, 10, 14, 10, '='], [17, 8, 23, 8, '='],
+      [31, 15, 38, 15, 's'], [42, 15, 49, 15, 'm'],
+      [34, 11, 41, 11, '='], [46, 9, 53, 9, '='],
+      [3, 1, 9, 3, '#'], [50, 1, 57, 3, '#']
+    ],
+    [[24, 14, '?'], [38, 14, 'E'], [50, 14, 'E'], [55, 14, 'D']]) });
 
 // Steam Gallery: the floor is always safe. A spring reaches the pipewalk; a timed vent can boost from there to the upper shortcut.
 G.defineRoom({ id: 'final_vents', region: 'final', kind: 'main',
