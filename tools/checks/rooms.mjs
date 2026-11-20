@@ -208,7 +208,7 @@ export function pageTraverse(spec) {
   };
   const field = g => {
     const dist = new Float64Array(cols * rows).fill(Infinity), qu = [];
-    const open = (c, y) => c >= 0 && c < cols && y >= 0 && y < rows && !'#sm<>^'.includes(def.grid[y][c]);
+    const open = (c, y) => c >= 0 && c < cols && y >= 0 && y < rows && !'#sm<>cjv^'.includes(def.grid[y][c]);
     for (const [c, y] of goalTiles(g)) if (open(c, y)) { dist[y * cols + c] = 0; qu.push(c, y); }
     for (let i = 0; i < qu.length; i += 2) {
       const c = qu[i], y = qu[i + 1], d = dist[y * cols + c];
