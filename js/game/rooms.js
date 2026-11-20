@@ -165,11 +165,11 @@ const rooms = G.rooms = {
 
   draw(ctx, dt) {
     const room = rooms.current, pal = art.palette(room.region), sh = fx.shake;
-    art.backdrop(ctx, pal, G.cam.x, G.time, room.region);
+    art.backdrop(ctx, pal, G.cam.x, G.time);
     ctx.save();
     ctx.translate(-Math.round(G.cam.x) + (sh ? U.rnd(-sh, sh) * 0.6 : 0), -Math.round(G.cam.y) + (sh ? U.rnd(-sh, sh) * 0.6 : 0));
     for (const pr of room.props) pr.draw(ctx);
-    art.tiles(ctx, pal, room.region);
+    art.tiles(ctx, pal);
     for (const e of room.enemies) e.draw(ctx);
     if (room.boss) room.boss.draw(ctx);
     G.combat.draw(ctx);
