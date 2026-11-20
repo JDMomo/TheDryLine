@@ -3,7 +3,7 @@ export default async ({ page }) => {
   const r=await page.evaluate(() => {
     const D=G.debug,T=G.C.T,bad=[],notes=[];
     D.newRun(818); D.god(true);
-    const g=Array.from({length:17},(_,r)=>Array.from({length:30},(_,c)=>(r===0||r>=15||c===0||c===29)?'#':'.').join(''));
+    const g=Array.from({length:17},(_,r)=>Array.from({length:30},(_,c)=>(r===0||r>=15||((c===0||c===29)&&(r<12||r>14)))?'#':'.').join(''));
     G.defineRoom({id:'qa_enemy_roles',region:'r4',kind:'main',map:g});
     const id='qa_enemy_roles_node';
     G.run.graph.nodes[id]={id,def:'qa_enemy_roles',region:'r4',exits:{},content:[],seen:true,parent:null};
