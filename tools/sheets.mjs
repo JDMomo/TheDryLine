@@ -1,22 +1,20 @@
 /* Visual sweep: contact sheets of every room (with its real enemies and props from generated worlds) and of every screen.
+import { launchBrowser } from './lib/browser.mjs';
    node tools/sheets.mjs                 writes tools/shots/rooms_<region>.png (half size), tools/shots/screens.png and tools/shots/palettes.png
    node tools/sheets.mjs --full <roomId> writes tools/shots/room_<roomId>.png at full size (use it to look closely)
    node tools/sheets.mjs --screens-full  writes every screen at full size to tools/shots/screen_<name>.png
    Rooms are drawn through the game's own G.rooms.draw, one 960 x 544 cell at a time, so what you see is what a player sees. */
-import { createRequire } from 'module';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import fs from 'fs';
 
-const require = createRequire('/opt/npm-tools/node_modules/');
-const { chromium } = require('playwright');
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, 'shots');
 fs.mkdirSync(out, { recursive: true });
 const args = process.argv.slice(2);
 const fullIdx = args.indexOf('--full'), fullRoom = fullIdx >= 0 ? args[fullIdx + 1] : null, screensFull = args.includes('--screens-full');
 
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--no-first-run', '--disable-background-networking', '--disable-sync', '--disable-component-update'] });
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 1040, height: 760 } });
 const errors = [];
 page.on('pageerror', e => errors.push(String(e)));

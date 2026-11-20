@@ -1,24 +1,22 @@
 /* Room validator for level designers.
+import { launchBrowser } from './lib/browser.mjs';
    node tools/roomlint.mjs <substring>              lint + traversal test for every room whose id contains the substring ('' or no argument: all rooms)
    node tools/roomlint.mjs r2_ --strict            main rooms: run and jump only (no slash, bounce or dash), both directions, every doorway and trunk reached
    node tools/roomlint.mjs r2_ --lint               lint only (no browser bot)
    node tools/roomlint.mjs r2_ --file my_rooms.js   load an extra script of G.defineRoom calls first (e.g. a draft that is not in index.html yet)
    One line per room; failures print what is wrong and where the bot got stuck. Exit code 1 if any room fails. */
-import { createRequire } from 'module';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 import fs from 'fs';
 import { runRooms, formatRoom, okRoom } from './checks/rooms.mjs';
 
-const require = createRequire('/opt/npm-tools/node_modules/');
-const { chromium } = require('playwright');
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const flag = n => args.includes(n), val = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
 const file = val('--file');
 const filter = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--file') || '';
 
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--no-first-run', '--disable-background-networking', '--disable-sync', '--disable-component-update'] });
+const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 1040, height: 760 } });
 page.on('pageerror', e => console.log('page error: ' + e));
 await page.goto(pathToFileURL(path.join(here, '..', 'index.html')).href);

@@ -1,13 +1,11 @@
 // Rasterises every assets/tokens/*.svg and assets/trinkets/*.svg to transparent PNGs: <id>.png (64 px) and <id>@2x.png (128 px).
 // Re-run: node tools/render_art.mjs   (headless Chrome via playwright; no network)
-import { createRequire } from 'module';
+import { launchBrowser } from './lib/browser.mjs';
 import { readdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-const require = createRequire('/opt/npm-tools/node_modules/');
-const { chromium } = require('playwright');
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const browser = await launchBrowser();
 const page = await browser.newPage();
 let n = 0;
 for (const dir of ['tokens', 'trinkets']) {

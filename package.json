@@ -1,0 +1,17 @@
+{
+  "name": "the-dry-line",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Local development and QA tooling for The Dry Line browser game.",
+  "scripts": {
+    "test": "node tools/smoke.mjs",
+    "test:fast": "node tools/smoke.mjs --fast",
+    "test:serial": "node tools/smoke.mjs --serial",
+    "roomlint": "node tools/roomlint.mjs",
+    "shots": "node tools/sheets.mjs",
+    "art:items": "node tools/render_art.mjs && node tools/art_shots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.65.1"
+  }
+}

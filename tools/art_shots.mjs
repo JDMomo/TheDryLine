@@ -1,11 +1,9 @@
 // Builds tools/shots/art_items.png (all 20 items at 24, 48 and 128 px on the game's dark background, with names)
 // and in-game shots art_hud.png (four tokens held) and art_plinth.png. Run after tools/render_art.mjs.
-import { createRequire } from 'module';
+import { launchBrowser } from './lib/browser.mjs';
 import { readdirSync, writeFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-const require = createRequire('/opt/npm-tools/node_modules/');
-const { chromium } = require('playwright');
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const shots = path.join(root, 'tools', 'shots');
 const ids = d => readdirSync(path.join(root, 'assets', d)).filter(f => f.endsWith('.svg')).map(f => f.slice(0, -4));
@@ -16,7 +14,7 @@ const cell = ([d, i]) => `<div class="c"><div class="n">${NAMES[i] || i}</div><d
 const html = `<meta charset="utf-8"><style>body{margin:0;background:#0d1a19;font:13px sans-serif;color:#d9c5a0;padding:14px;width:1260px}
 .g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.c{background:#152825;border-radius:6px;padding:8px 10px}.n{margin-bottom:4px}.r{display:flex;align-items:center;gap:14px;height:132px}</style><div class="g">${rows.map(cell).join('')}</div>`;
 writeFileSync(path.join(shots, 'art_items.html'), html);
-const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const browser = await launchBrowser();
 let page = await browser.newPage({ viewport: { width: 1290, height: 900 } });
 await page.goto(pathToFileURL(path.join(shots, 'art_items.html')).href); await page.waitForTimeout(300);
 await page.screenshot({ path: path.join(shots, 'art_items.png'), fullPage: true });

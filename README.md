@@ -20,7 +20,7 @@ Rules in short: the party carries three tokens (four with four players). Each Wa
 - `docs/ARCHITECTURE.md`: how the engine works and how to add a boss, enemy, token, room or region.
 - `docs/ART_GUIDE.md`: the art style rules.
 - `docs/STATUS.md`: what is done, what is broken, what is next.
-- `tools/`: the test harness. `node tools/smoke.mjs` runs every check in headless Chrome, four browsers at once by default (`--serial` for one, `--jobs=N`, `--fast` skips the slow checks, `name` or `name:shard` runs one; needs Node and Playwright; paths are set for the machine it was built on and may need changing). `node tools/mutate.mjs` breaks the game in 20 ways, one at a time, in a temporary copy and reports which breakages the fast checks catch.
+- `tools/`: the test harness. Run `npm install` once, then `npm test` (or `node tools/smoke.mjs`) to run every check in headless Chromium, four browsers at once by default (`--serial` for one, `--jobs=N`, `--fast` skips the slow checks, `name` or `name:shard` runs one). The tools use Playwright's bundled Chromium on Windows/macOS and fall back to `/usr/bin/google-chrome` on the original Linux agent when present; set `DRYLINE_CHROME` to use another Chrome/Chromium executable. If Playwright reports a missing browser, run `npx playwright install chromium`. `node tools/mutate.mjs` breaks the game in 20 ways, one at a time, in a temporary copy and reports which breakages the fast checks catch.
 - `reference/prototype.html`: the first single-file prototype.
 
 ## Credits

@@ -1,16 +1,14 @@
 /* Headless smoke test. `node tools/smoke.mjs` runs every check in tools/checks; `node tools/smoke.mjs <name>` runs one.
+import { launchBrowser } from './lib/browser.mjs';
    Each check gets a fresh page of index.html and must drive the game only through G.debug (plus reading the public
    registries such as G.itemDefs). Any page error, console error or G.errors entry fails the check. Exits 1 on failure.
    Options: --serial (one browser, one check at a time), --jobs=N (browsers at once, default 4), --fast (skip checks that export
    `slow = true`: bosses_fair, perf), --bail (stop starting new checks after the first failure; used by tools/mutate.mjs).
    A check may export `shards` (an array of names): it then runs once per shard, in parallel, and receives `shard` in its arguments. */
-import { createRequire } from 'module';
 import { readdirSync } from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 
-const require = createRequire('/opt/npm-tools/node_modules/');
-const { chromium } = require('playwright');
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageUrl = pathToFileURL(path.join(here, '..', 'index.html')).href;
 const args = process.argv.slice(2), flag = n => args.includes('--' + n);
@@ -33,7 +31,7 @@ for (const name of names) {
 const bail = flag('bail');
 if (jobs > 1) tasks.sort((a, b) => b.weight - a.weight);
 
-const launch = () => chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--no-first-run', '--disable-background-networking', '--disable-sync', '--disable-component-update'] });
+const launch = () => launchBrowser();
 
 let failed = 0, done = 0, stop = false;
 const failures = [];
