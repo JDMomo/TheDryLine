@@ -14,6 +14,7 @@ let uid = 0;
    update   set e.vx / e.vy and e.face; the base class moves the box. Helpers: e.set(state, t), e.state, e.t (counts down),
             e.onGround, e.hitWall (-1 | 0 | 1), e.edgeAhead(), e.target() (nearest standing player or null)
    draw     world space; the enemy's feet centre is e.x, e.y
+   staticArt {w,h} + optional staticPose/staticFx are used for canonical watercolor bodies that do not yet have animation strips.
    skinFrame(e, skin)  optional, used while a watercolor skin (G.enemySkins) is on: returns [strip, frame, rotation?] with strip 'move' |
             'attack' | 'defeat' (frames of tools/art strips, see tools/art/README.md). Without it the skin loops its move strip.
    Debug: G.debugBoxes = true draws every enemy's hitbox (magenta), its feet or centre cross and its state. */
@@ -109,9 +110,16 @@ class Enemy {
     if (def.touch && !this.harmless) G.combat.hurtPlayers(this.rect(), this.x);
   }
   draw(ctx) {
-    const skin = this.skin();
+    const skin = this.skin(), staticArt = !skin && this.def.staticArt && G.sprites['enemy_' + this.id];
     if (skin) this.drawSkin(ctx, skin);
-    else G.art.draw('enemy_' + this.id, ctx, { x: this.x, y: this.y, w: this.w, h: this.h, face: this.face, ent: this });
+    else if (staticArt) {
+      const a=this.def.staticArt, pose=this.def.staticPose?this.def.staticPose(this):null, alpha=pose&&pose.alpha!==undefined?pose.alpha:1;
+      ctx.save();ctx.translate(this.x,this.y+(pose&&pose.dy||0));ctx.rotate(pose&&pose.rot||0);ctx.globalAlpha*=alpha;
+      G.art.draw('enemy_' + this.id, ctx, { x:0,y:0,w:a.w,h:a.h,face:this.face,ent:this });
+      if(this.flash>0){ctx.globalCompositeOperation='lighter';ctx.globalAlpha*=0.55;G.art.draw('enemy_'+this.id,ctx,{x:0,y:0,w:a.w,h:a.h,face:this.face,ent:this});}
+      ctx.restore();
+      if(this.def.staticFx)this.def.staticFx(this,ctx);
+    } else G.art.draw('enemy_' + this.id, ctx, { x: this.x, y: this.y, w: this.w, h: this.h, face: this.face, ent: this });
     if (this.elite && !this.dead) {
       ctx.save(); ctx.translate(this.x, this.y - this.h - 9); ctx.rotate(Math.PI/4);
       ctx.fillStyle='#d6b767';ctx.globalAlpha=0.82;ctx.fillRect(-5,-5,10,10);ctx.fillStyle='#4b3519';ctx.fillRect(-2,-2,4,4);

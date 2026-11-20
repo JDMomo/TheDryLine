@@ -32,7 +32,7 @@ This branch is now substantially beyond the 2026-11-14 baseline documented below
 ### Art direction
 - The owner's watercolor Wanderer and existing Strider/Boiler/Rivet/Gearling/Scrapper strips remain the default when loaded.
 - Backgrounds now have region-specific low-contrast silhouette language and paper/wash grain: wreck ribs, signal coral/lamps, salt strata/crystals, station arches/clocks and Terminus clockwork.
-- Sapper/Harvester/Mirage remain code placeholders until owner-created strips exist. `docs/art/ASSET_LIST.md` now specifies move4/attack6/defeat4 files using the canonical watercolor concept silhouettes.
+- Sapper/Harvester/Mirage now use canonical watercolor concept-sheet body cutouts as static in-game sprites; their state telegraphs remain dynamic and full animation strips are still pending. `docs/art/ASSET_LIST.md` now specifies move4/attack6/defeat4 files using the canonical watercolor concept silhouettes.
 - These code scenery/enemy drawings are **supporting placeholders**, not a replacement for the watercolor source-of-truth.
 
 ### QA added in this batch

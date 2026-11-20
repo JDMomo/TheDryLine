@@ -24,15 +24,20 @@ const loadStatic = (key, file) => {
   const done = ok => { if (ok && img.naturalWidth > 0) G.sprites[key] = img; else delete G.sprites[key]; G.spritesPending--; };
   img.onload = () => { (img.decode ? img.decode() : Promise.resolve()).then(() => done(true), () => done(true)); };
   img.onerror = () => done(false);
-  img.src = 'assets/props/' + file;
+  img.src = 'assets/' + file;
 };
-loadStatic('prop_trunk', 'chest.webp');
-loadStatic('prop_ticket', 'ticket_machine.webp');
-loadStatic('prop_sign', 'signpost.webp');
-loadStatic('prop_post', 'signpost.webp');
-loadStatic('prop_lamp_decor', 'lamp.webp');
-loadStatic('prop_crate_decor', 'crate_barrel.webp');
-loadStatic('prop_banner_decor', 'banner.webp');
+loadStatic('prop_trunk', 'props/chest.webp');
+loadStatic('prop_ticket', 'props/ticket_machine.webp');
+loadStatic('prop_sign', 'props/signpost.webp');
+loadStatic('prop_post', 'props/signpost.webp');
+loadStatic('prop_lamp_decor', 'props/lamp.webp');
+loadStatic('prop_crate_decor', 'props/crate_barrel.webp');
+loadStatic('prop_banner_decor', 'props/banner.webp');
+// Canonical concept-sheet bodies for enemies whose full animation strips are still pending.
+// These are intentionally static production placeholders; combat tells remain dynamic overlays in the enemy definitions.
+loadStatic('enemy_sapper', 'enemies/sapper/static.webp');
+loadStatic('enemy_harvester', 'enemies/harvester/static.webp');
+loadStatic('enemy_mirage', 'enemies/mirage/static.webp');
 
 // Strips: one image holding n frames side by side (frame width = width / n). A missing file leaves G.strips empty: the code-drawn art shows.
 const loadStrip = (key, file, frames) => {
