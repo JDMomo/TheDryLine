@@ -133,10 +133,24 @@ G.hud = {
     }
     G.tips.draw(ctx);
     if (fx.banner) {
-      const n = fx.banner;
-      ctx.globalAlpha = U.clamp(n.t * 2.5, 0, 1) * U.clamp((n.max - n.t) * 6, 0, 1);
-      art.label(ctx, n.a, W / 2, 124, 26, '#e9a23b', 'center', C.DISPLAY, 600);
-      if (n.b) art.label(ctx, n.b, W / 2, 152, 14, '#e9e2cf');
+      const n = fx.banner, fade = U.clamp(n.t * 2.5, 0, 1) * U.clamp((n.max - n.t) * 6, 0, 1);
+      ctx.globalAlpha = fade;
+      const portrait = n.portrait && G.sprites['portrait_' + n.portrait];
+      if (portrait) {
+        const bw=590,bh=92,bx=(W-bw)/2,by=92;
+        ctx.fillStyle='rgba(6,11,11,0.90)';ctx.fillRect(bx,by,bw,bh);
+        ctx.strokeStyle='rgba(217,197,160,0.42)';ctx.lineWidth=1.5;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+        ctx.save();ctx.beginPath();ctx.arc(bx+52,by+46,38,0,6.283);ctx.clip();ctx.drawImage(portrait,bx+14,by+8,76,76);ctx.restore();
+        ctx.strokeStyle='#a58d60';ctx.lineWidth=2;ctx.beginPath();ctx.arc(bx+52,by+46,39,0,6.283);ctx.stroke();
+        art.label(ctx,n.a,bx+108,by+31,21,'#e9a23b','left',C.DISPLAY,600);
+        if(n.b) {
+          const lines=G.props.wrap(ctx,n.b,13.5,bw-132,430);
+          lines.slice(0,2).forEach((line,i)=>art.label(ctx,line,bx+108,by+54+i*17,13.5,'#e9e2cf','left'));
+        }
+      } else {
+        art.label(ctx, n.a, W / 2, 124, 26, '#e9a23b', 'center', C.DISPLAY, 600);
+        if (n.b) art.label(ctx, n.b, W / 2, 152, 14, '#e9e2cf');
+      }
       ctx.globalAlpha = 1;
     }
     if (fx.stampNow) {                                                  // the grade stamp of a fight that just ended

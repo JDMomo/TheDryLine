@@ -38,6 +38,7 @@ loadStatic('prop_banner_decor', 'props/banner.webp');
 loadStatic('enemy_sapper', 'enemies/sapper/static.webp');
 loadStatic('enemy_harvester', 'enemies/harvester/static.webp');
 loadStatic('enemy_mirage', 'enemies/mirage/static.webp');
+loadStatic('portrait_guide', 'portraits/guide.webp');
 
 // Strips: one image holding n frames side by side (frame width = width / n). A missing file leaves G.strips empty: the code-drawn art shows.
 const loadStrip = (key, file, frames) => {

@@ -435,7 +435,7 @@ const TYPES = {
         ['Station Keeper','All four local orders are clear. Take the cancellation to the Long Clock and finish what the railway could not.']
       ];
       const x=lines[Math.min(4,beaten)];
-      G.fx.say(x[0],x[1],5);
+      G.fx.say(x[0],x[1],5,'guide');
       pr.data.spoken=(pr.data.spoken||0)+1;
     },
     prompt(pr,p) {

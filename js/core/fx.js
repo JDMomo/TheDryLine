@@ -26,7 +26,7 @@ const fx = G.fx = {
   floatText(x, y, text, color) { floaters.push({ x, y, text, color, t: 1 }); },
   // A short stamp for a graded fight: lines = ['BEATEN', 'PAR', 'CLEAN'], note = one line under it.
   stamp(lines, note = '', t = 4.2) { fx.stampNow = { lines, note, t, max: t }; },
-  say(a, b, t = 3.2) { fx.banner = { a, b, t, max: t }; },
+  say(a, b, t = 3.2, portrait = null) { fx.banner = { a, b, t, max: t, portrait }; },
   jolt(stop, sh) { fx.hitstop = Math.max(fx.hitstop, stop); if (!calm && G.meta.settings.shake) fx.shake = Math.max(fx.shake, sh); },
   // Length of a white hit flash on a body: none when 'reduced flashes' is on (sparks and knock-back still show the hit).
   flashT(t) { return G.meta.settings.reduceFlashes ? 0 : t; },
