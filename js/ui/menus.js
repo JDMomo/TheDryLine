@@ -118,7 +118,8 @@ G.menus = {
 
     ctx.fillStyle='rgba(6,11,11,.74)';ctx.fillRect(388,260,404,102);
     ctx.strokeStyle='rgba(217,197,160,.40)';ctx.lineWidth=1.5;ctx.strokeRect(388,260,404,102);
-    if(Math.floor(G.time*2)%2)art.label(ctx,'PRESS ANY KEY OR CONTROLLER BUTTON',tx,291,17,'#fff3c4','center',C.FONT,700);
+    ctx.save();ctx.globalAlpha=.78+.22*(.5+.5*Math.sin(G.time*4.2));
+    art.label(ctx,'PRESS ANY KEY OR CONTROLLER BUTTON',tx,291,17,'#fff3c4','center',C.FONT,700);ctx.restore();
     art.label(ctx,'The first device becomes Player 1.',tx,320,11.5,'#9aa89f');
     art.label(ctx,'More players can join in the Junction.',tx,341,11.5,'#9aa89f');
 
