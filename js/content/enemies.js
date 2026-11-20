@@ -125,44 +125,56 @@ G.defineEnemy({
   }
 });
 
-/* ---------- 2. Boiler (brine_spout): stationary vent, lobs brine at the nearest player ---------- */
+/* ---------- 2. Boiler (brine_spout): artillery + close pressure vent; both tell, fire, then recover ---------- */
 G.defineEnemy({
   id: 'brine_spout', name: 'Boiler', hp: 30, w: 26, h: 30, touch: 1, shards: [3, 5],
-  init(e) { e.set('idle', 1 + rr() * 1.2); },
+  init(e) { e.set('idle', 0.9 + rr() * 0.8); e.harmless=true; },
   update(e) {
-    e.vx = 0;
-    const p = e.target();
+    e.vx = 0; const p = e.target();
     if (e.state === 'idle') {
-      faceTarget(e, p);
-      if (e.t <= 0 && p && Math.abs(p.x - e.x) < 560 && Math.abs(p.y - e.y) < 340) e.set('wind', 0.6);
+      e.harmless=true; faceTarget(e, p);
+      if (e.t <= 0 && p && Math.abs(p.x - e.x) < 560 && Math.abs(p.y - e.y) < 340)
+        e.set(Math.abs(p.x-e.x)<105 && Math.abs(p.y-e.y)<70 ? 'ventwind' : 'wind', Math.abs(p.x-e.x)<105 && Math.abs(p.y-e.y)<70 ? 0.42 : 0.6);
     } else if (e.state === 'wind') {
-      faceTarget(e, p);
+      e.harmless=true; faceTarget(e,p);
       if (e.t <= 0) {
-        const ox = e.x + e.face * 4, oy = e.y - e.h, tx = p ? p.x : e.x + e.face * 200, ty = p ? p.cy : e.y, g = 900;
-        const tt = U.clamp(Math.abs(tx - ox) / 380, 0.45, 0.95);
-        G.combat.shoot({ x: ox, y: oy, vx: (tx - ox) / tt, vy: (ty - oy - 0.5 * g * tt * tt) / tt, grav: g, r: 7, life: 3, hostile: true, cut: true, paint: brinePaint });
-        fx.spark(ox, oy, 8, '#d6e8dc', 200, 0.3); e.set('spent', 0.35);
+        const ox=e.x+e.face*4, oy=e.y-e.h, tx=p?p.x:e.x+e.face*200, ty=p?p.cy:e.y, g=900;
+        const tt=U.clamp(Math.abs(tx-ox)/380,0.45,0.95);
+        G.combat.shoot({x:ox,y:oy,vx:(tx-ox)/tt,vy:(ty-oy-0.5*g*tt*tt)/tt,grav:g,r:7,life:3,hostile:true,cut:true,paint:brinePaint,
+          onEnd:q=>G.materials.puddle(q.x,q.y,null,52,3.2)});
+        fx.spark(ox,oy,8,'#d6e8dc',200,0.3); e.set('spent',0.52);
       }
-    } else if (e.t <= 0) e.set('idle', 1.8 + rr() * 0.8);
+    } else if(e.state==='ventwind') {
+      e.harmless=true; faceTarget(e,p);
+      if(e.t<=0){
+        // Short-lived radial steam/brine body: staying close after the tell is the mistake.
+        G.combat.shoot({x:e.x,y:e.y-18,r:58,life:0.18,hostile:true,tile:'pass',
+          paint:(ctx,q)=>{ctx.save();ctx.globalAlpha=0.16+0.36*(q.life/0.18);ctx.fillStyle='#d6e8dc';ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,TAU);ctx.fill();ctx.strokeStyle=RUST;ctx.lineWidth=3;ctx.stroke();ctx.restore();}});
+        fx.ring(e.x,e.y-18,10,220,'#d6e8dc',0.3);fx.spark(e.x,e.y-28,12,'#d6e8dc',180,0.35);e.set('spent',0.72);
+      }
+    } else {
+      e.harmless=true;
+      if(e.t<=0)e.set('idle',1.4+rr()*0.8);
+    }
   },
-  // Skin: wind-up frames 0-2 across the 0.6 s, the strike frame (3) as it fires, then the two recovery frames across the 0.35 s.
   skinFrame(e, sk) {
-    if (e.state === 'wind') return ['attack', Math.min(2, Math.floor(e.prog() * 3))];
-    if (e.state === 'spent') { const u = e.prog(); return ['attack', u < 0.35 ? 3 : u < 0.7 ? 4 : 5]; }
+    if (e.state === 'wind' || e.state==='ventwind') return ['attack', Math.min(2, Math.floor(e.prog() * 3))];
+    if (e.state === 'spent') { const u=e.prog(); return ['attack',u<0.35?3:u<0.7?4:5]; }
     return ['move', G.time * sk.fps];
   },
   draw(e, ctx) {
-    const k = e.state === 'wind' ? 1 - Math.max(0, e.t) / 0.6 : e.state === 'spent' ? -0.5 * e.t / 0.35 : 0;
-    ctx.save(); ctx.translate(e.x, e.y);
-    if (e.state === 'wind') warnRing(ctx, -16, 14, k);
-    ctx.scale(1 + 0.12 * k, 1 - 0.1 * k);
-    const body = hit(e, '#9fb4af');
-    solid(ctx, '#6d8a88', () => rrect(ctx, -16, -8, 32, 8, 3));                                   // base plate
-    solid(ctx, body, () => { ctx.moveTo(-9, -8); ctx.lineTo(-7, -26); ctx.lineTo(7, -26); ctx.lineTo(9, -8); ctx.closePath(); });   // pipe
-    solid(ctx, hit(e, e.state === 'wind' ? RUST : '#c4d2cc'), () => rrect(ctx, -12, -32, 24, 9, 4));   // lip
-    solid(ctx, hit(e, '#c4d2cc'), () => rrect(ctx, -9, -17, 18, 4, 2));                          // band
-    eye(ctx, e.face * 3, -28, 3, OUT);                                                            // the mouth faces the target
-    if (e.state === 'wind' && Math.random() < 0.5) fx.spark(e.x + e.face * 2, e.y - 34, 1, '#d6e8dc', 60, 0.3);
+    const winding=e.state==='wind'||e.state==='ventwind', dur=e.state==='ventwind'?0.42:0.6;
+    const k=winding?1-Math.max(0,e.t)/dur:e.state==='spent'?-0.35*e.t/0.72:0;
+    ctx.save();ctx.translate(e.x,e.y);
+    if(winding)warnRing(ctx,-16,e.state==='ventwind'?24:14,k);
+    ctx.scale(1+0.12*k,1-0.1*k);
+    const body=hit(e,'#9fb4af');
+    solid(ctx,'#6d8a88',()=>rrect(ctx,-16,-8,32,8,3));
+    solid(ctx,body,()=>{ctx.moveTo(-9,-8);ctx.lineTo(-7,-26);ctx.lineTo(7,-26);ctx.lineTo(9,-8);ctx.closePath();});
+    solid(ctx,hit(e,winding?RUST:'#c4d2cc'),()=>rrect(ctx,-12,-32,24,9,4));
+    solid(ctx,hit(e,'#c4d2cc'),()=>rrect(ctx,-9,-17,18,4,2));
+    eye(ctx,e.face*3,-28,3,OUT);
+    if(winding&&Math.random()<0.45)fx.spark(e.x+e.face*2,e.y-34,1,'#d6e8dc',60,0.3);
     ctx.restore();
   }
 });
@@ -232,10 +244,11 @@ G.defineEnemy({
 /* ---------- 4. Rivet (signal_gull): hovers, then swoops in an arc ---------- */
 G.defineEnemy({
   id: 'signal_gull', name: 'Rivet', hp: 22, w: 30, h: 22, touch: 1, shards: [2, 4], flying: true, gravity: false,
-  init(e) { e.off = rr() < 0.5 ? -100 : 100; e.set('hover', 1.2 + rr()); e.bob = rr() * 6; },
+  init(e) { e.off = rr() < 0.5 ? -100 : 100; e.set('hover', 1.2 + rr()); e.bob = rr() * 6; e.harmless=true; },
   update(e, dt) {
     const p = e.target(), top = e.h + 40, bot = tiles.rows * T - 40;
     if (e.state === 'hover') {
+      e.harmless=true;
       if (p) {
         const tx = p.x + e.off, ty = U.clamp(p.y - 150, top, bot);
         e.vx = U.clamp((tx - e.x) * 2, -130, 130); e.vy = U.clamp((ty - e.y) * 3, -120, 120) + Math.sin(G.time * 4 + e.bob) * 25;
@@ -243,7 +256,7 @@ G.defineEnemy({
         if (e.t <= 0 && Math.abs(p.x - e.x) < 460 && p.y > e.y - 40) e.set('wind', 0.55);
       } else { e.vx = 0; e.vy = Math.sin(G.time * 3 + e.bob) * 20; }
     } else if (e.state === 'wind') {
-      faceTarget(e, p);
+      e.harmless=true; faceTarget(e, p);
       e.vx = -e.face * 40; e.vy = -50 * (e.t / 0.55);               // rears back and up
       if (e.t <= 0) {
         const tx = p ? p.x : e.x + e.face * 100, ty = U.clamp(p ? p.cy : e.y + 100, top, bot);
@@ -251,18 +264,21 @@ G.defineEnemy({
         e.set('swoop', e.dur);
       }
     } else if (e.state === 'swoop') {
-      e.u = 1 - Math.max(0, e.t) / e.dur;
+      e.harmless=false; e.u = 1 - Math.max(0, e.t) / e.dur;
       const nx = e.ax + (e.bx - e.ax) * e.u, ny = e.ay + (e.ty - e.ay) * Math.sin(Math.PI * e.u);
       e.vx = (nx - e.x) / dt; e.vy = (ny - e.y) / dt; e.face = e.bx > e.ax ? 1 : -1;
-      if (e.u >= 1 || e.hitWall || e.onGround) { e.off = -e.off; e.set('hover', 1.6 + rr()); }
-    } else e.set('hover', 1);
+      if (e.u >= 1 || e.hitWall || e.onGround) { e.off = -e.off; e.harmless=true; e.set('recover', 0.48); }
+    } else if(e.state==='recover') {
+      e.harmless=true;e.vx=-e.face*55;e.vy=-45;
+      if(e.t<=0)e.set('hover',1.25+rr()*0.6);
+    } else { e.harmless=true; e.set('hover', 1); }
   },
   // Skin: wind-up frames across the 0.55 s rear-back, the strike frame through the swoop (recovery as it ends), two recovery frames after it,
   // the move loop (wing beats) while hovering; the body pitches into the swoop.
   skinFrame(e, sk) {
     if (e.state === 'wind') return ['attack', Math.min(2, Math.floor(e.prog() * 3))];
     if (e.state === 'swoop') return ['attack', e.prog() < 0.8 ? 3 : 4, Math.atan2(e.vy, Math.abs(e.vx) + 1) * 0.6 * e.face];
-    if (e.prev === 'swoop' && e.age() < 0.3) return ['attack', e.age() < 0.15 ? 4 : 5];
+    if (e.state === 'recover') return ['attack', e.prog() < 0.5 ? 4 : 5];
     return ['move', G.time * sk.fps + e.bob];
   },
   draw(e, ctx) {
