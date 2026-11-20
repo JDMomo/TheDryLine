@@ -63,6 +63,52 @@ const art = G.art = {
     const r = G.regionDefs && G.regionDefs[regionId];
     return Object.assign({}, BASE_PALETTE, r && r.palette);
   },
+  // Region-specific silhouettes layered over the generic parallax. These are visual only: no room geometry or collision.
+  regionBackdrop(ctx, regionId, pal, camX, time) {
+    if (regionId !== 'r1') return;
+    const wrap = (x, span, pad = 180) => ((x + pad) % span + span) % span - pad;
+    ctx.save();
+
+    // Beached hulls: broad, low silhouettes sunk into the dry seabed.
+    ctx.globalAlpha = 0.58; ctx.fillStyle = pal.far; ctx.strokeStyle = pal.edge; ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      const x = wrap(i * 255 + hash1(i, 18.2) * 110 - camX * 0.16, 1650), y = 350 + hash1(i, 9.7) * 82;
+      const w = 115 + hash1(i, 4.1) * 78, h = 42 + hash1(i, 27.3) * 34;
+      ctx.beginPath(); ctx.moveTo(x - w * 0.55, y);
+      ctx.quadraticCurveTo(x - w * 0.25, y + h * 0.9, x + w * 0.38, y + h * 0.55);
+      ctx.quadraticCurveTo(x + w * 0.58, y + h * 0.28, x + w * 0.55, y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // Exposed ribs rising from the wreck.
+      ctx.globalAlpha = 0.34;
+      for (let r = -2; r <= 2; r++) {
+        const rx = x + r * w * 0.12, top = y - 24 - (2 - Math.abs(r)) * 13;
+        ctx.beginPath(); ctx.moveTo(rx, y + h * 0.34);
+        ctx.bezierCurveTo(rx - 9, y - 2, rx - 7, top + 10, rx, top);
+        ctx.bezierCurveTo(rx + 7, top + 10, rx + 9, y - 2, rx + 4, y + h * 0.34);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 0.58;
+    }
+
+    // Near chains, with sagging runs and a few oversized links. Slow parallax keeps them behind gameplay.
+    ctx.strokeStyle = pal.edgeHi; ctx.lineWidth = 2; ctx.globalAlpha = 0.28;
+    for (let i = 0; i < 4; i++) {
+      const x = wrap(170 + i * 330 - camX * 0.42, 1450), y = 92 + (i % 2) * 58;
+      ctx.beginPath(); ctx.moveTo(x - 145, y - 55); ctx.quadraticCurveTo(x, y + 105, x + 145, y - 30); ctx.stroke();
+      for (let k = -2; k <= 2; k++) {
+        const lx = x + k * 55, ly = y + 35 + (1 - Math.abs(k) * 0.22) * 34;
+        ctx.beginPath(); ctx.ellipse(lx, ly, 7, 12, k % 2 ? 0.45 : -0.45, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+
+    // A faint dry-line horizon scratches across the basin.
+    ctx.globalAlpha = 0.22; ctx.strokeStyle = pal.accent; ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const y = 448 + i * 11;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.bezierCurveTo(220, y - 5, 640, y + 7, C.W, y - 2); ctx.stroke();
+    }
+    ctx.restore();
+  },
   // A cut's shape (see G.CLASSES[cls].shape) filled at 0,0 with radius r: 'triangle' | 'crescent' | 'star' | 'slab'.
   cutShape(ctx, shape, r) {
     ctx.beginPath();
@@ -79,7 +125,7 @@ const art = G.art = {
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   },
   // Screen-space background with two parallax layers and drifting motes.
-  backdrop(ctx, pal, camX, time) {
+  backdrop(ctx, pal, camX, time, regionId) {
     const g = ctx.createLinearGradient(0, 0, 0, C.H);
     g.addColorStop(0, pal.sky0); g.addColorStop(0.6, pal.sky1); g.addColorStop(1, pal.sky2);
     ctx.fillStyle = g; ctx.fillRect(0, 0, C.W, C.H);
@@ -93,6 +139,7 @@ const art = G.art = {
         else ctx.fillRect(x, 120 + h1 * 160, w, C.H);
       }
     }
+    art.regionBackdrop(ctx, regionId, pal, camX, time);
     ctx.fillStyle = pal.accent;
     for (let i = 0; i < 46; i++) {
       const x = (((i * 211.7 + time * (6 + i % 5 * 3)) - camX * 0.8) % (C.W + 40) + C.W + 40) % (C.W + 40) - 20;
@@ -102,7 +149,7 @@ const art = G.art = {
     ctx.globalAlpha = 1;
   },
   // World-space tiles of the current room.
-  tiles(ctx, pal) {
+  tiles(ctx, pal, regionId) {
     const tl = G.tiles, grid = tl.grid;
     const c0 = Math.max(0, Math.floor(G.cam.x / T)), c1 = Math.min(tl.cols - 1, Math.floor((G.cam.x + C.W) / T));
     const r0 = Math.max(0, Math.floor(G.cam.y / T)), r1 = Math.min(tl.rows - 1, Math.floor((G.cam.y + C.H) / T));
@@ -118,6 +165,12 @@ const art = G.art = {
         if (c > 0 && grid[r][c - 1] !== '#') ctx.fillRect(x, y, 2, T);
         if (c < tl.cols - 1 && grid[r][c + 1] !== '#') ctx.fillRect(x + T - 2, y, 2, T);
         if (r < tl.rows - 1 && grid[r + 1][c] !== '#') ctx.fillRect(x, y + T - 2, T, 2);
+        if (regionId === 'r1' && ((c * 13 + r * 7) % 6 === 0)) {
+          ctx.save(); ctx.globalAlpha = 0.5; ctx.strokeStyle = pal.edge; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x + 7, y + 9); ctx.lineTo(x + T - 7, y + 9); ctx.stroke();
+          ctx.fillStyle = pal.edgeHi; ctx.beginPath(); ctx.arc(x + 8, y + 8, 1.7, 0, 6.283); ctx.arc(x + T - 8, y + 8, 1.7, 0, 6.283); ctx.fill();
+          ctx.restore();
+        }
       } else if (ch === '^') {
         ctx.fillStyle = pal.tile; ctx.fillRect(x, y + 26, T + 0.5, 6.5);
         ctx.fillStyle = pal.spike;
@@ -125,6 +178,11 @@ const art = G.art = {
       } else if (ch === '=') {
         ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 5); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
         ctx.fillStyle = pal.side; ctx.fillRect(x + 4, y + 5, 3, 5); ctx.fillRect(x + T - 7, y + 5, 3, 5);
+        if (regionId === 'r1') {
+          ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = pal.edgeHi;
+          ctx.fillRect(x + 6, y + 2, 2, 2); ctx.fillRect(x + T - 8, y + 2, 2, 2);
+          ctx.restore();
+        }
       }
     }
     ctx.fillStyle = pal.accent;
