@@ -201,7 +201,8 @@ G.defineRoom({
   signs:['TOLL HOUSE — EVACUATION LEDGER CLOSED. AWAIT CANCELLATION AUTHORITY.'],
   decor:[
     {type:'crate_decor',c:7,r:14},{type:'crate_decor',c:15,r:14},{type:'banner_decor',c:19,r:14},
-    {type:'banner_decor',c:27,r:14},{type:'crate_decor',c:38,r:14},{type:'banner_decor',c:55,r:14}
+    {type:'lamp_decor',c:22,r:14},{type:'furnace_decor',c:24,r:14},{type:'banner_decor',c:27,r:14},
+    {type:'banner_decor',c:55,r:14},{type:'lamp_decor',c:57,r:14}
   ],
   map: paint(2, false, ({put,fill})=>{
     // Arena rooms close on the right. The normal painter leaves a main-room exit there, so seal it explicitly.
