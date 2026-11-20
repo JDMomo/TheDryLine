@@ -162,4 +162,71 @@ G.defineRoom({
     '##############################', '##############################'
   ]
 });
+
+/* ---------- Authored Signal Reef campaign spine ---------- */
+(() => {
+  const wide=(id,build,signs=[])=>{
+    const W=60,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+    g[0].fill('#');g[15].fill('#');g[16].fill('#');
+    for(let r=0;r<H;r++)if(r<12||r>14){g[r][0]='#';g[r][W-1]='#';}
+    const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+    const put=(r,c,ch)=>g[r][c]=ch;
+    build({g,fill,put,W,H});
+    G.defineRoom({id,region:'r2',kind:'main',w:2,map:g.map(x=>x.join('')),signs});
+  };
+
+  // 1. Coral Stair — introduction: mostly ground movement, then an optional elevated lamp route.
+  wide('r2_spire',({fill,put})=>{
+    fill(13,14,12,14,'#'); fill(12,14,28,30,'#'); fill(13,14,45,47,'#');
+    fill(11,11,16,22,'='); fill(9,9,25,31,'='); fill(10,10,35,41,'='); fill(8,8,46,52,'=');
+    // Signal-mast silhouettes are represented by narrow solid pylons that never block the low route.
+    fill(6,14,7,7,'#'); fill(4,14,54,54,'#');
+    put(14,18,'E'); put(14,40,'E'); put(9,38,'F');
+    put(14,56,'D'); put(14,5,'?');
+  },['SIGNAL REEF — lamps repeat until acknowledged.']);
+
+  // 2. Lamp Shaft — the region's identity room: a real two-screen vertical climb.
+  {
+    const W=30,H=34,g=Array.from({length:H},()=>Array(W).fill('.'));
+    for(let r=0;r<H;r++){g[r][0]='#';g[r][W-1]='#';}
+    g[0].fill('#');g[H-1].fill('#');
+    for(let c=13;c<=16;c++){g[0][c]='.';g[H-1][c]='.';}
+    const fill=(r,c0,c1,ch)=>{for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+    const put=(r,c,ch)=>g[r][c]=ch;
+    // Safe zig-zag shelves. Every rise is base-jump reachable and every miss lands lower in the shaft.
+    [[30,6,11],[27,15,20],[24,7,12],[21,16,21],[18,6,11],[15,15,20],[12,7,12],[9,16,21],[6,8,13],[3,13,18]]
+      .forEach(([r,a,b])=>fill(r,a,b,'='));
+    // Fast center line: timed vents skip several shelf changes, but are never required.
+    put(30,14,'v');put(22,14,'v');put(14,14,'v');
+    // Reward alcove and branch doorway are off the safe line rather than on it.
+    fill(19,22,25,'='); put(18,23,'C');
+    fill(22,4,8,'='); put(21,6,'D');
+    put(28,9,'E'); put(20,18,'F'); put(11,10,'F'); put(5,18,'F');
+    G.defineRoom({id:'r2_shaft',region:'r2',kind:'main',h:2,route:['bottom','top'],map:g.map(x=>x.join('')),
+      signs:['The lamps above are repeating the same departure code.']});
+  }
+
+  // 3. Gull Roost — teaches aerial space: broad safe floor, high perches, spring as an optional intercept tool.
+  wide('r2_roost',({fill,put})=>{
+    fill(13,14,10,13,'#'); fill(12,14,25,28,'#'); fill(13,14,43,46,'#');
+    fill(9,9,7,14,'='); fill(7,7,19,27,'='); fill(9,9,32,40,'='); fill(6,6,45,53,'=');
+    put(15,17,'j'); put(15,41,'j');
+    put(8,11,'F'); put(6,23,'F'); put(8,36,'F'); put(5,49,'F');
+    // Harvester/support anchor on the ground creates a target-priority lesson beneath the flyers.
+    put(14,31,'E'); put(14,52,'E');
+    put(14,56,'D'); put(14,4,'?');
+  },['The roost was built around the signal masts, not the other way around.']);
+
+  // 4. Beacon Tower — combines vertical route choice, steam timing and aerial pressure before Lamp-Heron.
+  wide('r2_tower',({fill,put})=>{
+    fill(13,14,8,10,'#'); fill(11,14,20,22,'#'); fill(9,14,32,34,'#'); fill(12,14,46,48,'#');
+    fill(10,10,11,18,'='); fill(8,8,23,30,'='); fill(7,7,35,42,'='); fill(9,9,48,54,'=');
+    // Steam can boost from low route to high route; ordinary jumps/stairs still clear the room.
+    put(15,16,'v'); put(15,39,'v');
+    fill(5,14,56,56,'#'); // beacon mast silhouette
+    put(14,14,'E'); put(14,37,'E'); put(9,27,'F'); put(6,39,'F');
+    put(14,53,'D'); put(14,5,'?');
+  },['BEACON 4 — cancellation relay never acknowledged.']);
+})();
+
 })();
