@@ -82,16 +82,17 @@ The intended feel is Hollow Knight-like readability: dangerous because the patte
 
 **Rework target:** ambusher / temporary terrain hazard. Keep the ceiling shake tell. Broaden the readable trigger, make the landing create a short-lived hazard or blocking pool of light/heat, then expose the broken lamp for a punish/cleanup window. It should remain a support threat, not a high-HP duel enemy.
 
-## Roster gaps
+## Designed roster additions not yet wired into runtime
 
-The current eight cover walker, thrower, armour, swooper, drifter, hopper, rusher and ambusher in name, but several are still variations of contact damage. The roster needs 4–6 additional enemies after the rework so each region can field 3–4 enemies with complementary jobs.
+The eight enemies above are the **current runtime roster**, but they are not the full designed roster. Existing Dry Line watercolor asset work already establishes three additional enemies. Their visual identity and combat job are source-of-truth design constraints even though no runtime ids/definitions exist for them yet:
 
-Already reserved from design planning:
-- **Sapper** — new enemy; final mechanics not yet encoded in the repository.
-- **Harvester** — new enemy; final mechanics not yet encoded in the repository.
-- **Mirage** — new enemy; final mechanics not yet encoded in the repository.
+- **Sapper — Explosive.** Existing watercolor design: a compact round bomb/pressure-machine silhouette with fuse/hat language and animation concepts. Runtime implementation should make it the explosive/area-denial role rather than inventing a replacement concept.
+- **Harvester — Support.** Existing watercolor design: tripod/tank-like support machine with tubes and glowing canisters. Runtime implementation should preserve the support identity and use those canisters/tubes as readable gameplay language.
+- **Mirage — Phasing.** Existing watercolor design: shadowy hooded/cloth figure with trailing ribbons and phase/shimmer animation concepts. Runtime implementation should preserve phasing as its defining role.
 
-Do not manufacture final mechanics or art for these three until their previously planned concepts are recovered or explicitly respecified. Placeholder runtime art is acceptable for implementation.
+These are **existing designed enemies, not blank concepts**. The remaining work is to recover/use their established art and behavior intent, assign stable runtime ids, implement them with placeholder/code rendering only where a production strip is unavailable, and add their final sprite-sheet filenames to the asset manifest. Do not redesign their silhouettes or roles from scratch.
+
+After these three are integrated, add only the minimum additional enemy types needed to reach the requested 3–4 complementary roles per region; total new runtime additions should remain within the requested 4–6.
 
 ## Cross-roster systems to add
 

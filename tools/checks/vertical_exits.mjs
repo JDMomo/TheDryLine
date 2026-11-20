@@ -2,6 +2,7 @@
 export default async ({ page }) => {
   const r = await page.evaluate(() => {
     const D = G.debug, CW = 30, CH = 17;
+    D.newRun(1);
     const make = (id, route, topC, botC) => {
       const rows = CH * 2, g = Array.from({ length: rows }, (_, r) => Array(CW).fill('.'));
       for (let r = 0; r < rows; r++) for (let c = 0; c < CW; c++) if (r === 0 || r === rows - 1 || c === 0 || c === CW - 1) g[r][c] = '#';
