@@ -2,7 +2,7 @@
 export default async ({page})=>{
  const r=await page.evaluate(()=>{
    const bad=[], expected={
-    r1_gangway:['ballast_crab','ballast_crab'],
+    r1_gangway:['ballast_crab'],
     r1_dock:['ballast_crab','sapper','turnstile'],
     r2_roost:['harvester','ballast_crab'],
     r3_terraces:['mirage','brine_toad','mirage','ballast_crab'],
