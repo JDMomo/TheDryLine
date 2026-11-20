@@ -5,7 +5,14 @@
 (() => {
 'use strict';
 const G = window.G, C = G.C, art = G.art;
-const W = C.W, H = C.H, X0 = 270;
+const W = C.W, H = C.H, X0 = 286;
+const REGION_TAGS = {
+  r1:'mud · wrecks · crumble',
+  r2:'vertical · steam · lamps',
+  r3:'salt · exposed rails · springs',
+  r4:'conveyors · canopies · machinery',
+  final:'steam · clockwork · borrowed attacks'
+};
 const routeGlyph = d => {
   const r=d.route||['left','right'], k=r.join('>');
   return ({'left>right':'→','right>left':'←','bottom>top':'↑','top>bottom':'↓','left>top':'↗','top>right':'↘','right>top':'↖','top>left':'↙','left>bottom':'↘','bottom>right':'↗','right>bottom':'↙','bottom>left':'↖'})[k] || '·';
@@ -61,21 +68,21 @@ G.map = {
     const run = G.run, graph = run.graph, here = G.rooms.current.id;
     ctx.fillStyle = 'rgba(6,11,11,0.98)'; ctx.fillRect(0, 0, W, H);
     art.label(ctx, 'Route Board', W / 2, 18, 22, '#e9a23b', 'center', C.DISPLAY, 600);
-    if (G.story) art.label(ctx, G.story.objective(), W / 2, 38, 11.5, '#e9e2cf');
+    if (G.story) art.label(ctx, G.story.objective(), W / 2, 39, 11.5, '#e9e2cf');
 
     // tokens the party holds
     const held = G.game.heldTokens(), total = G.players.reduce((s, p) => s + p.slots, 0);
-    art.label(ctx, 'Tokens held', 24, 48, 12, '#9aa89f', 'left');
+    art.label(ctx, 'Tokens held', 24, 60, 12, '#9aa89f', 'left');
     for (let i = 0; i < total; i++) {
       const t = held[i], x = 116 + i * 205;
-      if (!t) { art.label(ctx, '(empty slot)', x + 16, 48, 12, '#4d5a54', 'left'); continue; }
-      G.items.icon(ctx, t.id, x + 6, 48, 0.75);
-      art.label(ctx, t.name + ' · ' + G.CLASSES[t.cls].name, x + 20, 48, 12, t.color, 'left', C.FONT, 600);
-      G.materials.drawChips(ctx, G.itemDefs[t.id].mat, x + 20, 61, 'left');
+      if (!t) { art.label(ctx, '(empty slot)', x + 16, 60, 12, '#4d5a54', 'left'); continue; }
+      G.items.icon(ctx, t.id, x + 6, 60, 0.75);
+      art.label(ctx, t.name + ' · ' + G.CLASSES[t.cls].name, x + 20, 60, 12, t.color, 'left', C.FONT, 600);
+      G.materials.drawChips(ctx, G.itemDefs[t.id].mat, x + 20, 73, 'left');
     }
 
-    const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), rowH = Math.min(80, (H - 146) / order.length);
-    const hub = graph.nodes[graph.hub], hy = 66;
+    const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), rowH = Math.min(70, (H - 178) / order.length);
+    const hub = graph.nodes[graph.hub], hy = 80;
     art.label(ctx, 'The Junction', 24, hy + 14, 14, '#e9e2cf', 'left', C.FONT, 600);
     art.label(ctx, 'Gates are all open', 24, hy + 32, 11.5, '#9aa89f', 'left');
     box(ctx, X0, hy + 14, 70, 22, hub, hub.id === here, '');
@@ -88,32 +95,34 @@ G.map = {
     order.forEach((reg, ri) => {
       const g = graph.regions[reg.id], y = hy + 58 + ri * rowH, pal = art.palette(reg.id), boss = G.bossDefs[reg.boss], done = run.beaten[reg.id];
       if (!g) return;
-      art.label(ctx, reg.name, 24, y + 14, 14, pal.accent, 'left', C.FONT, 600);
-      art.label(ctx, 'Warden: ' + (boss ? boss.name : '?'), 24, y + 32, 11.5, done ? '#5c6a63' : '#e9e2cf', 'left');
-      art.label(ctx, done ? 'Fallen' : 'Waits down the line', 24, y + 48, 11.5, done ? '#5c6a63' : '#9aa89f', 'left');
+      art.label(ctx, reg.name, 24, y + 11, 14, pal.accent, 'left', C.FONT, 600);
+      const seenMain=g.nodes.filter(id=>!graph.nodes[id].parent&&graph.nodes[id].seen).length, totalMain=g.nodes.filter(id=>!graph.nodes[id].parent).length;
+      art.label(ctx, 'Route ' + seenMain + '/' + totalMain + '   ·   ' + (REGION_TAGS[reg.id]||''), 24, y + 27, 10.5, '#9aa89f', 'left');
+      art.label(ctx, (boss ? boss.name : '?') + (done ? ' — fallen' : ' — waiting'), 24, y + 42, 11, done ? '#5c6a63' : '#e9e2cf', 'left');
+      if(reg.ability) art.label(ctx, (run.abil[reg.ability] ? '✓ ' : '○ ') + G.abilityDefs[reg.ability].name, 24, y + 57, 10.5, run.abil[reg.ability] ? '#e9a23b' : '#5c6a63', 'left');
       const gr = (run.grades || {})[reg.id];
-      if (gr) art.label(ctx, 'Grade: ' + G.game.gradeText(gr), 24, y + 63, 11.5, gr.clean ? '#fff3c4' : '#e9a23b', 'left', C.FONT, 600);
+      if (gr) art.label(ctx, G.game.gradeText(gr), 206, y + 57, 10.5, gr.clean ? '#fff3c4' : '#e9a23b', 'right', C.FONT, 600);
 
       const chain = g.nodes.filter(id => !graph.nodes[id].parent);
       let mainN = 0;
       chain.forEach((id, i) => {
         const node = graph.nodes[id], isArena = id === g.arena, x = X0 + i * 100;
-        if (i) { ctx.fillStyle = '#2a3a35'; ctx.fillRect(x - 30, y + 24, 30, 2); }
+        if (i) { ctx.fillStyle = '#2a3a35'; ctx.fillRect(x - 30, y + 24, 24, 2); }
         if (!isArena) mainN++;
-        const d=G.roomDefs[node.def], nm=G.story ? G.story.roomName(node.def) : 'Room ' + mainN;
-        box(ctx, x, y + 14, 70, 22, node, id === here, isArena ? '' : nm);
-        if (!isArena && node.seen) art.label(ctx, routeGlyph(d), x + 62, y + 25, 10, '#9aa89f');
-        if (isArena) sigil(ctx, x + 35, y + 25, pal.accent, done);
+        const d=G.roomDefs[node.def], known=node.seen||run.mods.revealMap, nm=known ? (G.story ? G.story.roomName(node.def) : 'Room ' + mainN) : '?';
+        box(ctx, x, y + 12, 76, 24, node, id === here, isArena ? '' : nm);
+        if (!isArena && node.seen) art.label(ctx, routeGlyph(d), x + 68, y + 24, 10, '#9aa89f');
+        if (isArena) sigil(ctx, x + 38, y + 24, pal.accent, done);
         g.nodes.filter(b => graph.nodes[b].parent === id).forEach((b, k) => {
           if (!node.seen && !run.mods.revealMap) return;
           const bn = graph.nodes[b], letter = String.fromCharCode(65 + g.nodes.filter(q => graph.nodes[q].parent).indexOf(b));
           const known = bn.seen || run.mods.revealMap;
-          box(ctx, x + k * 24, y - 1, 20, 13, bn, bn.id === here, known ? letter : '?');
+          box(ctx, x + k * 24, y - 3, 20, 13, bn, bn.id === here, known ? letter : '?');
         });
       });
       if (reg.id === 'final') {                                // what the Long Clock will borrow, shown before the player commits
         const bs = G.game.borrows(run);
-        inline(ctx, [{ text: 'Borrows: ', color: '#9aa89f' }].concat(bs.length ? bs.map((x, i) => ({ text: (i ? ', ' : '') + x.short + ' (' + x.warden + ')', color: '#e9a23b' })) : [{ text: 'nothing, every Warden has fallen', color: '#5c6a63' }]), X0 + 290, y + 25, W - 10, 10.5);
+        inline(ctx, [{ text: 'Borrows: ', color: '#9aa89f' }].concat(bs.length ? bs.map((x, i) => ({ text: (i ? ', ' : '') + x.short, color: '#e9a23b' })) : [{ text: 'nothing', color: '#5c6a63' }]), X0 + 288, y + 24, W - 10, 9.5);
       }
       // what each side room holds
       const sides = g.nodes.filter(b => graph.nodes[b].parent && (graph.nodes[graph.nodes[b].parent].seen || run.mods.revealMap));
@@ -121,19 +130,22 @@ G.map = {
       if (pieces.length) {
         // side rooms fill two columns of up to two lines
         const half = (W - 20 - X0) / 2;
-        pieces.forEach((parts, k) => inline(ctx, parts, X0 + (k % 2) * half, y + 44 + Math.floor(k / 2) * 12, X0 + (k % 2) * half + half - 8, 10));
-      } else inline(ctx, [{ text: 'No side rooms found yet', color: '#4d5a54' }], X0, y + 44, W - 20, 10);
+        pieces.forEach((parts, k) => inline(ctx, parts, X0 + (k % 2) * half, y + 42 + Math.floor(k / 2) * 11, X0 + (k % 2) * half + half - 8, 9.5));
+      } else inline(ctx, [{ text: 'No side rooms found yet', color: '#4d5a54' }], X0, y + 42, W - 20, 9.5);
       // the Warden's three fare slots on this run's lock chart, by cut
       const parts = [{ text: 'Lock chart: ', color: '#9aa89f' }];
       for (const cut of (graph.chart && graph.chart[reg.id]) || Object.keys(G.CLASSES)) {
         const s = boss && boss.spots && boss.spots[cut];
         parts.push({ cut }); parts.push({ text: (s ? s.name : '?') + ' (' + G.CLASSES[cut].name.toLowerCase() + ')   ', color: G.CLASSES[cut].color });
       }
-      inline(ctx, parts, X0, y + 68, W - 10, 10);
+      inline(ctx, parts, X0, y + 63, W - 10, 9.5);
     });
     const note=G.story&&G.story.latest();
-    if(note) art.label(ctx, 'Latest note — '+note.title+': '+note.text, W/2, H-29, 10.5, '#9aa89f');
-    art.label(ctx, 'Rooms show their route direction   ·   diamond = Warden   ·   letters = side rooms   ·   Tab to close', W / 2, H - 12, 10.5, '#9aa89f');
+    if(note) {
+      ctx.fillStyle='rgba(6,11,11,0.86)';ctx.fillRect(18,H-49,W-36,24);
+      art.label(ctx, 'Latest note — '+note.title+': '+note.text, W/2, H-37, 10, '#e9e2cf');
+    }
+    art.label(ctx, 'Bright = visited   ·   outline = here   ·   arrows = room route   ·   diamond = Warden   ·   Tab to close', W / 2, H - 12, 10, '#9aa89f');
   }
 };
 })();
