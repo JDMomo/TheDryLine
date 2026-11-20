@@ -18,7 +18,9 @@ export default async ({ page }) => {
   if(shape.spikes!==0) bad.push('safe route should not require damage hazards: '+JSON.stringify(shape));
   if(!(shape.trunk.c>=49&&shape.trunk.r===8)) bad.push('trunk is not in the far spring alcove: '+JSON.stringify(shape.trunk));
 
-  // The generic validator must prove left<->right and the optional trunk from both sides using base movement only.
+  // The generic validator needs a live run so it can attach its temporary qa_r1_dock graph node.
+  await page.evaluate(() => { G.debug.newRun(73); G.debug.god(true); });
+  // Prove left<->right and the optional trunk from both sides using base movement only.
   const jobs = await page.evaluate(pageTraverse,{id:'r1_dock',abil:[],budget:1200000,strict:true});
   const names=jobs.map(j=>j.name), failed=jobs.filter(j=>!j.ok);
   if(!names.some(n=>n==='left to right')||!names.some(n=>n==='right to left')) bad.push('main route jobs missing: '+names.join(', '));
