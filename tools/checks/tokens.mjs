@@ -59,14 +59,14 @@ export default async ({ page }) => {
   for (const cut of Object.keys(CUTS)) if (ids.filter(i => res.tokens[i].cls === cut).length !== 3) throw new Error('cut ' + cut + ' does not have three tokens');
 
   // each cut punches its slot on the reference boss (aim values as in punch.mjs)
-  const aim = { pierce: [500, 436, 1], arc: [524, 480, 1, { right: true }], burst: [630, 480, 1], ground: [920, 480, -1] };
-  const punch = await page.evaluate(({ CUTS, aim }) => {
+  const bossX = 1200, aim = { pierce: [980, 436, 1], arc: [1004, 480, 1, { right: true }], burst: [1110, 480, 1], ground: [1400, 480, -1] };
+  const punch = await page.evaluate(({ CUTS, aim, bossX }) => {
     const D = G.debug, out = {};
     for (const cut in CUTS) {
       const id = CUTS[cut];
       D.newRun(3); D.god(true); D.gotoRoom('r1'); G.players[0].items = [id]; G.players[0].sel = 0;
       D.startBoss('r1'); const floor = D.state().room.boss.floor;
-      D.holdBoss({ x: 720, y: floor, face: -1, rear: cut === 'burst' ? 1 : 0 });
+      D.holdBoss({ x: bossX, y: floor, face: -1, rear: cut === 'burst' ? 1 : 0 });
       const [x, y, face, hold] = aim[cut];
       for (let k = 0; k < 3; k++) {
         G.players[0].itemCd = 0; D.place(0, x, y, face); D.step(1);
@@ -75,7 +75,7 @@ export default async ({ page }) => {
       out[cut] = D.state().room.boss.spots.find(s => s.cls === cut).broken;
     }
     return out;
-  }, { CUTS, aim });
+  }, { CUTS, aim, bossX });
   for (const cut in CUTS) if (!punch[cut]) throw new Error(cut + ': ' + CUTS[cut] + ' did not punch the slot');
 
   // trinkets
