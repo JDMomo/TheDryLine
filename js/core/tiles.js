@@ -62,7 +62,8 @@ const tiles = G.tiles = {
 
       if (o.onGround && under === 'j') {
         o.vy = -Math.max(760, G.C.MOVE.JUMP_V * 1.24); o.onGround = false;
-        if ('canDouble' in o) { o.canDouble = true; o.coyote = 0; o.jumping = o.airJ = true; }
+        // A spring is an external launch, not a button-held jump. Keep it from being shortened next frame by the player's jump-release cut.
+        if ('canDouble' in o) { o.canDouble = true; o.coyote = 0; o.jumping = false; o.airJ = false; }
       }
 
       // A vent launches bodies in the four-tile column above it while its visible steam pulse is active.
