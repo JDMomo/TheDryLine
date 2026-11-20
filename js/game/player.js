@@ -168,7 +168,7 @@ class Player {
       p.onGround = true; p.vy = 0; p.coyote = M.COYOTE; p.canDouble = true; p.airJ = false; p.sliding = false;
       if (p.dashT <= 0) p.canDash = true;
       p.groundT += dt;
-      const r = Math.floor(p.y / T), under = x => tiles.floorAt(Math.floor(x / T), r) && x > 0 && x < tiles.cols * T;
+      const r = Math.floor(p.y / T), under = x => tiles.stableFloorAt(Math.floor(x / T), r) && x > 0 && x < tiles.cols * T;
       if (p.groundT > 0.12 && under(p.x - 18) && under(p.x + 18) && p.inv <= 0) { p.safeX = p.x; p.safeY = p.y; }
     } else { p.onGround = false; p.groundT = 0; if (res.hy === -1) p.vy = 0; }
 

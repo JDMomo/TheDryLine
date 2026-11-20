@@ -138,6 +138,28 @@ const art = G.art = {
         ctx.fillStyle = '#687672'; ctx.fillRect(x, y, T + 0.5, 5);
         ctx.strokeStyle = '#b6c0b9'; ctx.lineWidth = 2; const d = ch === '>' ? 1 : -1, cx = x + 16;
         ctx.beginPath(); ctx.moveTo(cx - d * 6, y + 12); ctx.lineTo(cx + d * 3, y + 17); ctx.lineTo(cx - d * 6, y + 22); ctx.stroke();
+      } else if (ch === 'c') {
+        const st = tl.crumbleState(c, r);
+        if (!tl.crumbleGone(c, r)) {
+          const blink = st && st.phase === 'warn' ? 0.48 + 0.38 * Math.abs(Math.sin(G.time * 24)) : 1;
+          ctx.globalAlpha = blink; ctx.fillStyle = pal.tile; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+          ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 4);
+          ctx.strokeStyle = pal.edgeHi; ctx.lineWidth = 1.5; ctx.beginPath();
+          ctx.moveTo(x + 4, y + 8); ctx.lineTo(x + 13, y + 16); ctx.lineTo(x + 9, y + 27);
+          ctx.moveTo(x + 28, y + 7); ctx.lineTo(x + 20, y + 15); ctx.lineTo(x + 25, y + 28); ctx.stroke(); ctx.globalAlpha = 1;
+        }
+      } else if (ch === 'j') {
+        ctx.fillStyle = '#303b39'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        ctx.strokeStyle = '#d9b85b'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 5, y + 23); ctx.lineTo(x + 11, y + 11); ctx.lineTo(x + 17, y + 23); ctx.lineTo(x + 23, y + 11); ctx.lineTo(x + 28, y + 23); ctx.stroke();
+        ctx.fillStyle = '#d9b85b'; ctx.fillRect(x + 3, y + 3, T - 6, 4);
+      } else if (ch === 'v') {
+        ctx.fillStyle = '#3a4644'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
+        ctx.fillStyle = '#8d9b96'; for (let k = 0; k < 3; k++) ctx.fillRect(x + 5 + k * 9, y + 5, 4, 12);
+        if (tl.ventActive(c, r)) {
+          ctx.globalAlpha = 0.42; ctx.fillStyle = '#d8e3de';
+          for (let k = 0; k < 5; k++) { const yy = y - 12 - ((G.time * 95 + k * 23) % 105); ctx.beginPath(); ctx.arc(x + 7 + (k % 3) * 9, yy, 5 + (k % 2) * 2, 0, 6.283); ctx.fill(); }
+          ctx.globalAlpha = 1;
+        }
       }
     }
     ctx.fillStyle = pal.accent;

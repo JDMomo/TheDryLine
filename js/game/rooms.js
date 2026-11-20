@@ -17,6 +17,7 @@ const SIDES = ['left', 'right', 'top', 'bottom'];
    Characters:
      #  solid          .  empty          ^  spikes (hurt, can be bounced on with a down slash)      =  one-way platform
      s  slippery salt crust (solid; wet dissolves it)    m  mud (solid; slows movement)    >/<  right/left conveyor (solid; pushes grounded bodies)
+     c  crumbling ledge (warns, falls, rebuilds)          j  launch spring                 v  timed steam vent
      E  ground enemy   F  flying enemy   L  ceiling enemy (hangs from the ceiling above it)   I  plinth (token)    C  lost trunk (opens when the room is clear)
      R  ticket machine (needs 2 free tiles each side)        S  kiosk ware (priced plinth)       K  clipping booth (needs 3 free tiles each side)
      M  signal post    H  standpipe      D  doorway           B  boss (arena)    G  region gate (hub)    ?  sign (text from signs[])    P  party start (hub)
@@ -36,7 +37,7 @@ G.defineRoom = def => {
     for (let c = 0; c < row.length; c++) {
       const ch = row[c];
       if (MARKS.includes(ch)) { marks.push({ ch, c, r }); out += '.'; }
-      else if ('#.^=sm<>'.includes(ch)) out += ch;
+      else if ('#.^=sm<>cjv'.includes(ch)) out += ch;
       else { bad('unknown character "' + ch + '" at row ' + r + ', column ' + c); out += '.'; }
     }
     grid.push(out);
@@ -82,8 +83,8 @@ const markPos = m => ({ x: m.c * T + T / 2, y: (m.r + 1) * T });
 function instance(node) {
   const def = G.roomDefs[node.def];
   const room = { node, id: node.id, def, region: node.region, kind: def.kind, grid: def.grid.slice(), cols: def.cols, rows: def.rows,
-    props: [], enemies: [], boss: null, cleared: false, fight: false };
-  tiles.load(room.grid);                 // enemy and boss constructors read the room size
+    props: [], enemies: [], boss: null, cleared: false, fight: false, terrain: { crumble: {} } };
+  tiles.load(room.grid, room.terrain);                 // enemy and boss constructors read the room size
   def.marks.forEach((m, i) => {
     const c = node.content[i], { x, y } = markPos(m);
     if (!c) return;
@@ -111,7 +112,7 @@ const rooms = G.rooms = {
     const node = G.run.graph.nodes[nodeId];
     const room = G.run.rooms[nodeId] || (G.run.rooms[nodeId] = instance(node));
     if (rooms.current && rooms.current !== room) G.combat.leave();         // scrip on the floor goes with the party
-    rooms.current = room; tiles.load(room.grid); G.combat.clear(); fx.clear();
+    rooms.current = room; tiles.load(room.grid, room.terrain); G.combat.clear(); fx.clear();
     let x = 3 * T, y = groundY(room, 1), face = 1;
     if (entry.side === 'left') { x = 40; y = groundY(room, 1); }
     else if (entry.side === 'right') { x = room.cols * T - 40; y = groundY(room, room.cols - 2); face = -1; }
@@ -168,6 +169,7 @@ const rooms = G.rooms = {
     for (const pr of room.props) pr.update(dt);
     room.props = room.props.filter(pr => !pr.gone);
     for (const e of room.enemies) e.update(dt);
+    tiles.updateTerrain(G.players.concat(room.enemies));
     if (room.enemies.some(e => e.dead)) { G.run.stats.kills += room.enemies.filter(e => e.dead).length; room.enemies = room.enemies.filter(e => !e.dead); }
     if (!room.cleared && !room.enemies.length) { room.cleared = true; if (lead) fx.floatText(lead.x, lead.y - 70, 'Room clear', '#e9e2cf'); }
     if (room.boss) {
