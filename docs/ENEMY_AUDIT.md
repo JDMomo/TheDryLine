@@ -122,3 +122,14 @@ A reworked enemy is not considered done until automated checks prove:
 - material interactions are deterministic;
 - its old stable id still works in room generation and saves/run codes;
 - placeholder/code art and final sprite art use the same state names so art can be swapped without gameplay changes.
+
+
+## Added encounter jobs — vertical-slice pass
+
+The canonical watercolor concept sheet also defines three later-roster jobs now represented by code placeholders until their strips are cut:
+
+- **Sapper — explosive zoning.** A 0.7 s plant tell precedes a cuttable delayed charge. Hitting the Sapper during the tell cancels the plant. Counterplay: interrupt, cut the mine, or move out of the marked space.
+- **Harvester — support / repair.** It only begins its 0.85 s repair tell when a nearby ally is damaged. Hitting it during the tell cancels the pulse. Counterplay: prioritize the support unit or deliberately separate it from wounded enemies.
+- **Mirage — phasing ambusher.** It visibly fades, relocates to safe footing near the target, then gives a 0.5 s reappearance tell before a committed dash. Counterplay: wait for the tell and punish the recovery rather than chasing the fade.
+
+These keep the existing attack contract: **wind-up → committed active move → recovery**, with a readable interruption or positional answer. Their final silhouettes must follow `The Dry Line Watercolor Sprite Sheet.png`, not the procedural placeholders.
