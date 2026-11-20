@@ -18,7 +18,8 @@ export default async ({page})=>{
     const t0=room.mech&&room.mech.main&&room.mech.main.timer;if(!(t0>4&&t0<=4.5))bad.push('lever timer wrong '+t0);
     D.step(Math.ceil(4.7/G.C.STEP));if(!gate.bl.on)bad.push('gate did not close when lever timer ended');
 
-    if(G.players.length<2)G.debug.addPlayer();
+    while(G.players.length>2)G.game.removePlayer(G.players[G.players.length-1]);
+    while(G.players.length<2)G.debug.addPlayer();
     const p2=G.players[1];D.place(0,plate.x,plate.y,1);p.onGround=true;D.place(1,plate.x+80,plate.y,1);p2.onGround=true;D.step(3);
     if(gate.bl.on||!plate.data.active)bad.push('pressure plate did not hold gate open');
     D.place(0,plate.x-100,plate.y,1);p.onGround=true;D.step(8);
