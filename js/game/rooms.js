@@ -21,7 +21,7 @@ const SIDES = ['left', 'right', 'top', 'bottom'];
      M  signal post    H  standpipe      D  doorway           B  boss (arena)    G  region gate (hub)    ?  sign (text from signs[])    P  party start (hub)
      X  cracked barrier (branch rooms): a wall three tiles tall standing on the tile below the marker; only a heavy cut breaks it
    A marker stands on the tile below it: put it in the empty tile directly above a floor.
-   Side exits: 'main' rooms are open (.) on both the left and right edge at rows 12 to 14 of the bottom cell; 'arena' rooms on the left edge only.
+   Main route ports: def.route = [entrySide, exitSide], using left/right/top/bottom; omitted means left -> right. Arenas still open on the left only.
    'branch' and 'trial' rooms have exactly one D (the way back) and closed edges.
    Arena boss door: the first column from the left whose row 11 is solid and rows 12 to 14 are open; it closes while the boss fights. */
 G.defineRoom = def => {
@@ -41,7 +41,8 @@ G.defineRoom = def => {
     grid.push(out);
   });
   const base = (h - 1) * C.CH, cols = C.CW * w, rows = C.CH * h;
-  const openLR = side => EXIT_ROWS.every(r => grid[base + r][side === 'left' ? 0 : cols - 1] === '.');
+  const openCol = c => EXIT_ROWS.every(r => grid[base + r][c] === '.');
+  const openLR = side => openCol(side === 'left' ? 0 : cols - 1);
   const edgeRun = side => {
     if (side === 'left' || side === 'right') return openLR(side) ? { c: side === 'left' ? 0 : cols - 1, r: base + 13 } : null;
     const r = side === 'top' ? 0 : rows - 1, runs = []; let start = -1;
@@ -63,9 +64,9 @@ G.defineRoom = def => {
     for (const side of SIDES) if (!route.includes(side) && ports[side]) bad('main room has an undeclared open ' + side + ' edge; add it to route or close it');
   }
   if (def.kind === 'arena') {
-    if (!open(0) || !bMark) return bad('arenas need an open left edge and a B marker');
+    if (!openLR('left') || !bMark) return bad('arenas need an open left edge and a B marker');
     room.doorCol = 0;
-    for (let c = 0; c < bMark.c; c++) if (grid[base + 11][c] === '#' && open(c)) { room.doorCol = c; break; }
+    for (let c = 0; c < bMark.c; c++) if (grid[base + 11][c] === '#' && openCol(c)) { room.doorCol = c; break; }
     let c1 = bMark.c; while (c1 < cols && grid[bMark.r][c1] !== '#') c1++;
     room.floorX = [(room.doorCol + 1) * T, c1 * T];          // open floor of the fight, in pixels
   }
