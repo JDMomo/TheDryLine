@@ -175,6 +175,10 @@ export function pageTraverse(spec) {
     });
   } else if (def.kind === 'arena') {
     jobs.push({ name: 'entrance to boss door', entry: { side: 'left' }, goal: { type: 'door' } });
+  } else if (def.kind === 'hub') {
+    // the start area: every gate is reachable from the spawn with base moves (a sealed gate bay once trapped new players at the start)
+    const startIdx = marks.findIndex(m => m.ch === 'P');
+    if (startIdx >= 0) marks.forEach((m, i) => { if (m.ch === 'G') jobs.push({ name: 'start to gate (col ' + m.c + ')', entry: { mark: startIdx }, goal: { type: 'mark', i } }); });
   } else if (def.kind === 'branch' || def.kind === 'trial') {
     if (doorIdx >= 0) marks.forEach((m, i) => {
       if (!'ICRSKMH'.includes(m.ch)) return;
@@ -428,8 +432,8 @@ export async function runRooms(page, opts = {}) {
   for (const r of todo) {
     const t0 = Date.now(), { err, warn } = lintRoom(r, info.abil);
     const res = { id: r.id, kind: r.kind, lint: err, warn, jobs: [], ms: 0 };
-    if (walk && !err.length && r.kind !== 'hub') {
-      const spec = { id: r.id, abil: r.kind === 'branch' ? (r.needs || []) : [], budget, seg: opts.seg, beam: opts.beam, strict: !!opts.strict && r.kind === 'main' };
+    if (walk && !err.length) {
+      const spec = { id: r.id, abil: r.kind === 'branch' ? (r.needs || []) : [], budget, seg: opts.seg, beam: opts.beam, strict: (!!opts.strict && r.kind === 'main') || r.kind === 'hub' };   // the start area is always held to run-and-jump only
       res.jobs = await page.evaluate(pageTraverse, spec);
       // the other direction of the rule: a guarded room's plinth must be UNREACHABLE without its ability (nothing but base moves)
       if (r.kind === 'branch' && (r.needs || []).length) {

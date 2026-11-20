@@ -11,9 +11,10 @@ fill(0,1,0,W-1,'#'); fill(32,33,0,W-1,'#');
 fill(0,H-1,0,1,'#'); fill(0,H-1,W-2,W-1,'#');
 
 // LOWER DISTRICT — five gate platforms separated by architectural bays, not hazards.
+// Each gate is a lintel overhead only. (Arch feet down to the floor once sealed every bay into a box and trapped new players between
+// two gates: the floor must stay continuous from wall to wall, and the walk_hub check walks it.)
 for(const c of [8,36,52,84,112]){
-  fill(29,31,c-4,c-3,'#'); fill(29,31,c+3,c+4,'#'); // arch feet
-  fill(27,28,c-4,c+4,'#');                           // lintel
+  fill(27,28,c-2,c+2,'#');                           // lintel, 3 tiles of headroom under it
 }
 // ARRIVAL SHELTER / KEEPER bay.
 // The uprights stop above walking height: this must read as a canopy, never as a sealed starting box.
@@ -27,7 +28,6 @@ put(31,77,'S');                        // kiosk stock: readable between shelter 
 
 // LOWER LANDMARKS — low luggage / machinery masses break the 4-screen run into recognizable chunks.
 fill(30,31,17,20,'#'); fill(29,31,21,22,'#');
-fill(30,31,37,39,'#');
 fill(30,31,98,101,'#'); fill(29,31,102,103,'#');
 
 // UPPER FOOTBRIDGE — optional traversal loop across most of the Junction.
@@ -41,6 +41,11 @@ fill(13,13,52,67,'=');   // high clock balcony
 fill(30,31,12,15,'#'); fill(28,31,16,19,'#'); fill(26,31,20,23,'#'); fill(24,31,24,27,'#'); fill(22,31,28,31,'#');
 fill(30,31,105,108,'#'); fill(28,31,101,104,'#'); fill(26,31,97,100,'#'); fill(24,31,93,96,'#'); fill(22,31,89,92,'#');
 
+// Climbs out of the central concourse: the staircases rise from the outer gates, so their inner faces are 10-tile walls.
+// One-way steps (2 tiles apart: easy hops, a base jump rises about 4) lead from the floor up to each stair top, so Gates 1 and 5 are reachable
+// from the start (the rooms check walks start -> every gate).
+fill(29,29,43,47,'='); fill(27,27,39,42,'='); fill(23,23,32,35,'=');   // west: floor -> 29 -> 27 -> dispatch shelf 25 -> 23 -> stair top 22
+fill(29,29,74,77,'='); fill(27,27,78,81,'='); fill(25,25,79,82,'=');   // east: floor -> 29 -> 27 -> 25 -> overlook shelf 23 -> stair top 22
 // Intermediate shelves make climbing/down-climbing forgiving.
 fill(25,25,33,42,'='); fill(23,23,47,56,'='); fill(25,25,64,73,'='); fill(23,23,78,87,'=');
 
