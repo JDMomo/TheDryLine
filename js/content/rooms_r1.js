@@ -137,8 +137,8 @@ G.defineRoom({
 
     // Independent secret/reward detour. Spring launch reaches the alcove; the player drops back to either route.
     put(15, 52, 'j');
-    put(7, 49, '======');
-    put(6, 52, 'C');
+    put(9, 49, '======');
+    put(8, 52, 'C');
 
     // Encounters bias the slow lane; the high lane trades footing risk for fewer bodies and speed.
     put(14, 9, 'E');
