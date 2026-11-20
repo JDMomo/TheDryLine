@@ -61,7 +61,9 @@ const PROP_SPRITE_SIZE = {
   ticket: [58, 82],
   sign: [34, 72],
   post: [38, 80],
-  lamp_decor: [40, 78]
+  lamp_decor: [40, 78],
+  crate_decor: [62, 110],
+  banner_decor: [44, 116]
 };
 
 /* Each type: draw(pr, ctx); optional update(pr, dt), interact(pr, player), prompt(pr, player) -> [title, line, hint] or null.
@@ -453,6 +455,27 @@ const TYPES = {
       ctx.fillStyle='#e5d5a4';ctx.beginPath();ctx.arc(23,-17,3,0,6.283);ctx.fill();
       ctx.fillStyle='#d9c17d';ctx.globalAlpha=.75;ctx.beginPath();ctx.arc(5,-44,2.5,0,6.283);ctx.fill();
       ctx.globalAlpha=1;ctx.restore();
+    }
+  },
+  crate_decor: {
+    prompt(){ return null; },
+    boxes(){ return []; },
+    draw(pr,ctx){
+      const x=pr.x,y=pr.y;ctx.save();ctx.globalAlpha=.92;
+      ctx.fillStyle='#6f5038';ctx.fillRect(x-24,y-39,46,39);
+      ctx.strokeStyle='#2c211b';ctx.lineWidth=3;ctx.strokeRect(x-24,y-39,46,39);
+      ctx.fillStyle='#765c43';ctx.beginPath();ctx.ellipse(x+15,y-49,17,26,0,0,6.283);ctx.fill();ctx.stroke();
+      ctx.restore();
+    }
+  },
+  banner_decor: {
+    prompt(){ return null; },
+    boxes(){ return []; },
+    draw(pr,ctx){
+      const x=pr.x,y=pr.y;ctx.save();ctx.globalAlpha=.88;
+      ctx.strokeStyle='#3a2d21';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-112);ctx.stroke();
+      ctx.fillStyle='#a75c39';ctx.beginPath();ctx.moveTo(x+3,y-103);ctx.lineTo(x+37,y-96);ctx.lineTo(x+33,y-39);ctx.lineTo(x+19,y-48);ctx.lineTo(x+4,y-42);ctx.closePath();ctx.fill();
+      ctx.restore();
     }
   },
   sign: {       // data: { text }

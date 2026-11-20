@@ -58,6 +58,11 @@ put(31,8,'G'); put(31,30,'G'); put(31,52,'G'); put(31,90,'G'); put(31,112,'G');
 G.defineRoom({
   id:'junction', region:'hub', kind:'hub', w:4, h:2,
   map:g.map(row=>row.join('')),
+  decor:[
+    {type:'crate_decor',c:18,r:31},{type:'crate_decor',c:38,r:31},{type:'crate_decor',c:99,r:31},
+    {type:'banner_decor',c:7,r:27},{type:'banner_decor',c:51,r:27},{type:'banner_decor',c:111,r:27},
+    {type:'banner_decor',c:59,r:13}
+  ],
   signs:[
     'The Junction board still lists five open lines.',
     'The shelter kettle is cold. The Station Keeper is not.',

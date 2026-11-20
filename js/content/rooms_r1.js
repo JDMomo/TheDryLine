@@ -71,6 +71,7 @@ G.defineRoom({
 G.defineRoom({
   id: 'r1_gangway', region: 'r1', kind: 'main', w: 2,
   signs: ['WRECK QUAY — PASSENGER PRIORITY. Freight markings remain beneath the evacuation chalk.'],
+  decor:[{type:'crate_decor',c:7,r:14},{type:'crate_decor',c:15,r:14},{type:'banner_decor',c:19,r:14},{type:'crate_decor',c:49,r:14}],
   map: paint(2, false, ({ put, fill }) => {
     // Arrival shelter: a low but generous roof frames the first twenty tiles without restricting the jump arc.
     fill(2, 6, 3, 17, '#');
@@ -98,6 +99,7 @@ G.defineRoom({
 // A continuous upper mast/plank route is faster and carries the signal-trial doorway; falling from it returns to the safe deck.
 G.defineRoom({
   id: 'r1_wreck', region: 'r1', kind: 'main', w: 2,
+  decor:[{type:'banner_decor',c:16,r:10},{type:'crate_decor',c:31,r:11},{type:'crate_decor',c:45,r:11}],
   map: paint(2, false, ({ put, fill }) => {
     // Stern ascent and broad deck: chunky ship silhouette, not a scatter of unrelated boxes.
     fill(13, 14, 7, 10, '#');
@@ -127,6 +129,7 @@ G.defineRoom({
 // 5. A low tunnel with brine spouts; a chimney in the roof holds a trunk.
 G.defineRoom({
   id: 'r1_tunnel', region: 'r1', kind: 'main',
+  decor:[{type:'crate_decor',c:6,r:14},{type:'crate_decor',c:25,r:14}],
   map: paint(1, false, ({ put, fill }) => {
     fill(1, 10, 1, 28, '#');                  // roof (rows 11 to 14 open)
     fill(1, 10, 1, 28, '#');
@@ -148,6 +151,7 @@ G.defineRoom({
 //    SECRET POCKET: a separate spring at the far quay launches into a high maintenance alcove holding the lost trunk; it is never required.
 G.defineRoom({
   id: 'r1_dock', region: 'r1', kind: 'main', w: 2,
+  decor:[{type:'crate_decor',c:17,r:14},{type:'banner_decor',c:34,r:14},{type:'crate_decor',c:46,r:14}],
   map: paint(2, false, ({ put, fill }) => {
     // Safe low lane: no spikes, crumble or forced launch. Mud is the cost of taking the forgiving route.
     put(15, 4, 'mmmmmmmm');
@@ -183,6 +187,7 @@ G.defineRoom({
 // solid down to row 11 and open at rows 12 to 14), 25 tiles of floor and two perches at row 10.
 G.defineRoom({
   id: 'r1_arena', region: 'r1', kind: 'arena',
+  decor:[{type:'banner_decor',c:8,r:14},{type:'banner_decor',c:22,r:14}],
   map: [
     WALL,
     '####.........................#', '####.........................#', '####.........................#',
