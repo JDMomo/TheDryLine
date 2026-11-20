@@ -39,6 +39,7 @@ const TEACH = {
   standpipe: 'A standpipe mends the whole party, once per run.',
   door: 'Doorways lead to side rooms. Every side room has a way back.',
   gate: 'Every gate is open. Each line ends at a Warden.',
+  board: 'The station board is also your map. Use it here, or press Map anywhere on the line.',
   lever: 'Levers open their paired mechanical gate for a few seconds.',
   plate: 'A pressure plate holds its paired gate open while someone stands on it.',
   rail_cart: 'Rail carts carry anything grounded on their deck. Ride with them or step off.'
@@ -297,7 +298,13 @@ const TYPES = {
       ls.forEach((t, k) => art.label(ctx, t, x, y - 143 - (ls.length - 1 - k) * 13, 10.5, '#e9a23b'));
     }
   },
-  board: {      // the lock chart in the Junction, hung on the wall: for every region, the three cuts its Warden has a fare slot for this run. pr.y is its bottom edge.
+  board: {      // The Junction's physical Route Board: lock chart at a glance; interact opens the full map/journal.
+    interact() { G.state='map'; if(G.map&&G.map.open)G.map.open(); },
+    prompt(pr,p) {
+      const n=['r1','r2','r3','r4'].filter(id=>G.run.beaten[id]).length;
+      return ['Route Board', n+'/4 local Warden orders released. The board records visited rooms, discoveries and the lock chart.',
+        useName(p)+' to inspect the full route'];
+    },
     boxes(pr, ctx) {
       const L = boardLayout(pr, ctx), out = [{ x0: L.x0, x1: L.x1, y0: L.y0, y1: L.y1, kind: 'body' }];
       for (const r of L.rows) { out.push(Object.assign({ kind: 'label', text: r.region.name }, r.name)); for (const c of r.cuts) out.push(Object.assign({ kind: 'label', text: 'cut' }, c)); }
@@ -307,7 +314,8 @@ const TYPES = {
       const L = boardLayout(pr, ctx), x = pr.x;
       ctx.fillStyle = '#5a4630'; ctx.fillRect(x - 54, 32, 3, L.y0 - 32); ctx.fillRect(x + 51, 32, 3, L.y0 - 32);              // hanging cords
       ctx.fillStyle = '#8a6c46'; ctx.fillRect(L.x0, L.y0, L.x1 - L.x0, L.y1 - L.y0); ctx.fillStyle = '#1d1a14'; ctx.fillRect(L.x0 + 3, L.y0 + 3, L.x1 - L.x0 - 6, L.y1 - L.y0 - 6);
-      art.label(ctx, 'Lock chart', x, L.y0 + 12, 11, '#f4e6b8', 'center', C.FONT, 600);
+      art.label(ctx, 'ROUTE BOARD', x, L.y0 + 10, 10.5, '#f4e6b8', 'center', C.FONT, 700);
+      art.label(ctx, 'LOCK CHART', x, L.y0 + 21, 8.5, '#9aa89f', 'center', C.FONT, 600);
       for (const r of L.rows) {
         const chart = (G.run.graph.chart || {})[r.region.id] || [], pal = art.palette(r.region.id), gone = G.run.beaten[r.region.id];
         art.label(ctx, r.region.name, r.name.x0, r.y, 10, gone ? '#6d6a5c' : pal.accent, 'left');
