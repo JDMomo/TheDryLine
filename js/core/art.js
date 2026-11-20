@@ -192,20 +192,26 @@ const art = G.art = {
       const x = c * T, y = r * T, ch = grid[r][c];
       if (ch === '#') {
         if (watercolor) {
-          // On the shipped/http build the collision mass supports the painting instead of becoming a black debug wall.
-          // Deterministic translucent patches mimic uneven wash while the dark edge keeps platform reads crisp.
-          ctx.globalAlpha=.86;ctx.fillStyle=pal.side;ctx.fillRect(x,y,T+.5,T+.5);
-          ctx.globalAlpha=.18;ctx.fillStyle=pal.edge;
-          const bx=4+Math.floor(hash1(c*31+r,5.4)*9), by=8+Math.floor(hash1(c+r*17,9.1)*12);
-          ctx.fillRect(x+bx,y+by,14+Math.floor(hash1(c*7+r,2.6)*10),5);
-          ctx.globalAlpha=.14;ctx.fillStyle=pal.tile;ctx.fillRect(x+2,y+T-8,T-4,7);
+          // Painted mode: collision is an ink/wash silhouette over the environment, not a wall of opaque grid cells.
+          // Adjacent cells share the same wash so the mass reads continuously; only exposed contours get strong ink.
+          ctx.globalAlpha=.52;ctx.fillStyle=pal.side;ctx.fillRect(x,y,T+.6,T+.6);
+          ctx.globalAlpha=.09;ctx.fillStyle=pal.edgeHi;
+          const bx=3+Math.floor(hash1(c*31+r,5.4)*11), by=7+Math.floor(hash1(c+r*17,9.1)*14);
+          ctx.fillRect(x+bx,y+by,13+Math.floor(hash1(c*7+r,2.6)*12),4+Math.floor(hash1(c+r,1.7)*4));
+          ctx.globalAlpha=.11;ctx.fillStyle=pal.tile;ctx.fillRect(x+1,y+T-7,T-2,6);
           ctx.globalAlpha=1;
         } else {
           ctx.fillStyle = pal.tile; ctx.fillRect(x, y, T + 0.5, T + 0.5);
         }
         if (r > 0 && grid[r - 1][c] !== '#') {
-          ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 4); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
-          if ((c * 7 + r) % 3 === 0) { ctx.fillStyle = pal.edge; ctx.fillRect(x + 6, y - 3, 2, 3); ctx.fillRect(x + 19, y - 4, 2, 4); }
+          if (watercolor) {
+            const j0=(hash1(c*13+r,4.1)-.5)*2.2,j1=(hash1(c*19+r,8.3)-.5)*2.2;
+            ctx.globalAlpha=.88;ctx.strokeStyle=pal.edge;ctx.lineWidth=2.6;ctx.beginPath();ctx.moveTo(x,y+2+j0);ctx.lineTo(x+T,y+2+j1);ctx.stroke();
+            ctx.globalAlpha=.34;ctx.strokeStyle=pal.edgeHi;ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(x,y+j0);ctx.lineTo(x+T,y+j1);ctx.stroke();ctx.globalAlpha=1;
+          } else {
+            ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 4); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
+          }
+          if ((c * 7 + r) % 3 === 0) { ctx.fillStyle = pal.edge; ctx.globalAlpha=watercolor?.42:1; ctx.fillRect(x + 6, y - 3, 2, 3); ctx.fillRect(x + 19, y - 4, 2, 4); ctx.globalAlpha=1; }
           const reg=region;
           if(reg==='r1' && (c+r)%4===0){ ctx.fillStyle=pal.edgeHi; ctx.globalAlpha=.45; ctx.fillRect(x+8,y+7,3,3); ctx.fillRect(x+22,y+7,3,3); ctx.globalAlpha=1; }
           else if(reg==='r2' && (c+r)%3===0){ ctx.strokeStyle=pal.edgeHi; ctx.globalAlpha=.35; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x+9,y+4); ctx.lineTo(x+6,y-5); ctx.moveTo(x+22,y+4); ctx.lineTo(x+26,y-7); ctx.stroke(); ctx.globalAlpha=1; }
@@ -213,17 +219,26 @@ const art = G.art = {
           else if(reg==='r4' && c%3===0){ ctx.fillStyle=pal.edgeHi; ctx.globalAlpha=.32; ctx.fillRect(x+4,y+7,24,2); ctx.globalAlpha=1; }
           else if(reg==='final' && (c+r)%4===0){ ctx.strokeStyle=pal.edgeHi; ctx.globalAlpha=.28; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(x+16,y+14,7,0,6.283); ctx.stroke(); ctx.globalAlpha=1; }
         }
-        ctx.fillStyle = pal.side;
-        if (c > 0 && grid[r][c - 1] !== '#') ctx.fillRect(x, y, 2, T);
-        if (c < tl.cols - 1 && grid[r][c + 1] !== '#') ctx.fillRect(x + T - 2, y, 2, T);
-        if (r < tl.rows - 1 && grid[r + 1][c] !== '#') ctx.fillRect(x, y + T - 2, T, 2);
+        ctx.fillStyle = watercolor ? pal.edge : pal.side;
+        ctx.globalAlpha = watercolor ? .34 : 1;
+        if (c > 0 && grid[r][c - 1] !== '#') ctx.fillRect(x, y, watercolor?1.5:2, T);
+        if (c < tl.cols - 1 && grid[r][c + 1] !== '#') ctx.fillRect(x + T - (watercolor?1.5:2), y, watercolor?1.5:2, T);
+        if (r < tl.rows - 1 && grid[r + 1][c] !== '#') ctx.fillRect(x, y + T - (watercolor?1.5:2), T, watercolor?1.5:2);
+        ctx.globalAlpha=1;
       } else if (ch === '^') {
         ctx.fillStyle = pal.tile; ctx.fillRect(x, y + 26, T + 0.5, 6.5);
         ctx.fillStyle = pal.spike;
         for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x + i * 8, y + 28); ctx.lineTo(x + i * 8 + 4, y + 8); ctx.lineTo(x + i * 8 + 8, y + 28); ctx.closePath(); ctx.fill(); }
       } else if (ch === '=') {
-        ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 5); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
-        ctx.fillStyle = pal.side; ctx.fillRect(x + 4, y + 5, 3, 5); ctx.fillRect(x + T - 7, y + 5, 3, 5);
+        if(watercolor){
+          const jy=(hash1(c*23+r,3.7)-.5)*1.8;
+          ctx.globalAlpha=.8;ctx.strokeStyle=pal.edge;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y+3+jy);ctx.lineTo(x+T+.5,y+3-jy);ctx.stroke();
+          ctx.globalAlpha=.38;ctx.strokeStyle=pal.edgeHi;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x,y+1+jy);ctx.lineTo(x+T+.5,y+1-jy);ctx.stroke();
+          ctx.globalAlpha=.45;ctx.fillStyle=pal.side;ctx.fillRect(x+5,y+6,2.5,5);ctx.fillRect(x+T-7.5,y+6,2.5,5);ctx.globalAlpha=1;
+        } else {
+          ctx.fillStyle = pal.edge; ctx.fillRect(x, y, T + 0.5, 5); ctx.fillStyle = pal.edgeHi; ctx.fillRect(x, y, T + 0.5, 1.5);
+          ctx.fillStyle = pal.side; ctx.fillRect(x + 4, y + 5, 3, 5); ctx.fillRect(x + T - 7, y + 5, 3, 5);
+        }
       } else if (ch === 's') {
         ctx.fillStyle = '#e8e2cf'; ctx.fillRect(x, y, T + 0.5, T + 0.5);
         ctx.fillStyle = '#f7f3e6'; ctx.fillRect(x, y, T + 0.5, 4);
