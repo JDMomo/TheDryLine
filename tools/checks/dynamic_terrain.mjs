@@ -19,7 +19,7 @@ export default async ({ page }) => {
     const gone=G.tiles.crumbleGone(6,15), solidGone=G.tiles.solid(6,15);
 
     // Keep a dummy overlapping the tile when rebuild time expires; it must stay gone until clear.
-    const dummy={x:6.5*T,y:15*T+18,w:20,h:28,dead:false,onGround:false,vy:0};
+    const dummy={x:6.5*T,y:15*T+18,w:20,h:28,dead:false,onGround:false,vy:0,update(){}};
     G.rooms.current.enemies.push(dummy);
     D.step(Math.ceil(2.8/G.C.STEP));
     const heldGone=G.tiles.crumbleGone(6,15);
