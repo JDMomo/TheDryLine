@@ -43,8 +43,20 @@ class Enemy {
   age() { return G.time - (this.sAt || 0); }
   prog() { return this.t0 ? U.clamp(1 - this.t / this.t0, 0, 1) : 0; }
   target() {
-    let best = null, bd = Infinity;
-    for (const p of G.players) { if (p.down) continue; const d = Math.abs(p.x - this.x) + Math.abs(p.y - this.y); if (d < bd) { bd = d; best = p; } }
+    const live=G.players.filter(p=>!p.down);
+    if(!live.length){this.targetUid=null;return null;}
+    const locked=live.find(p=>p.index===this.targetUid);
+    if(locked&&this.targetUntil>G.time)return locked;
+    let best=null,bd=Infinity;
+    for(const p of live){
+      const d=Math.abs(p.x-this.x)+Math.abs(p.y-this.y);
+      let pressure=0;
+      if(live.length>1&&G.rooms&&G.rooms.current) for(const e of G.rooms.current.enemies)
+        if(e!==this&&!e.dead&&e.targetUid===p.index&&e.targetUntil>G.time) pressure++;
+      const score=d+pressure*140;
+      if(score<bd){bd=score;best=p;}
+    }
+    this.targetUid=best&&best.index;this.targetUntil=G.time+0.8;
     return best;
   }
   // No floor one step ahead in the facing direction.
