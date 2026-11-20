@@ -53,7 +53,7 @@ fill(15,15,44,49,'='); fill(14,14,46,47,'#');
 put(14,45,'?');
 
 // Gates are stamped LAST so stair/roof architecture can never erase an exit marker.
-put(31,8,'G'); put(31,30,'G'); put(31,52,'G'); put(31,90,'G'); put(31,112,'G');
+put(31,8,'G'); put(31,36,'G'); put(31,52,'G'); put(31,84,'G'); put(31,112,'G');
 
 G.defineRoom({
   id:'junction', region:'hub', kind:'hub', w:4, h:2,

@@ -12,7 +12,7 @@ export default async ({page})=>{
   });
   const bad=[];
   if(!(shape.buffers.salt>=8&&shape.buffers.mud>=4&&shape.buffers.spikes===0))bad.push('buffers remix wrong '+JSON.stringify(shape.buffers));
-  if(!(shape.vents.spring===1&&shape.vents.vent===1&&shape.vents.spikes===0))bad.push('steam gallery wrong '+JSON.stringify(shape.vents));
+  if(!(shape.vents.spring>=2&&shape.vents.vent>=2&&shape.vents.spikes===0))bad.push('steam gallery wrong '+JSON.stringify(shape.vents));
   if(!(shape.gears.right>=20&&shape.gears.left>=10&&shape.gears.crumble>=4&&shape.gears.spikes===0))bad.push('clockworks remix wrong '+JSON.stringify(shape.gears));
   if(shape.errors.length)bad.push('G.errors '+shape.errors.join(' | '));
   for(const [id,seed] of [['final_buffers',901],['final_vents',902],['final_gearworks',903]]){
@@ -21,5 +21,5 @@ export default async ({page})=>{
     const fail=jobs.filter(j=>!j.ok);if(fail.length)bad.push(id+': '+fail.map(j=>j.name+' '+j.msg).join(' | '));
   }
   if(bad.length)throw new Error(bad.join(' ; '));
-  return 'Terminus remixes salt/mud, spring/steam, and conveyor/crumble with base-safe routes';
+  return 'Terminus remixes salt/mud, repeated spring/steam rhythms, and conveyor/crumble with base-safe routes';
 };

@@ -247,7 +247,7 @@ G.defineRoom({
     fill(12,14,18,20,'#'); fill(12,14,37,39,'#');
     fill(10,10,7,15,'='); fill(9,9,23,31,'='); fill(10,10,40,48,'=');
     // Separate maintenance shelf / first secret.
-    put(15,55,'j'); fill(8,8,51,57,'='); put(7,55,'C');
+    put(15,55,'j'); fill(9,9,51,57,'='); put(8,55,'C');
     put(14,12,'E'); put(14,30,'E'); put(14,47,'E');
     put(14,56,'D'); put(14,5,'?');
   },['GRAND CONCOURSE — all departures remain posted until formally cancelled.']);

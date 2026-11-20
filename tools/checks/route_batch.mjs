@@ -40,24 +40,28 @@ export default async ({ page }) => {
       G.rooms.enter(id,entry); return G.players[0];
     };
 
-    // Each authored Signal Reef vent must actually be able to launch a body from its tile.
-    const vents=[];
+    // Each authored Signal Reef vent must actually be able to launch a body from its CURRENT tile.
+    const vents=[], d2=G.roomDefs.r2_shaft;
     let p=load('r2_shaft','r2',{side:'bottom'});
-    for(const [r,c] of [[29,13],[21,13],[12,13]]) {
+    const ventCells=[];d2.grid.forEach((row,r)=>{for(let c=0;c<row.length;c++)if(row[c]==='v')ventCells.push([r,c]);});
+    for(const [r,c] of ventCells) {
       D.place(0,(c+0.5)*T,r*T,1); p=G.players[0]; p.onGround=true; p._ventCd=0; p.vy=0;
       let best=0, fired=false;
       for(let i=0;i<400;i++){D.step(1); best=Math.min(best,p.vy); if(p.vy<-500){fired=true;break;}}
       vents.push({r,c,fired,best});
     }
 
-    const spring=(defId,region,c)=>{
-      const q=load(defId,region,{side:'left'});
-      D.place(0,(c+0.5)*T,15*T,1); q.onGround=true; q.vy=0;
+    const spring=(defId,region)=>{
+      const d=G.roomDefs[defId],cell=[], trunk=d.marks.find(m=>m.ch==='C');
+      d.grid.forEach((row,r)=>{for(let c=0;c<row.length;c++)if(row[c]==='j')cell.push([r,c]);});
+      const [r,c]=cell[0]||[-1,-1], q=load(defId,region,{side:'left'});
+      D.place(0,(c+0.5)*T,r*T,1); q.onGround=true; q.vy=0;
       let minY=q.y,best=0;
       for(let i=0;i<180;i++){D.step(1); minY=Math.min(minY,q.y); best=Math.min(best,q.vy);}
-      return {best,minY,reached:minY<=9*T+8};
+      const target=trunk?(trunk.r+1)*T+8:9*T+8;
+      return {r,c,best,minY,target,reached:minY<=target};
     };
-    const r3=spring('r3_trestle','r3',52), r4=spring('r4_concourse','r4',55);
+    const r3=spring('r3_trestle','r3'), r4=spring('r4_concourse','r4');
     return {vents,r3,r4,errors:G.errors.slice()};
   });
   if(motion.vents.some(v=>!v.fired)) bad.push('one or more Signal Reef vents never launched: '+JSON.stringify(motion.vents));
