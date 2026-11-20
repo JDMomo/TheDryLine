@@ -29,7 +29,7 @@ const floorAhead = (s, dir) => tiles.floorAt(Math.floor((s.x + dir * (s.r + 6)) 
 G.defineItem({
   id: 'cobalt_awl', name: 'Cobalt Awl', cls: 'pierce', rarity: 'common', cd: 0.7,
   mat: ['metal'], inter: 'Metal: Conduct with the Brine Flask or a brine puddle; Pull with the Magnet Tooth.',
-  desc: 'A fast straight shot. Hold Up to fire it upward.',
+  desc: 'A fast straight shot. Aim up to fire it upward.',
   use(p) {
     const up = p.in.held.up, col = CL.pierce.color;
     G.combat.shoot({ x: p.x + (up ? 0 : p.face * 14), y: p.y - (up ? 44 : 24), vx: up ? 0 : p.face * 900, vy: up ? -900 : 0, life: 1.1, r: 5,
@@ -97,7 +97,7 @@ G.defineItem({
 G.defineItem({
   id: 'ochre_ladle', name: 'Ochre Ladle', cls: 'arc', rarity: 'common', cd: 1.0,
   mat: ['wet'], inter: 'Wet: its burst leaves a brine puddle (4 s) that Douses fire and soaks enemies, so metal hits Conduct.',
-  desc: 'A short, steep lob that bursts where it lands, about 130 px ahead. Hold Up to lob it high, hold the way you face to throw it far, hold Down to drop it close.',
+  desc: 'A short, steep lob that bursts where it lands, about 130 px ahead. Aim up to lob it high, toward your facing direction to throw it far, or down to drop it close.',
   // [vx, vy] per aim. neutral lands about 130 px ahead, down about 70, fwd about 250, up about 120 (and high: 300 px above the hand)
   LOB: { neutral: [175, -480], down: [100, -300], fwd: [320, -540], up: [105, -900] },
   use(p) {
@@ -113,7 +113,7 @@ G.defineItem({
 G.defineItem({
   id: 'sulphur_kettle', name: 'Sulphur Kettle', cls: 'arc', rarity: 'rare', cd: 1.5,
   mat: ['flammable', 'heavy'], inter: 'Flammable: leaves a sulphur cloud (3 s); a spark makes it Flare. Heavy: Shatters brittle shots.',
-  desc: 'A heavy, slow lob with a big burst. Hold Up to lob it high, hold the way you face to throw it far. Steer it left and right in flight.',
+  desc: 'A heavy, slow lob with a big burst. Aim up to lob it high or toward your facing direction to throw it far. Steer it left and right in flight.',
   LOB: { neutral: [150, -470], down: [90, -330], fwd: [250, -520], up: [95, -820] },
   use(p) {
     const [vx, vy] = G.itemDefs.sulphur_kettle.LOB[aimOf(p)];
@@ -129,7 +129,7 @@ G.defineItem({
 G.defineItem({
   id: 'chalk_skipstone', name: 'Chalk Skipstone', cls: 'arc', rarity: 'fixed', cd: 1.1,
   mat: ['brittle'], inter: 'Brittle: a heavy shot Shatters it into 3 hits; Crack if you are hurt just after casting.',
-  desc: 'A bouncing throw. Each bounce (up to 3) adds damage. Hold Up to lob it high instead.',
+  desc: 'A bouncing throw. Each bounce (up to 3) adds damage. Aim up to lob it high instead.',
   LOB: { neutral: [380, -120], down: [380, -120], fwd: [380, -120], up: [130, -1000] },
   use(p) {
     const aim = aimOf(p), [vx, vy] = G.itemDefs.chalk_skipstone.LOB[aim];

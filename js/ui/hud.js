@@ -33,7 +33,7 @@ const N = a => G.input.name(a);
 const TIPS = {
   token: () => N('item') + ' uses your token. ' + N('cycle') + ' switches tokens.',
   mend: () => 'Hold ' + N('heal') + ' on the ground to mend a pip with your gauge.',
-  bounce: () => 'In the air over spikes, hold Down and slash (' + N('attack') + ') to bounce off them.',
+  bounce: () => 'In the air over spikes, hold ' + N('down') + ' and slash (' + N('attack') + ') to bounce off them.',
   fare: () => 'A lit fare slot takes the token with the same shape. Not every cut has a slot: see the board and the map.',
   crack: () => G.run.abil.heavy ? 'Cracked barriers break to Heavy Cut: hold ' + N('attack') + ', then release.' : 'Cracked barriers need Heavy Cut. Its signal post is in Ticket Hall.',
   grade: () => 'Warden fights earn Par for speed and Clean for no hits. Clean refunds one token punched in that fight.'

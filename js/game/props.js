@@ -7,6 +7,7 @@
 const G = window.G, C = G.C, U = G.util, fx = G.fx, art = G.art;
 
 const priceOf = d => Math.round(d.price * G.run.mods.shopCost);
+const useName = p => G.input.name('interact', p);
 const goodName = d => d.item ? G.itemDefs[d.item].name : d.trinket ? G.trinketDefs[d.trinket].name : d.scrip ? 'Purse of scrip' : '';
 const goodDesc = d => d.item ? G.CLASSES[G.itemDefs[d.item].cls].name + ' token. ' + G.itemDefs[d.item].desc : d.trinket ? 'Trinket. ' + G.trinketDefs[d.trinket].desc : d.scrip ? d.scrip + ' scrip.' : '';
 // Material card of a plinth's good: { tags, line } (chips and the interactions line, see G.materials), or null.
@@ -28,7 +29,7 @@ const TICKET_PRICES = [30, 45];           // the machine can be used twice: the 
 const ticketCost = () => TICKET_PRICES[Math.min(G.run.tickets, TICKET_PRICES.length - 1)];
 // One line shown the first time a kind of prop is approached (it stops after the player has stood at one for a few seconds).
 const TEACH = {
-  plinth: 'A plinth holds a token. Up takes it; with the party full, it swaps with your selected token.',
+  plinth: 'A plinth holds a token. Use/enter takes it; with the party full, it swaps with your selected token.',
   kiosk: 'The kiosk sells trinkets for scrip. The price is on each ware.',
   trunk: 'A lost trunk opens when the room is clear.',
   ticket: 'The ticket machine shows three tickets for scrip. Keep one; the rest go void. A second roll costs more.',
@@ -54,7 +55,7 @@ function boardLayout(pr, ctx) {
 const teachKey = pr => pr.type === 'plinth' && pr.data.price ? 'kiosk' : pr.type;
 
 /* Each type: draw(pr, ctx); optional update(pr, dt), interact(pr, player), prompt(pr, player) -> [title, line, hint] or null.
-   A prop can only be used (Up) while it has a prompt. */
+   A prop can only be used while it has a prompt; Use/enter follows the player's Up binding. */
 const TYPES = {
   plinth: {     // data: { item | trinket, price, locked, group }
     interact(pr, p) {
@@ -75,13 +76,13 @@ const TYPES = {
       if (d.group && String(d.group).startsWith('ticket') && !hasGood(d)) pr.gone = true;      // the ticket stand clears, so the machine can come back
 
     },
-    prompt(pr) {
+    prompt(pr, p) {
       const d = pr.data;
       if (!hasGood(d)) return null;
       const swap = d.item && G.game.freeSlots() === 0, sel = G.players[0] && G.players[0].items[G.players[0].sel];
       const hint = d.locked && !G.rooms.current.cleared ? 'Guarded until the room is clear'
-        : d.price ? 'Up to buy for ' + priceOf(d) + ' scrip' + (G.run.shards < priceOf(d) ? ' (you have ' + Math.floor(G.run.shards) + ')' : '') + (swap ? ', swaps your selected token' : '')
-        : swap ? 'Up to swap with your selected token' + (sel ? ' (' + G.itemDefs[sel].name + ')' : '') : 'Up to take';
+        : d.price ? useName(p) + ' to buy for ' + priceOf(d) + ' scrip' + (G.run.shards < priceOf(d) ? ' (you have ' + Math.floor(G.run.shards) + ')' : '') + (swap ? ', swaps your selected token' : '')
+        : swap ? useName(p) + ' to swap with your selected token' + (sel ? ' (' + G.itemDefs[sel].name + ')' : '') : useName(p) + ' to take';
       return [goodName(d), goodDesc(d), hint, goodMat(d)];
     },
     draw(pr, ctx) {
@@ -127,10 +128,10 @@ const TYPES = {
       if (d.next && d.next.length) { d.choices = d.next; d.next = null; } else d.used = true;
       fx.say('The machine prints three tickets', 'Take one. The others are void.' + (d.used ? '' : ' It can print once more.'), 2.6);
     },
-    prompt(pr) {
+    prompt(pr, p) {
       if (pr.data.used || pr.data.wait) return null;
       const c = ticketCost();
-      return ['Ticket machine', 'Shows three tickets, tokens first. You keep one; the rest are void.' + (pr.data.next ? ' Two rolls per run.' : ' Last roll.'), 'Up to pay ' + c + ' scrip' + (G.run.shards < c ? ' (you have ' + Math.floor(G.run.shards) + ')' : '')];
+      return ['Ticket machine', 'Shows three tickets, tokens first. You keep one; the rest are void.' + (pr.data.next ? ' Two rolls per run.' : ' Last roll.'), useName(p) + ' to pay ' + c + ' scrip' + (G.run.shards < c ? ' (you have ' + Math.floor(G.run.shards) + ')' : '')];
     },
     draw(pr, ctx) {
       if (pr.data.wait) return;                       // the tickets stand where the machine is
@@ -150,7 +151,7 @@ const TYPES = {
       Object.keys(G.CLASSES).forEach((cls, i) => G.rooms.current.props.push(G.props.make('clip', pr.x + (i - 1.5) * 50, pr.y, { cls, group: 'clip' + pr.x, stock: pr.data.stock || [] })));
       fx.say('Choose a cut', G.itemDefs[p.items[p.sel]].name + ' will be reclipped. It costs one health pip for the run.', 3.4);
     },
-    prompt(pr) { return pr.data.used ? null : ['Clipping booth', 'Swap your selected token for a random one of a cut you choose.', 'Up to step in. Costs one max health pip for the run']; },
+    prompt(pr, p) { return pr.data.used ? null : ['Clipping booth', 'Swap your selected token for a random one of a cut you choose.', useName(p) + ' to step in. Costs one max health pip for the run']; },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y;
       ctx.fillStyle = '#1d2a2c'; ctx.fillRect(x - 20, y - 70, 40, 70); ctx.fillStyle = '#3f6b5a'; ctx.fillRect(x - 24, y - 74, 48, 6);
@@ -179,7 +180,7 @@ const TYPES = {
     },
     prompt(pr, p) {
       const c = G.CLASSES[pr.data.cls], id = p && p.items[p.sel], spare = G.game.spareTokens(pr.data.cls, pr.data.stock).length > 0;
-      return [c.name + ' cut', spare ? (id ? G.itemDefs[id].name : 'Your selected token') + ' becomes a random ' + c.name + ' token.' : 'No spare ' + c.name + ' token is left. The booth would give a trinket or scrip instead.', 'Up to clip. Costs one max health pip for the run'];
+      return [c.name + ' cut', spare ? (id ? G.itemDefs[id].name : 'Your selected token') + ' becomes a random ' + c.name + ' token.' : 'No spare ' + c.name + ' token is left. The booth would give a trinket or scrip instead.', useName(p) + ' to clip. Costs one max health pip for the run'];
     },
     draw(pr, ctx) {
       const c = G.CLASSES[pr.data.cls], x = pr.x, y = pr.y;
@@ -215,7 +216,7 @@ const TYPES = {
       for (const p of G.players) { if (p.down) p.revive(p.maxHp); else p.hp = p.maxHp; }
       fx.ring(pr.x, pr.y - 24, 10, 260, '#fff3c4', 0.5); fx.say('Mended', 'The standpipe runs dry.', 2);
     },
-    prompt(pr) { return pr.data.used ? null : ['Standpipe', 'Mends the whole party fully. One use per run.', 'Up to drink']; },
+    prompt(pr, p) { return pr.data.used ? null : ['Standpipe', 'Mends the whole party fully. One use per run.', useName(p) + ' to drink']; },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y;
       ctx.fillStyle = '#22322e'; ctx.fillRect(x - 22, y - 12, 44, 12); ctx.fillStyle = '#3f6b5a'; ctx.fillRect(x - 25, y - 15, 50, 4);
@@ -225,13 +226,13 @@ const TYPES = {
   },
   door: {       // data: { to: nodeId, entry, label, tag }
     interact(pr) { G.rooms.go(pr.data.to, pr.data.entry); },
-    prompt(pr) {
+    prompt(pr, p) {
       const need = (pr.data.needs || []).filter(a => G.abilityDefs[a]);
-      if (!need.length) return [pr.data.label || 'Doorway', '', 'Up to enter'];
+      if (!need.length) return [pr.data.label || 'Doorway', '', useName(p) + ' to enter'];
       // a guarded room: say which move the plinth needs, and whether the party has it yet (and where it is found)
       const missing = need.filter(a => !G.run.abil[a]), names = need.map(a => G.abilityDefs[a].name).join(' and ');
       const where = missing.map(a => { const r = Object.values(G.regionDefs).find(x => x.ability === a); return G.abilityDefs[a].name + (r ? ' is found in ' + r.name : ''); }).join('; ');
-      return [pr.data.label || 'Doorway', 'The plinth here needs ' + names + (missing.length ? '. Not found yet: ' + where + '.' : '. You have it.'), 'Up to enter'];
+      return [pr.data.label || 'Doorway', 'The plinth here needs ' + names + (missing.length ? '. Not found yet: ' + where + '.' : '. You have it.'), useName(p) + ' to enter'];
     },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y;
@@ -242,11 +243,11 @@ const TYPES = {
   },
   gate: {       // hub gate into a region, data: { region }. Shows the region's Warden sigil, dimmed once beaten. The Terminus also shows what the Long Clock will borrow.
     interact(pr) { G.rooms.go(G.run.graph.regions[pr.data.region].first, { side: 'left' }); },
-    prompt(pr) {
+    prompt(pr, p) {
       const r = G.regionDefs[pr.data.region], b = G.bossDefs[r.boss];
       const chart = (G.run.graph.chart || {})[r.id], bor = r.id === 'final' ? G.game.borrows() : null;
       return [r.name, (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.') + (chart ? ' Slots: ' + chart.map(c => G.CLASSES[c].name).join(', ') + '.' : '')
-        + (bor ? (bor.length ? ' It borrows from each Warden still alive: ' + bor.map(x => x.text + ' (' + x.warden + ')').join('; ') + '.' : ' Every Warden has fallen: it borrows nothing.') : ''), 'Up to enter'];
+        + (bor ? (bor.length ? ' It borrows from each Warden still alive: ' + bor.map(x => x.text + ' (' + x.warden + ')').join('; ') + '.' : ' Every Warden has fallen: it borrows nothing.') : ''), useName(p) + ' to enter'];
     },
     // the borrow lines above the Terminus gate label ("Borrows: a, b, c", wrapped), shown before the party commits to the fight
     borrowLines(pr, ctx) {
@@ -308,7 +309,7 @@ const TYPES = {
       pr.gone = true; pr.data.broken = true; G.run.stats.cracks = (G.run.stats.cracks || 0) + 1;
       fx.jolt(0.1, 12); fx.spark(pr.x, pr.y - 48, 40, '#b9ad94', 420, 0.7); fx.dust(pr.x, pr.y, 16); fx.ring(pr.x, pr.y - 48, 10, 320, '#fff3c4', 0.35);
     },
-    prompt(pr) { return ['Cracked barrier', 'Solid stone, but it is split through. Only a heavy cut breaks it.', G.run.abil.heavy ? 'Hold slash, then release' : 'Heavy Cut is found in Ticket Hall']; },
+    prompt(pr, p) { return ['Cracked barrier', 'Solid stone, but it is split through. Only a heavy cut breaks it.', G.run.abil.heavy ? 'Hold ' + G.input.name('attack', p) + ', then release' : 'Heavy Cut is found in Ticket Hall']; },
     draw(pr, ctx) {
       const x = pr.x, y = pr.y, w = C.T, h = 3 * C.T;
       ctx.fillStyle = '#4a4a46'; ctx.fillRect(x - w / 2, y - h, w, h);

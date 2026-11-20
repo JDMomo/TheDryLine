@@ -41,6 +41,7 @@ export default async ({ page }) => {
     ok(G.input.bind('keyboard', 'item', 'KeyG').ok, 'could not rebind the token key');
     ok(/^G uses your token/.test(G.tips.text('token')), 'the token tip does not use the new key: ' + G.tips.text('token'));
     ok(G.input.bind('keyboard', 'up', 'KeyY').ok && G.input.name('interact', G.players[0]) === 'Y', 'Use / enter does not follow Up');
+    ok(G.input.bind('keyboard', 'down', 'KeyN').ok && /hold N/.test(G.tips.text('bounce')), 'the bounce tip does not follow the remapped Down key: ' + G.tips.text('bounce'));
     // a prompt at a prop shows the new key
     const node = Object.values(G.run.graph.nodes).find(n => G.worldgen.contents(n).some(c => c.type === 'plinth' && c.data.price));
     D.gotoRoom(node.id); D.step(2); G.state = 'play'; G.run.shards = 400;
