@@ -16,7 +16,10 @@ const BORROWS = {
 // taught (which first-time prop tips have been shown). Reads and writes never throw: without storage the game plays on in memory.
 // bindings: { keyboard: { action: [codes] }, gamepad: { action: [buttons] } }, only what differs from the defaults (see js/core/input.js).
 // settings: comfort options { shake: screen shake on, reduceFlashes: fewer and softer flashes }.
-G.meta = { runs: 0, wins: 0, best: null, cuts: [], taught: {}, bindings: { keyboard: {}, gamepad: {} }, settings: { shake: true, reduceFlashes: false } };
+// The feat ledger (js/game/ledger.js): feats { featId: { run: runs played when it was done } }, mats (the material interactions seen so far, for the
+// Chemistry feat), opts (what the player chose for the next run, kept to what the feats unlocked: { start: cut | null, express: bool }).
+G.meta = { runs: 0, wins: 0, best: null, cuts: [], taught: {}, bindings: { keyboard: {}, gamepad: {} }, settings: { shake: true, reduceFlashes: false },
+  feats: {}, mats: [], opts: { start: null, express: false } };
 function loadMeta() {
   const m = G.meta;
   let saved = null;
@@ -34,6 +37,11 @@ function loadMeta() {
       if (plain(src)) for (const a of G.input.REBINDABLE) if (Array.isArray(src[a]) && src[a].length && src[a].every(c => type === 'keyboard' ? typeof c === 'string' : Number.isInteger(c) && c >= 0 && c < 32)) out[a] = src[a].slice(0, 4);
       m.bindings[type] = out;
     }
+    const feats = {};                                                       // the ledger: only known feats, each with a run number
+    if (plain(saved.feats)) for (const f of G.ledger.FEATS) { const v = saved.feats[f.id]; if (v === true || plain(v)) feats[f.id] = { run: v && num(v.run) ? v.run : 0 }; }
+    m.feats = feats;
+    m.mats = Array.isArray(saved.mats) ? saved.mats.filter((w, i, a) => G.ledger.WORDS.includes(w) && a.indexOf(w) === i) : [];
+    m.opts = { start: plain(saved.opts) && G.CLASSES[saved.opts.start] ? saved.opts.start : null, express: !!(plain(saved.opts) && saved.opts.express === true) };
     if (plain(saved.settings)) { if (typeof saved.settings.shake === 'boolean') m.settings.shake = saved.settings.shake; if (typeof saved.settings.reduceFlashes === 'boolean') m.settings.reduceFlashes = saved.settings.reduceFlashes; }
   }
   G.input.refresh();
@@ -51,29 +59,39 @@ const game = G.game = {
 
   // A run code is the whole recipe for a world: the seed (base 36) and the unlocked cuts (one hex digit, a bit per cut in CUT_ORDER),
   // e.g. '1K9Z-5'. The same code gives the same graph, lock chart and token and trinket rewards on any save and by any route.
-  codeOf(seed, cuts) { return (seed >>> 0).toString(36).toUpperCase() + '-' + CUT_ORDER.reduce((m, c, i) => m | (cuts.includes(c) ? 1 << i : 0), 0).toString(16).toUpperCase(); },
+  // With the feat ledger a code may carry a second part after a dot: '1K9Z-5.1A3' (hex; bits: ledger tokens, locked Timetable cards, Express chosen, starting cut,
+  // see G.ledger.maskOf). A code from a save with nothing unlocked and no options chosen has no dot, so it is the old two-part form.
+  codeOf(seed, cuts, extra) {
+    const base = (seed >>> 0).toString(36).toUpperCase() + '-' + CUT_ORDER.reduce((m, c, i) => m | (cuts.includes(c) ? 1 << i : 0), 0).toString(16).toUpperCase();
+    const mask = extra ? G.ledger.maskOf(extra.unl, extra.opts) : 0;
+    return mask ? base + '.' + mask.toString(16).toUpperCase() : base;
+  },
   parseCode(text) {
-    const m = /^\s*#?([0-9A-Z]{1,7})-([0-9A-F])\s*$/i.exec(String(text));
+    const m = /^\s*#?([0-9A-Z]{1,7})-([0-9A-F])(?:\.([0-9A-F]{1,3}))?\s*$/i.exec(String(text));
     if (!m) return null;
     const seed = parseInt(m[1], 36) >>> 0, mask = parseInt(m[2], 16);
-    return { seed, cuts: CUT_ORDER.filter((c, i) => mask & (1 << i)) };
+    return { seed, cuts: CUT_ORDER.filter((c, i) => mask & (1 << i)), extra: G.ledger.fromMask(m[3] ? parseInt(m[3], 16) : 0) };
   },
   // newRun(), newRun(seed) (the unlocked cuts are taken from the save now), newRun(seed, cuts) or newRun('1K9Z-5').
-  newRun(seed, cuts) {
-    if (typeof seed === 'string') { const c = game.parseCode(seed); if (c) ({ seed, cuts } = c); else { G.fail('bad run code: ' + seed); seed = null; } }
+  // The ledger part (`extra` = { unl: { tokens, cards }, opts: { express, start } }) comes from the code, or else from the save's feats and chosen options.
+  newRun(seed, cuts, extra) {
+    if (typeof seed === 'string') { const c = game.parseCode(seed); if (c) ({ seed, cuts, extra } = c); else { G.fail('bad run code: ' + seed); seed = null; } }
+    if (!extra) { const unl = G.ledger.unlocked(); extra = { unl, opts: G.ledger.options(unl) }; }
     if (seed === undefined || seed === null) seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
     seed = seed >>> 0;
     cuts = CUT_ORDER.filter(c => (cuts || G.meta.cuts).includes(c));       // recorded now: the world never reads the save again
-    const run = G.run = { seed, cuts, code: game.codeOf(seed, cuts), rng: U.makeRng((seed ^ 0x9e3779b9) >>> 0), time: 0, shards: 0, abil: {}, trinkets: [], spent: [], beaten: {},
-      mods: G.baseMods(), bonusHp: 0, tickets: 0, rooms: {}, over: null, overT: 0, stats: { hits: 0, breaks: 0, kills: 0 }, graph: null,
-      punchLog: [], unlocked: [], grades: {} };
+    const run = G.run = { seed, cuts, code: game.codeOf(seed, cuts, extra), rng: U.makeRng((seed ^ 0x9e3779b9) >>> 0), time: 0, shards: 0, abil: {}, trinkets: [], spent: [], beaten: {},
+      mods: G.baseMods(), bonusHp: extra.opts.express ? -1 : 0, tickets: 0, rooms: {}, over: null, overT: 0, stats: { hits: 0, breaks: 0, kills: 0 }, graph: null,
+      punchLog: [], unlocked: [], grades: {}, unl: extra.unl, opts: extra.opts, rule: null, uses: {}, cracked: [], featsNew: [] };
     for (const id in G.abilityDefs) run.abil[id] = false;
-    run.graph = G.worldgen.build(seed, cuts);
-    run.chart = run.graph.chart;
+    run.graph = G.worldgen.build(seed, cuts, extra);
+    run.chart = run.graph.chart; run.rule = run.graph.rule;
+    G.ledger.applyRule(run.rule);                                   // the card may change the shared fare-slot constants; every run starts from the defaults
     G.combat.clear(); G.rooms.current = null;                       // nothing of the last run (shots, scrip) comes along
     if (!G.players.length) game.addPlayer(G.input.claimed || 'kb');
     for (const p of G.players) { p.items = []; p.sel = 0; p.hp = p.maxHp; p.glow = 0; p.down = false; }
     game.reslot();
+    for (const id of run.graph.draw.start) if (id) game.takeItem(G.players[0], id);      // a chosen starting token and/or the Packed Lunch token
     G.rooms.trans = null;
     G.rooms.enter(run.graph.hub, { start: true });
     G.meta.runs++; game.saveMeta();
@@ -111,7 +129,8 @@ const game = G.game = {
   // `short` is the word on the gate label, `text` the longer line, `attack` the state prefix used in boss_final.js.
   borrows(run = G.run) {
     const be = (run && run.beaten) || {};
-    return ['r1', 'r2', 'r3', 'r4'].filter(r => !be[r]).map(r => Object.assign({ region: r }, BORROWS[r]));
+    const list = ['r1', 'r2', 'r3', 'r4'].filter(r => !be[r]).map(r => Object.assign({ region: r }, BORROWS[r]));
+    return run && run.rule && run.rule.borrowLess ? list.slice(run.rule.borrowLess) : list;       // Timetable card Short Shift: one fewer, the first on the list is struck off
   },
   partyItems() { return G.players.flatMap(p => p.items); },
   partyClasses() { return new Set(game.partyItems().map(id => G.itemDefs[id].cls)); },
@@ -149,6 +168,7 @@ const game = G.game = {
       G.meta.cuts.push(cls);
       for (const d of Object.values(G.itemDefs)) if (d.rarity === 'rare' && d.cls === cls && !run.unlocked.includes(d.id)) run.unlocked.push(d.id);
     }
+    G.ledger.event('punch', { boss });
     game.saveMeta();
   },
   addTrinket(id) {
@@ -168,19 +188,28 @@ const game = G.game = {
   gradeFight(boss, room) {
     const run = G.run, parTime = (boss.def.par || 0) * (boss.scale || 1);
     const g = { time: boss.clock, parTime, par: parTime > 0 && boss.clock < parTime, clean: run.stats.hits === boss.hits0, refund: null, where: null };
+    const rule = run.rule || {};
     if (g.clean) {
-      const id = run.spent.slice(boss.spent0)[0];
-      if (id) {
-        run.spent.splice(run.spent.indexOf(id), 1); g.refund = id;
-        if (game.freeSlots() > 0) { game.takeItem(G.players.find(p => !p.down) || G.players[0], id); g.where = 'party'; }
+      // The first token punched in the fight comes back (Timetable card Rebate Day: every token punched in it does).
+      const ids = run.spent.slice(boss.spent0), back = rule.refundAll ? ids : ids.slice(0, 1);
+      g.refunds = [];
+      back.forEach((id, i) => {
+        run.spent.splice(run.spent.indexOf(id), 1);
+        let where;
+        if (game.freeSlots() > 0) { game.takeItem(G.players.find(p => !p.down) || G.players[0], id); where = 'party'; }
         else {
           const mid = (room.def.floorX[0] + room.def.floorX[1]) / 2;
-          room.props.push(G.props.make('plinth', mid + 116, boss.floor, { item: id, refund: true })); g.where = 'floor';
+          room.props.push(G.props.make('plinth', mid + 116 + i * 58, boss.floor, { item: id, refund: true })); where = 'floor';
         }
-      }
+        g.refunds.push({ id, where });
+        if (!i) { g.refund = id; g.where = where; }
+      });
     }
+    if (rule.parPips && g.par) game.addMaxPips(rule.parPips);                       // Timetable card Stopwatch
+    if (rule.cleanScrip && g.clean) run.shards += rule.cleanScrip;
     run.grades[boss.region] = g;
-    fx.stamp(game.gradeText(g).toUpperCase().split(' · '), g.refund ? G.itemDefs[g.refund].name + (g.where === 'party' ? ' comes back to the party' : ' is on the floor') : '');
+    const n = (g.refunds || []).length;
+    fx.stamp(game.gradeText(g).toUpperCase().split(' · '), g.refund ? G.itemDefs[g.refund].name + (n > 1 ? ' and ' + (n - 1) + ' more' : '') + (g.where === 'party' ? ' come' + (n > 1 ? '' : 's') + ' back to the party' : ' on the floor') : '');
     return g;
   },
   gradeText(g) { return g ? ['Beaten'].concat(g.par ? ['Par'] : [], g.clean ? ['Clean'] : []).join(' · ') : ''; },
@@ -189,10 +218,12 @@ const game = G.game = {
     const room = G.rooms.current, run = G.run;
     run.beaten[boss.region] = true;
     G.rooms.endFight(room);
-    game.gradeFight(boss, room);
-    game.addMaxPips(1);
-    run.shards += C.WARDEN_SCRIP;
-    fx.floatText(boss.x, boss.y - boss.h - 20, '+' + C.WARDEN_SCRIP + ' scrip', '#fff3c4');
+    const grade = game.gradeFight(boss, room), rule = run.rule || {}, scrip = C.WARDEN_SCRIP * (rule.scrip || 1);
+    game.addMaxPips(rule.wardenPips || 1);                                           // Timetable card Long Haul: two pips
+    if (rule.noPipes) for (const p of G.players) if (!p.down) p.hp = p.maxHp;       // Timetable card Dry Pipes: a Warden mends the whole party
+    run.shards += scrip;
+    fx.floatText(boss.x, boss.y - boss.h - 20, '+' + scrip + ' scrip', '#fff3c4');
+    G.ledger.event('beaten', { region: boss.region, grade });
     const mid = (room.def.floorX[0] + room.def.floorX[1]) / 2, picks = [];
     // The choice comes from its own stream (seed + region), so a seed offers the same three whatever else happened in the run.
     const loot = U.makeRng((run.seed ^ 0x5bd1e995 ^ [...boss.region].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7)) >>> 0);
@@ -208,7 +239,7 @@ const game = G.game = {
     const result = game.win(run) ? 'win' : game.lose(run) ? 'dead' : null;
     if (!result) return;
     run.over = result;
-    if (result === 'win') { G.meta.wins++; if (G.meta.best === null || run.time < G.meta.best) G.meta.best = run.time; game.saveMeta(); }
+    if (result === 'win') { G.meta.wins++; if (G.meta.best === null || run.time < G.meta.best) G.meta.best = run.time; G.ledger.event('win'); game.saveMeta(); }
   }
 };
 

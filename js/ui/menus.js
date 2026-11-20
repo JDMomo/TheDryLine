@@ -92,21 +92,23 @@ G.menus = {
     }
   },
   title(ctx) {
-    art.backdrop(ctx, art.palette('hub'), G.time * 12, G.time);
+    const on = G.ui.on();
+    if (on) G.world.backdrop(ctx, 'hub', G.time * 12, 0, G.time); else art.backdrop(ctx, art.palette('hub'), G.time * 12, G.time);
     ctx.fillStyle = 'rgba(6,11,11,0.6)'; ctx.fillRect(0, 0, W, H);
-    art.label(ctx, G.title.name && G.title.name !== 'Untitled' ? G.title.name : 'The Dry Line', W / 2, 62, 54, '#e9a23b', 'center', C.DISPLAY, 600);
-    art.label(ctx, premise, W / 2, 106, 14, '#e9e2cf');
-    if (Math.floor(G.time * 2) % 2) art.label(ctx, 'Click here, then press any button on the keyboard or a controller to begin: that device is player 1', W / 2, 146, 16, '#e9e2cf');
-    panel(ctx, 640, 212, -2);
+    if (on) { G.ui.paper(ctx, 36, 8, W - 72, H - 12, 'page'); G.ui.title(ctx, W / 2, 68, 440); }      // a parchment page, the lettering in brush script
+    else art.label(ctx, G.title.name && G.title.name !== 'Untitled' ? G.title.name : 'The Dry Line', W / 2, 62, 54, '#e9a23b', 'center', C.DISPLAY, 600);
+    art.label(ctx, premise, W / 2, on ? 124 : 106, 14, '#e9e2cf');
+    if (Math.floor(G.time * 2) % 2) art.label(ctx, 'Click here, then press any button on the keyboard or a controller to begin: that device is player 1', W / 2, on ? 150 : 146, 16, '#e9e2cf');
+    panel(ctx, 640, 244, 14);
     table(ctx, rowsFor('keyboard'), 170, 188, 'Keyboard');
     table(ctx, rowsFor('gamepad'), 520, 188, 'Gamepad');
-    art.label(ctx, 'Players 2 to 4: at the Junction, press Jump on any other device (keyboard or controller). Hold Pause for 1 second there to leave.', W / 2, 402, 13, '#e9e2cf');
-    art.label(ctx, 'The party carries three tokens. Each Warden has three fare slots, set by the lock chart; a punched token is void.', W / 2, 426, 13, '#9aa89f');
+    art.label(ctx, 'Players 2 to 4: at the Junction, press Jump on any other device (keyboard or controller). Hold Pause for 1 second there to leave.', W / 2, 428, 13, '#e9e2cf');
+    art.label(ctx, 'The party carries three tokens. Each Warden has three fare slots, set by the lock chart; a punched token is void.', W / 2, 452, 13, '#9aa89f');
     const m = G.meta;
     art.label(ctx, 'Runs ' + m.runs + '   ·   Wins ' + m.wins + (m.best !== null ? '   ·   Best ' + clock(m.best) : '') + '   ·   Cuts punched ' + m.cuts.length + ' of 4', W / 2, H - 40, 13, '#9aa89f');
   },
   pause(ctx) {
-    const PH = 490;
+    const PH = 520;
     ctx.fillStyle = 'rgba(6,11,11,0.6)'; ctx.fillRect(0, 0, W, H); panel(ctx, 640, PH);
     const top = (H - PH) / 2, N = a => G.input.name(a, menu.type), lost = G.menus.lost;
     const row = (t, i, y, on) => {

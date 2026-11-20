@@ -33,6 +33,7 @@ function step(dt) {
   G.time += dt;
   const pr = any.pressed;
   if (G.state === 'title') {
+    if (G.ledgerUI && G.ledgerUI.titleStep(pr)) { G.input.endStep(); return; }       // the Ledger screen has the title (js/ui/ledger.js)
     const dev = G.input.claim();
     if (dev || pr.jump || pr.attack) { G.input.claimed = dev || 'kb'; G.game.newRun(G.game.parseCode(location.hash) ? location.hash.slice(1) : undefined); G.input.claimed = null; G.state = 'play'; }   // the first device to press a button is player 1; a #CODE in the address replays that run
   }
@@ -59,27 +60,53 @@ function step(dt) {
   G.input.endStep();
 }
 
-function render(dt) {
-  const s = Math.min(2, window.devicePixelRatio || 1);
-  if (cv.width !== C.W * s) { cv.width = C.W * s; cv.height = C.H * s; }
-  ctx.setTransform(s, 0, 0, s, 0, 0);
+// Hi-dpi: the bitmap is the canvas's size on screen times the device pixel ratio (capped), and everything is drawn through a scale from game
+// coordinates (C.W x C.H), so the game never sees the resolution. G.view holds the numbers (read by the render check).
+const DPR_CAP = 3, PIXEL_CAP = 3840 * 2160;
+G.interp.wrapDraw();                                  // G.rooms.draw now draws between the last two steps (js/core/camera.js)
+G.view = { scale: 1, w: C.W, h: C.H, dpr: 1 };
+function fitCanvas() {
+  const dpr = Math.min(DPR_CAP, window.devicePixelRatio || 1), cssW = cv.clientWidth || C.W;
+  let w = Math.max(C.W / 2, Math.round(cssW * dpr)), s = w / C.W;
+  while (w * Math.round(C.H * s) > PIXEL_CAP && s > 0.5) { s *= 0.9; w = Math.round(C.W * s); }
+  const h = Math.round(C.H * s);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  G.view.scale = w / C.W; G.view.sy = h / C.H; G.view.w = w; G.view.h = h; G.view.dpr = dpr;
+  return G.view;
+}
+// Camera snapped to device pixels, so tiles keep their edges at any scale (drawing code that rounds the camera to game pixels may use this).
+G.view.snap = v => Math.round(v * G.view.scale) / G.view.scale;
+
+function render(dt, alpha = 1) {
+  const v = fitCanvas();
+  ctx.setTransform(v.scale, 0, 0, v.sy, 0, 0);
   if (G.state === 'title') return G.menus.title(ctx);
+  G.interp.alpha = G.state === 'play' ? alpha : 1;
   G.rooms.draw(ctx, dt); G.hud.draw(ctx);
   if (G.state === 'pause') G.menus.pause(ctx);
   else if (G.state === 'map') G.map.draw(ctx);
   else if (G.state === 'over') G.menus.over(ctx);
 }
 
+// The simulation runs ahead of the clock: acc is (real time - simulated time), kept between -STEP and 0 after the steps, so what is drawn
+// (the state alpha of the way from the last step's start to its end) is the state of the present moment: an input is shown at the first frame
+// after the step that took it, as before, and never one step later.
 function frame(now) {
+  requestAnimationFrame(frame);                       // first, so an error while drawing cannot stop the loop
   const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
   G.input.poll();
+  let alpha = 1;
   if (!manual) {
-    if (G.fx.hitstop > 0 && G.state === 'play') G.fx.hitstop -= dt;
-    else { acc += dt; while (acc >= C.STEP) { step(C.STEP); acc -= C.STEP; } }
+    if (G.fx.hitstop > 0 && G.state === 'play') { G.fx.hitstop -= dt; alpha = 1 + Math.min(0, acc) / C.STEP; }
+    else {
+      acc += dt;
+      while (acc > 0) { if (G.state === 'play') G.interp.capture(); step(C.STEP); acc -= C.STEP; }
+      alpha = G.state === 'play' ? 1 + acc / C.STEP : 1;
+      if (acc > 0) acc = 0;
+    }
   }
   if (G.state !== 'title') overlay.hidden = true;
-  render(dt);
-  requestAnimationFrame(frame);
+  render(dt, Math.max(0, Math.min(1, alpha)));
 }
 // Losing the window's focus pauses a run in progress (nothing is lost while the player is away).
 const autoPause = () => { if (G.state === 'play' && G.run && !G.run.over) { G.state = 'pause'; G.menus.open(G.players[0] && G.players[0].in.dev); } };
@@ -100,6 +127,7 @@ const findNode = key => {
 const regionOf = id => G.regionDefs[id] ? id : Object.keys(G.regionDefs).find(r => G.regionDefs[r].boss === id);
 G.debug = {
   godMode: false,
+  bossSkinFixture: false,    // tools/art/fixtures: draw the throwaway test skin on the Tollkeeper (see js/art/boss_skins.js)
   hidePlayers: false,        // tests: draw no player (compare a picture with and without)
   fullCharts: false,         // tests that need every cut on every Warden: newRun then gives all four cuts to each region
   newRun(seed, cuts) {

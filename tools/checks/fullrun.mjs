@@ -102,8 +102,9 @@ function playSeed(seed) {
     // rewards
     const r1 = room(), trin = r1.props.filter(p => p.type === 'plinth' && p.data.trinket && !p.gone), back = r1.props.find(p => p.type === 'door' && p.data.to === g.hub);
     if (!G.run.grades[reg.id] || G.game.gradeText(G.run.grades[reg.id]).indexOf('Beaten') !== 0) fail(reg.id + ' fight was not graded');
-    if (G.players[0].maxHp !== pips0 + 1) fail(reg.id + ' Warden gave ' + (G.players[0].maxHp - pips0) + ' health pips');
-    if (G.run.shards < scrip0 + 40) fail(reg.id + ' Warden gave ' + (G.run.shards - scrip0) + ' scrip');
+    const rule = G.run.rule || {};
+    if (G.players[0].maxHp !== pips0 + (rule.wardenPips || 1)) fail(reg.id + ' Warden gave ' + (G.players[0].maxHp - pips0) + ' health pips');
+    if (G.run.shards < scrip0 + 40 * (rule.scrip || 1)) fail(reg.id + ' Warden gave ' + (G.run.shards - scrip0) + ' scrip');
     if (trin.length !== 3) fail(reg.id + ' Warden left ' + trin.length + ' trinket plinths');
     if (!back) { fail(reg.id + ' Warden left no way back to the Junction'); break; }
     const nt = G.run.trinkets.length;

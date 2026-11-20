@@ -143,7 +143,7 @@ export default async ({ page, shard }) => {
     const f = res.fight;
     for (const k in f.tells) { const lim = /^rage/.test(k) ? 0.35 : 0.45; if (f.tells[k] < lim - 1e-9) problems.push(spec.name + ' ' + k + ' lasts only ' + f.tells[k].toFixed(2) + ' s (needs ' + lim + ')'); }
     if (!f.dead) problems.push(spec.name + ': the slashes-only bot did not win in ' + f.t.toFixed(0) + ' s (boss at ' + (f.hpPct * 100).toFixed(0) + '%)');
-    else if (f.t > 150) problems.push(spec.name + ': slashes-only fight took ' + f.t.toFixed(0) + ' s (aim: 60 to 120)');
+    else if (f.t > (region === 'final' ? 150 : 120)) problems.push(spec.name + ': slashes-only fight took ' + f.t.toFixed(0) + ' s (aim: Wardens 90 to 120, Long Clock up to 150)');
     if (f.openMin < 1.0) problems.push(spec.name + ': an attack cycle leaves only ' + f.openMin.toFixed(2) + ' s of safe slashing time (median ' + f.openMed.toFixed(2) + ', ' + f.cycles + ' cycles)');
     // fight length rules (they were the check `fight_len`): slashes alone win in 150 s or less; three punched slots take at least 30 s and clearly shorten the fight
     const pf = f.punched;

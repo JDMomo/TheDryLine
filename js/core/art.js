@@ -75,11 +75,15 @@ const art = G.art = {
   },
   label(ctx, text, x, y, size, color, align = 'center', font = C.FONT, weight = 500) {
     ctx.font = weight + ' ' + size + 'px ' + font; ctx.textAlign = align; ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(5,9,8,0.75)'; ctx.fillText(text, x + 1, y + 1.5);
+    if (G.ui && G.ui.mode) color = G.ui.text(color);                                   // on parchment (js/ui/skin.js): light text colours become ink
+    const dark = G.world && typeof color === 'string' && color[0] === '#' && color.length === 7 && G.world.lum(color) < 0.2;
+    ctx.fillStyle = dark ? 'rgba(255,248,225,0.35)' : 'rgba(5,9,8,0.75)'; ctx.fillText(text, x + (dark ? 0.5 : 1), y + (dark ? 1 : 1.5));
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   },
   // Screen-space background with two parallax layers and drifting motes.
   backdrop(ctx, pal, camX, time) {
+    const rm = G.rooms && G.rooms.current;
+    if (G.artTest !== false && G.world && G.world.backdrop && rm) return G.world.backdrop(ctx, rm.region, camX, G.cam ? G.cam.y : 0, time);        // the watercolor world (js/art/world_bg.js)
     const g = ctx.createLinearGradient(0, 0, 0, C.H);
     g.addColorStop(0, pal.sky0); g.addColorStop(0.6, pal.sky1); g.addColorStop(1, pal.sky2);
     ctx.fillStyle = g; ctx.fillRect(0, 0, C.W, C.H);
@@ -103,6 +107,7 @@ const art = G.art = {
   },
   // World-space tiles of the current room.
   tiles(ctx, pal) {
+    if (G.artTest !== false && G.world && G.world.tiles && G.world.tiles(ctx, pal)) return;                                                  // the watercolor tiles (js/art/world.js)
     const tl = G.tiles, grid = tl.grid;
     const c0 = Math.max(0, Math.floor(G.cam.x / T)), c1 = Math.min(tl.cols - 1, Math.floor((G.cam.x + C.W) / T));
     const r0 = Math.max(0, Math.floor(G.cam.y / T)), r1 = Math.min(tl.rows - 1, Math.floor((G.cam.y + C.H) / T));

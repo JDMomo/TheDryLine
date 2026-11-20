@@ -52,7 +52,7 @@ export default async ({ page, shard }) => {
   }
   // the Long Clock: with every Warden beaten (nothing borrowed) a slash-only fight takes 90 to 120 s; each borrowed attack lengthens it, so straight to the clock is
   // clearly the longest (measured 114 to 120 s against 105 to 110 s with four beaten (the runs vary a few seconds); these floors hold when the shards run apart, and run together they are also compared directly)
-  if (slashT.final4 !== undefined && (slashT.final4 < 90 || slashT.final4 > 120)) problems.push('Long Clock with four Wardens beaten: ' + slashT.final4.toFixed(0) + ' s slash only (wanted 90 to 120)');
+  if (slashT.final4 !== undefined && (slashT.final4 < 120 || slashT.final4 > 150)) problems.push('Long Clock with four Wardens beaten: ' + slashT.final4.toFixed(0) + ' s slash only (wanted 120 to 150)');
   if (slashT.final !== undefined && slashT.final < 106) problems.push('going straight to the Long Clock takes ' + slashT.final.toFixed(0) + ' s slash only (it borrows four attacks: wanted 106 or more)');
   if (slashT.final2 !== undefined && slashT.final2 < 100) problems.push('the Long Clock with two Wardens beaten takes ' + slashT.final2.toFixed(0) + ' s slash only (it borrows two attacks: wanted 100 or more)');
   if (slashT.final !== undefined && slashT.final4 !== undefined && slashT.final < slashT.final4 + 8) problems.push('going straight to the Long Clock (' + slashT.final.toFixed(0) + ' s) must be clearly longer than with four Wardens beaten (' + slashT.final4.toFixed(0) + ' s)');

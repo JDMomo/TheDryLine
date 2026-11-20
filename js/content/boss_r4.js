@@ -10,7 +10,7 @@
      burst  Jaw Hinge (only while the jaw is open)               -> no summons
      ground Wheel Truck (front wheel, only when it has stopped)  -> slower roll
    Below half health: every tell is a quarter shorter (never under 0.35 s) and the spiral reverses direction half way through.
-   The base class lacks a hook for dying, so init wraps this boss's own update to clean up crabs and crates when it dies. */
+   When it dies the onDeath hook clears the crates; the crabs it summoned with b.summon() are killed by the base class. */
 (() => {
 'use strict';
 const G = window.G, U = G.util, fx = G.fx, T = G.C.T;
@@ -18,22 +18,33 @@ const G = window.G, U = G.util, fx = G.fx, T = G.C.T;
 const OUT = '#0d1610', HULL = '#2d5a3f', HULL2 = '#1f4030', HULL3 = '#3b7050', BRASS = '#b8913c', BRASS2 = '#c8b678', DARK = '#14201a', WARN = '#B8482F';
 const TELLS = { rollTell: 1, crateTell: 1, spawnTell: 1, spinTell: 1 };
 
-// Enemies of this boss that are alive.
-const crabs = () => G.rooms.current ? G.rooms.current.enemies.filter(e => e.id === 'ballast_crab' && !e.dead) : [];
-
 function chooseAttack(b) {
-  const rng = G.run.rng, sp = b.rage ? 0.75 : 1, f = b.flags;
+  const rng = G.run.rng, f = b.flags;
   b.facePlayer();
   let opts = ['roll', 'spin'];
-  if (!f.noCrates) opts.push('crates');
-  if (!f.noSummons && (crabs().length < 2 || f.noCrates)) opts.push('spawn');   // keeps the Jaw Hinge reachable once crates are gone
+  if (b.available('crates')) opts.push('crates');
+  if (b.available('spawn') && (b.ownedAlive('ballast_crab').length < 2 || f.noCrates)) opts.push('spawn');   // keeps the Jaw Hinge reachable once crates are gone
   opts = opts.filter(o => o !== b.last);
   const pick = rng.pick(opts); b.last = pick;
-  if (pick === 'roll') b.set('rollTell', 0.7 * sp);
-  else if (pick === 'spin') b.set('spinTell', 0.75 * sp);
-  else if (pick === 'spawn') b.set('spawnTell', 0.6 * sp);
-  else { markCrates(b); b.set('crateTell', 0.8 * sp); }
+  if (pick === 'crates') markCrates(b);
+  b.begin(pick);                                                           // tell and wind-up come from the registry below
 }
+
+// The attack registry (js/game/bosses.js documents the fields). Wind-ups are scaled by 0.75 when enraged.
+G.defineAttacks('gatewhale', {
+  roll: { name: 'Roll', tell: 'rollTell', wind: 0.7, strike: ['roll'], strikeT: 3.2, recover: 0.9, dodge: 'jump',
+    fair: 'It rocks back with the lamp flashing and chevrons mark the lane for 0.7 s; then it rolls to the far wall. Jump it, dash it, or stand on a platform or crate.',
+    slots: [{ cut: 'ground', flag: 'slowRoll', mode: 'weaken', note: 'the roll is slower (235 instead of 335 px/s)' }] },
+  crates: { name: 'Crate Drop', tell: 'crateTell', wind: 0.8, strike: ['crates'], strikeT: 1.0, recover: 0.9, dodge: 'move',
+    fair: 'The jaw opens and brackets mark three floor spots for 0.8 s; crates drop there and stay as short-lived pillars.',
+    slots: [{ cut: 'pierce', flag: 'noCrates', mode: 'disable', note: 'it can no longer mark and drop crates' }] },
+  spawn: { name: 'Cough Up Crabs', tell: 'spawnTell', wind: 0.6, strike: ['spawn'], strikeT: 0.5, recover: 1.1, dodge: 'cut',
+    fair: 'The jaw opens wide for 0.6 s, then it coughs out Ballast Crabs (at most two alive). The open jaw shows the Jaw Hinge.',
+    slots: [{ cut: 'burst', flag: 'noSummons', mode: 'disable', note: 'it can no longer release crabs' }] },
+  spin: { name: 'Steam Spiral', tell: 'spinTell', wind: 0.75, strike: ['spin'], strikeT: 2.3, recover: 1.2, dodge: 'move',
+    fair: 'It shakes and glows at the valve for 0.75 s, then vents a spiral of steam from the blowhole. Move through the gaps.',
+    slots: [{ cut: 'arc', flag: 'thin', mode: 'weaken', note: 'one arm of steam instead of two, wider gaps' }] }
+});
 
 // Pick up to three floor columns: one under each player, the rest scattered near them. Shown as brackets during the tell.
 function markCrates(b) {
@@ -80,7 +91,9 @@ function clearCrates(b) {
 }
 
 G.defineBoss({
-  id: 'gatewhale', name: 'The Gatewhale', hp: 700, par: 119, w: 150, h: 84,
+  id: 'gatewhale', name: 'The Gatewhale', hp: 780, par: 119, w: 150, h: 84,
+  interp: ['spin', 'jaw'],
+  onDeath(b) { clearCrates(b); },                  // the crabs it summoned are killed by the base class
 
   spots: {
     arc: { name: 'Blowhole Valve', local: [-10, -108], r: 17,
@@ -100,14 +113,6 @@ G.defineBoss({
   // Own fields: jaw 0..1 (mouth open), spin (wheel angle), crates, marks (columns marked for the next drop), steam counters, roll distance.
   init(b) {
     b.jaw = 0; b.spin = 0; b.last = ''; b.crates = []; b.marks = []; b.steamT = 0; b.steamA = 0; b.steamD = 1; b.lampOn = 1; b.flipped = false; b.dist = 0;
-    const base = b.update;                          // cleanup on death (the base class has no hook for it)
-    b.update = function (dt) {
-      base.call(b, dt);
-      if (b.state === 'dead' && !b.flags.cleaned) {
-        b.flags.cleaned = true; clearCrates(b);
-        for (const e of crabs()) { e.damage(9999, b.x); }
-      }
-    };
   },
 
   pose(b) { return { ox: TELLS[b.state] ? Math.sin(G.time * 70) * 1.6 : (b.state === 'stagger' ? Math.sin(G.time * 30) * 2 : 0), sy: 1 - (b.state === 'rollTell' ? 0.05 : 0) }; },
@@ -147,11 +152,8 @@ G.defineBoss({
         break;
       case 'spawnTell':
         if (b.t <= 0) {
-          const n = f.noSummons ? 0 : Math.max(0, 2 - crabs().length), m = b.toWorld(70, -14);
-          for (let i = 0; i < n; i++) {
-            const e = new G.Enemy(G.enemyDefs.ballast_crab, U.clamp(m.x + b.face * i * 18, 40, G.tiles.cols * T - 40), b.floor);
-            e.face = b.face; e.kbT = 0.35; e.kbV = b.face * 240; G.rooms.current.enemies.push(e);
-          }
+          const n = f.noSummons ? 0 : Math.max(0, 2 - b.ownedAlive('ballast_crab').length), m = b.toWorld(70, -14);
+          for (let i = 0; i < n; i++) b.summon('ballast_crab', U.clamp(m.x + b.face * i * 18, 40, G.tiles.cols * T - 40), b.floor, { face: b.face, kb: [0.35, b.face * 240] });
           fx.spark(m.x, m.y, 14, '#dfe8d6', 240, 0.5); fx.jolt(0, 5); b.set('spawn', 0.5);
         }
         break;
@@ -170,7 +172,7 @@ G.defineBoss({
           const m = b.toWorld(-10, -106);
           for (let i = 0; i < arms; i++) {
             const a = b.steamA + i * 6.283 / arms;
-            b.shoot({ x: m.x, y: m.y, vx: Math.cos(a) * 190, vy: Math.sin(a) * 190, life: 3, r: 7, paint: paintSteam });
+            b.shoot({ x: m.x, y: m.y, vx: Math.cos(a) * 190, vy: Math.sin(a) * 190, life: 3, r: 7, kind: 'steam', paint: paintSteam });
           }
         }
         if (b.t <= 0) { b.flipped = false; b.set('recover', 1.2 * sp); }

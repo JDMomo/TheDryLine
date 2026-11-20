@@ -1,5 +1,5 @@
 // A token turns up once per run. Every source (guarded plinths, trunks, the ticket machine, kiosk) draws only ids that are not
-// held, not void and not already placed or offered elsewhere in the run; a dry pool offers a trinket or scrip, never a copy; seeds replay.
+// held, not void and not already placed or offered elsewhere in the run; a source whose drawn token is missing offers a trinket or scrip, never a copy; seeds replay.
 export default async ({ page }) => {
   const res = await page.evaluate(() => {
     const D = G.debug, bad = [], ok = (c, m) => { if (!c) bad.push(m); };
@@ -45,17 +45,15 @@ export default async ({ page }) => {
         for (const [id, where] of ts) { if (tseen[id]) bad.push('cuts ' + cuts.length + ' seed ' + seed + ': trinket ' + id + ' at ' + tseen[id] + ' and ' + where); tseen[id] = where; }
         for (const id of g.claimed) if (!G.itemDefs[id] && !G.trinketDefs[id]) bad.push('claimed list holds ' + id);
         for (const id of ids.map(x => x[0])) if (!g.claimed.includes(id)) bad.push('seed ' + seed + ': ' + id + ' is placed but not claimed');
-        for (const r of Object.values(G.regionDefs)) if (r.fixedItem && !seen[r.fixedItem]) bad.push('seed ' + seed + ': fixed token ' + r.fixedItem + ' is not placed');
-        const rand = ids.filter(([id]) => G.itemDefs[id].rarity !== 'fixed').length;
-        if (rand > G.items.pool().length) bad.push('seed ' + seed + ': more random tokens placed than the pool holds');
+        const drawn = g.draw.all.filter(id => !g.draw.start.includes(id));
+        for (const id of drawn) if (!seen[id]) bad.push('seed ' + seed + ': drawn token ' + id + ' is not placed');
+        if (ids.length > G.items.pool().length) bad.push('seed ' + seed + ': more tokens placed than the pool holds');
         if (empty(g)) bad.push('seed ' + seed + ': a source holds nothing');
         if (g.warnings.length) bad.push('seed ' + seed + ' warnings: ' + g.warnings.join('; '));
-        if (!cuts.length && G.items.pool().length <= ids.filter(([id]) => G.itemDefs[id].rarity !== 'fixed').length) stats.dry++;
         stats.filler += Object.values(g.nodes).reduce((s, n) => s + G.worldgen.contents(n).filter(c => (c.data && (c.data.scrip || (c.type === 'ticket' && c.data.choices.concat(c.data.next).some(o => o.trinket || o.scrip))))).length, 0);
       }
     }
     G.meta.cuts = [];
-    ok(stats.dry > 20, 'a new player\'s pool should run dry in most runs (dry in ' + stats.dry + ')');
     ok(stats.filler > 0, 'a dry pool never offered a trinket or scrip');
 
     // 2. replayable: the same seed gives the same sources

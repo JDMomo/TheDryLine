@@ -1,5 +1,7 @@
 /* CONTENT: tokens. One G.defineItem per token (fields: js/game/items.js; recipe: docs/ARCHITECTURE.md; list: bible section 8).
-   Three per cut: a common (the baseline), a rare (unlocked by punching a slot of the cut) and a fixed one (one per region's guarded plinth).
+   Four per cut: a common (the baseline), a rare (unlocked by punching a slot of the cut), a signature token (rarity 'fixed': it used to sit on a
+   region's plinth; now every run draws its plinth tokens from the whole pool, see G.worldgen.drawTokens) and a ledger token (rarity 'ledger':
+   enters the pool when the feat that unlocks it is done, see js/game/ledger.js).
    Shots may carry step(s, dt), free and seen (see js/game/combat.js); a token may carry tick(player, dt) while held.
    Per-player token state lives in p.tok. */
 (() => {
@@ -263,5 +265,85 @@ G.defineItem({
       onEnd(s) { fx.spark(s.x, s.y, 8, col, 160, 0.3); k.crawler = null; p.itemCd = p.itemCdMax = cdOf('pumice_crawler'); } });
   },
   drawIcon: icon('ground', c => { c.beginPath(); c.moveTo(-3, 2.5); c.quadraticCurveTo(0, -6, 3, 2.5); c.closePath(); c.fill(); })
+});
+
+// ---------------------------------------------------------------- ledger tokens (one per cut; each enters the pool when a feat is done)
+G.defineItem({
+  id: 'jet_gimlet', name: 'Jet Gimlet', cls: 'pierce', rarity: 'ledger', cd: 1.0,
+  mat: ['metal', 'magnetic'], inter: 'Metal: Conduct with the Brine Flask or a brine puddle; Pull with the Magnet Tooth. Magnetic: it is drawn back to you.',
+  desc: 'A bolt that flies 0.35 s, turns and comes home to you, striking everything again on the way back.',
+  use(p) {
+    const col = CL.pierce.color;
+    G.combat.shoot({ x: p.x + p.face * 14, y: p.y - 24, vx: p.face * 820, life: 1.3, r: 5, seen: new Set(), tile: 'die', back: false,
+      owner: p, cls: 'pierce', itemId: 'jet_gimlet', dmg: 5, color: col, trail: col,
+      step(s) {
+        if (!s.back && s.age >= 0.35) { s.back = true; s.seen = new Set(); fx.spark(s.x, s.y, 8, col, 200, 0.25); }
+        if (s.back) {
+          const dx = p.x - s.x, dy = (p.y - 24) - s.y, d = Math.hypot(dx, dy) || 1;
+          s.vx = dx / d * 820; s.vy = dy / d * 820; if (d < 24) s.life = 0;
+        }
+      },
+      paint(ctx, s) {
+        ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.atan2(s.vy, s.vx)); ctx.fillStyle = s.back ? '#ffffff' : '#d6ecf8'; ctx.fillRect(-14, -2, 24, 4);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(7, -6); ctx.lineTo(7, 6); ctx.closePath(); ctx.fill(); ctx.restore();
+      } });
+  },
+  drawIcon: icon('pierce', c => { c.lineWidth = 1.6; c.beginPath(); c.arc(0, 1, 4.5, 3.6, 6.1); c.stroke(); })
+});
+
+G.defineItem({
+  id: 'amber_sling', name: 'Amber Sling', cls: 'arc', rarity: 'ledger', cd: 1.3,
+  mat: ['flammable', 'brittle'], inter: 'Flammable: a spark Ignites it in flight. Brittle: a heavy shot Shatters it into 3 hits; Crack if you are hurt just after casting.',
+  desc: 'A short lob that bursts where it lands and throws two smaller bursts out to either side. Hold Up to lob it high, the way you face to throw it far.',
+  LOB: { neutral: [175, -480], down: [100, -300], fwd: [320, -540], up: [105, -900] },
+  use(p) {
+    const [vx, vy] = G.itemDefs.amber_sling.LOB[aimOf(p)], col = CL.arc.color;
+    G.combat.shoot({ x: p.x + p.face * 10, y: p.y - 34, vx: p.face * vx + p.vx * 0.15, vy, grav: 1500, life: 3, r: 6, burst: 22,
+      owner: p, cls: 'arc', itemId: 'amber_sling', dmg: 6,
+      paint(ctx, s) { ctx.save(); ctx.translate(s.x, s.y); shape(ctx, 'arc', 8, G.time * 10); ctx.fillStyle = '#7a4a10'; ctx.fillRect(-2, -2, 4, 4); ctx.restore(); },
+      onEnd(s) {
+        fx.spark(s.x, s.y, 14, col, 260, 0.35); fx.ring(s.x, s.y, 6, 150, col, 0.2);
+        for (const d of [-1, 1]) G.combat.shoot({ x: s.x, y: s.y - 6, vx: d * 175, vy: -340, grav: 1500, life: 1.4, r: 5, burst: 20,
+          owner: p, cls: 'arc', itemId: 'amber_sling', dmg: 4, ignited: s.ignited,
+          paint(ctx, t) { ctx.save(); ctx.translate(t.x, t.y); shape(ctx, 'arc', 5, G.time * 14); ctx.restore(); },
+          onEnd(t) { fx.spark(t.x, t.y, 8, col, 200, 0.25); fx.ring(t.x, t.y, 4, 90, col, 0.16); } });
+      } });
+  },
+  drawIcon: icon('arc', c => { c.beginPath(); c.arc(-3.5, 2, 1.6, 0, 6.283); c.arc(3.5, 2, 1.6, 0, 6.283); c.fill(); })
+});
+
+G.defineItem({
+  id: 'mica_lantern', name: 'Mica Lantern', cls: 'burst', rarity: 'ledger', cd: 1.4,
+  mat: ['brittle', 'spark'], inter: 'Spark: its pulse Ignites flammable shots and sets off clouds (Flare). Brittle: a heavy shot Shatters it; Crack if you are hurt just after casting.',
+  desc: 'A lantern set 90 px ahead of you. It pulses at once and again 0.7 s later, so the danger stays on the far side of the pulse.',
+  use(p) {
+    const x = p.x + p.face * 90, y = p.cy, col = CL.burst.color;
+    const hit = (px, py) => {
+      pulse(px, py, 84, 330, col); fx.jolt(0, 3); G.combat.clearHostile(px, py, 96);
+      G.combat.strike({ x: px, y: py, r: 84, cls: 'burst', itemId: 'mica_lantern', owner: p, dmg: 5, all: true });
+    };
+    hit(x, y);
+    G.combat.shoot({ x, y, life: 0.7, r: 0, free: true, tile: 'pass', owner: p, color: col,
+      paint(ctx, s) {
+        const k = s.age / 0.7; ctx.save(); ctx.translate(s.x, s.y); shape(ctx, 'burst', 8 + 5 * k, s.age * 3);
+        ctx.fillStyle = '#fff3c4'; ctx.globalAlpha = 0.5 + 0.5 * k; ctx.fillRect(-3, -3, 6, 6); ctx.restore();
+      },
+      onEnd(s) { hit(s.x, s.y); } });
+  },
+  drawIcon: icon('burst', c => { c.lineWidth = 1.6; c.strokeRect(-3.5, -3.5, 7, 7); })
+});
+
+G.defineItem({
+  id: 'gypsum_sledge', name: 'Gypsum Sledge', cls: 'ground', rarity: 'ledger', cd: 1.2,
+  mat: ['heavy', 'slick'], inter: 'Heavy: Shatters brittle shots; with Lead Boot it Stops at you or a wall, and a slash Kicks it on. Slick: it keeps its speed.',
+  desc: 'A slab that gets heavier the further it slides: 5 damage at the start, 15 by the end of its run.',
+  use(p) {
+    const col = CL.ground.color;
+    G.combat.shoot({ x: p.x + p.face * 14, y: p.y - 8, vx: p.face * 340, hug: true, life: 1.9, r: 7,
+      owner: p, cls: 'ground', itemId: 'gypsum_sledge', dmg: 5, color: col, trail: col,
+      step(s) { if (!s.kicked) s.dmg = 5 + Math.min(10, s.age * 7); },
+      paint(ctx, s) { const w = 10 + Math.min(6, s.age * 5); ctx.fillStyle = col; ctx.fillRect(s.x - w, s.y - 6, w * 2, 13); ctx.fillStyle = '#3a2433'; ctx.fillRect(s.x - w, s.y + 4, w * 2, 3); ctx.fillStyle = '#f2d6e6'; ctx.fillRect(s.x - w + 3, s.y - 4, w, 2); } });
+  },
+  drawIcon: icon('ground', c => { c.fillRect(-8, -1, 16, 2); c.fillRect(-4, 3, 8, 2); })
 });
 })();

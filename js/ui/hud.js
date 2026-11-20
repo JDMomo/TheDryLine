@@ -75,7 +75,7 @@ G.hud = {
     ctx.fillStyle = HUD_PLATE; ctx.fillRect(8, 8, Math.max(250, abW + 24), 78 + Math.max(0, G.players.length - 1) * 24);
     ctx.fillRect(W - 8 - (p1.slots * 50 + 30), 8, p1.slots * 50 + 30, 92);
     pips(ctx, p1, 30, 30, 15, 26); gauge(ctx, p1, 20, 50, 124, 7);
-    ctx.save(); ctx.translate(162, 53.5); ctx.rotate(Math.PI / 4); ctx.fillStyle = '#fff3c4'; ctx.fillRect(-4, -4, 8, 8); ctx.restore();
+    G.world.scrip(ctx, 162, 53.5, 0.6);
     art.label(ctx, Math.floor(run.shards) + ' scrip', 174, 54, 14, '#e9e2cf', 'left', C.FONT, 600);
     let x = 20;
     for (const id in G.abilityDefs) {
@@ -101,14 +101,15 @@ G.hud = {
     const b = room.boss;
     if (b && (room.fight || (b.state === 'dead' && b.t > -1.2))) {
       const bw = 520, bx = (W - bw) / 2, by = H - 34;
+      if (G.ui.on()) G.ui.paper(ctx, bx - 16, by - 36, bw + 16 + 18 + b.spots.length * 20 + 22 + 18, 58, 'bar');      // the boss bar sits on a parchment strip
       art.label(ctx, 'Warden', bx, by - 14, 11, '#9aa89f', 'left');
       art.label(ctx, b.def.name, W / 2, by - 14, 16, '#e9e2cf', 'center', C.DISPLAY, 600);
       art.label(ctx, 'Fare slots', bx + bw + 18, by - 14, 11, '#9aa89f', 'left');
-      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(bx, by, bw, 9);
+      ctx.fillStyle = G.ui.on() ? 'rgba(90,66,36,0.4)' : 'rgba(0,0,0,0.55)'; ctx.fillRect(bx, by, bw, 9);
       ctx.fillStyle = b.rage ? '#d9603a' : '#e9a23b'; ctx.fillRect(bx, by, bw * U.clamp(b.hp / b.maxHp, 0, 1), 9);
       b.spots.forEach((s, i) => {
         const cx = bx + bw + 18 + i * 20;
-        ctx.save(); ctx.translate(cx, by + 4.5); ctx.fillStyle = s.broken ? '#2a2f2d' : s.open ? G.CLASSES[s.cls].color : '#586068'; art.cutShape(ctx, G.CLASSES[s.cls].shape, 7.5); ctx.restore();
+        ctx.save(); ctx.translate(cx, by + 4.5); if (G.ui.on()) { ctx.fillStyle = '#241b0f'; art.cutShape(ctx, G.CLASSES[s.cls].shape, 9.4); } ctx.fillStyle = s.broken ? '#2a2f2d' : s.open ? G.CLASSES[s.cls].color : '#586068'; art.cutShape(ctx, G.CLASSES[s.cls].shape, 7.5); ctx.restore();
         if (s.broken) { ctx.strokeStyle = '#9aa89f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx - 5, by - 0.5); ctx.lineTo(cx + 5, by + 9.5); ctx.stroke(); }
       });
     }
@@ -116,6 +117,7 @@ G.hud = {
     if (fx.banner) {
       const n = fx.banner;
       ctx.globalAlpha = U.clamp(n.t * 2.5, 0, 1) * U.clamp((n.max - n.t) * 6, 0, 1);
+      if (G.ui.on()) { ctx.font = '600 26px ' + C.DISPLAY; const bwid = Math.max(ctx.measureText(n.a).width, n.b ? (ctx.font = '500 14px ' + C.FONT, ctx.measureText(n.b).width) : 0); G.ui.paper(ctx, W / 2 - bwid / 2 - 34, 100, bwid + 68, n.b ? 66 : 48, 'ribbon'); }
       art.label(ctx, n.a, W / 2, 124, 26, '#e9a23b', 'center', C.DISPLAY, 600);
       if (n.b) art.label(ctx, n.b, W / 2, 152, 14, '#e9e2cf');
       ctx.globalAlpha = 1;

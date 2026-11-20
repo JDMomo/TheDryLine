@@ -12,16 +12,16 @@ export default async ({ page }) => {
       if (chk.unreachable.length || chk.deadEnds.length) fail('graph not sound');
       for (const r of Object.values(G.regionDefs)) {
         const f = c.fixed[r.id];
-        if (!r.fixedItem && !f) continue;   // the Terminus has no fixed token: the bible lists four guarded plinths, one per region r1 to r4
+        if (!r.plinth && !f) continue;   // the Terminus has no plinth: the bible lists four guarded plinths, one per region r1 to r4
         if (!f) { fail('no guarded plinth in ' + r.id); continue; }
         if (f.kind !== 'branch' || !f.parent) fail('plinth of ' + r.id + ' is not in a branch room');
-        const want = G.itemDefs[r.fixedItem] ? r.fixedItem : null;
-        if (want ? f.item !== want : (!G.itemDefs[f.item] || G.itemDefs[f.item].rarity === 'fixed' && false)) fail('plinth of ' + r.id + ' holds ' + f.item + ', wanted ' + (want || 'a defined token'));
+        if (f.item !== g.draw.plinth[r.id] || !G.itemDefs[f.item]) fail('plinth of ' + r.id + ' holds ' + f.item + ', the run drew ' + g.draw.plinth[r.id]);   // the token is drawn per run (the pool check covers which)
         if (g.nodes[f.node].region !== r.id) fail('plinth of ' + r.id + ' is in another region');
       }
       if (c.trunks !== 2 || c.trunksInMain !== 2) fail('trunks ' + c.trunks + ' (' + c.trunksInMain + ' in main rooms)');
       if (c.tickets !== 1) fail('ticket machines ' + c.tickets);
-      if (c.kioskRooms !== 1 || c.kioskWares !== 3) fail('kiosk rooms ' + c.kioskRooms + ', wares ' + c.kioskWares);
+      const rule = g.rule || {};   // Timetable cards Scrip Boom (kiosk closed) and Dry Pipes (no standpipes) change these counts: the timetable check covers them
+      if (rule.kioskClosed ? c.kioskWares !== 0 : (c.kioskRooms !== 1 || c.kioskWares !== 3)) fail('kiosk rooms ' + c.kioskRooms + ', wares ' + c.kioskWares);
       if (c.booths !== 0) fail('booths ' + c.booths);
       if (Object.values(G.roomDefs).some(d => d.marks.some(m => m.ch === 'K'))) fail('a room template still has a booth marker');
       for (const n of Object.values(g.nodes)) for (const k of G.worldgen.contents(n)) if (k.type === 'plinth' && k.data.price && !k.data.trinket) fail('the kiosk sells a token');
@@ -29,7 +29,7 @@ export default async ({ page }) => {
       if (c.signs < 3) fail('hub signs ' + c.signs);
       const order = Object.values(G.regionDefs).sort((a, b) => a.gate - b.gate), last = g.regions[order[order.length - 1].id], pre = g.nodes[last.arena].exits.left.to;
       const pipe = last.pipe || pre;   // the last region's standpipe stop: a shared branch room off the room before the arena, or that room itself
-      if ([...c.standpipes].sort().join() !== [g.hub, pipe].sort().join()) fail('standpipes in ' + c.standpipes + ', wanted ' + g.hub + ' and ' + pipe);
+      if ([...c.standpipes].sort().join() !== (rule.noPipes ? '' : [g.hub, pipe].sort().join())) fail('standpipes in ' + c.standpipes + ', wanted ' + g.hub + ' and ' + pipe);
       if (pipe !== pre && g.nodes[pipe].parent !== pre) fail('the standpipe room of the Terminus does not hang off the room before the arena');
       if (G.roomDefs[g.nodes[pre].def].kind !== 'main') fail('the room before the last arena is not a main room');
       for (const n of Object.values(g.nodes)) for (const k of G.worldgen.contents(n)) if (k.type === 'plinth' && k.data.price && k.data.price !== 40) fail('kiosk price ' + k.data.price);
@@ -89,7 +89,7 @@ export default async ({ page }) => {
     if (w4) { at(w4); tap('interact'); ok(G.run.shards === 0 && !G.run.trinkets.includes(w4.data.trinket), 'cannot buy without scrip'); }
 
     // standpipes: heal fully once, in the hub and before the final arena
-    D.newRun(13); D.god(true);
+    G.ledger.force = 'none'; D.newRun(13); D.god(true);     // Dry Pipes has no standpipes: the timetable check covers it
     const order = Object.values(G.regionDefs).sort((a, b2) => a.gate - b2.gate), last = G.run.graph.regions[order[order.length - 1].id], pre = G.run.graph.nodes[last.arena].exits.left.to;
     for (const id of [G.run.graph.hub, last.pipe || pre]) {
       D.gotoRoom(id); const sp = props('standpipe')[0]; ok(!!sp, 'standpipe in ' + id); if (!sp) continue;

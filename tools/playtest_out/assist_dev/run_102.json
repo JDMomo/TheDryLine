@@ -1,0 +1,1 @@
+{"seed":"102","ignoreChart":false,"assist":true,"scale":3,"audio":false,"startState":"play","code":"2U-0","error":"keyboard.down: Target crashed \n    at worker (/home/claude/game/tools/playtest.mjs:76:58)\n    at async file:///home/claude/game/tools/playtest.mjs:217:18","end":"error","wall":536,"errors":[],"failed":[]}

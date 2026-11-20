@@ -1,4 +1,4 @@
-// Movement unlocks open things. Each region's guarded room (its own branch room, holding the fixed token) needs the movement unlock of the previous
+// Movement unlocks open things. Each region's guarded room (its own branch room, holding the plinth token) needs the movement unlock of the previous
 // region in the ring: r2 needs Dash (from r1), r3 Wall Grip (from r2), r4 Double Jump (from r3), r1 Heavy Cut (from r4).
 //   - the room declares it in `needs` (the room validator, checks/rooms.mjs, proves both directions on every guarded room: reachable with
 //     the ability, unreachable without it; this check covers the wiring around it)
@@ -9,7 +9,7 @@ export default async ({ page }) => {
   const res = await page.evaluate(() => {
     const D = G.debug, bad = [], ok = (c, m) => { if (!c) bad.push(m); };
     const RING = { r1: 'heavy', r2: 'dash', r3: 'grip', r4: 'double' };           // region -> the ability its guarded room needs
-    const regions = Object.values(G.regionDefs).filter(r => r.fixedItem).sort((a, b) => a.gate - b.gate);
+    const regions = Object.values(G.regionDefs).filter(r => r.plinth).sort((a, b) => a.gate - b.gate);
     ok(regions.length === 4, 'four regions with a guarded plinth, found ' + regions.length);
     regions.forEach((r, i) => {
       const prev = regions[(i + regions.length - 1) % regions.length];

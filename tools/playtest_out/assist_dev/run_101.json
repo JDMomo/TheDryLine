@@ -1,0 +1,1 @@
+{"seed":"101","ignoreChart":false,"assist":true,"scale":3,"audio":false,"startState":"play","code":"2T-0","error":"page.evaluate: Target crashed \n    at worker (/home/claude/game/tools/playtest.mjs:70:28)\n    at async file:///home/claude/game/tools/playtest.mjs:217:18","end":"error","wall":551,"errors":[],"failed":[]}

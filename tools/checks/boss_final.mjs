@@ -7,7 +7,7 @@ export default async ({ page, shots }) => {
     // A fresh run with the final arena node set to the Long Clock; the fight is started with the party inside the door.
     window.T = {
       setup(beaten = [], tokens = [], god = true, seed = 5) {
-        D.newRun(seed); D.god(god);
+        G.ledger.force = 'none'; D.newRun(seed); D.god(god);     // no Timetable card: every borrowed attack is in play
         for (const r of beaten) G.run.beaten[r] = true;
         const node = G.run.graph.nodes[G.run.graph.regions.final.arena];
         if (node.def !== 'final_arena' || !node.content[0] || node.content[0].id !== 'long_clock') { node.def = 'final_arena'; node.content = [{ type: 'boss', id: 'long_clock' }]; }
