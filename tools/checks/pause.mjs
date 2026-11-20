@@ -46,7 +46,14 @@ export default async ({ page }) => {
     const texts = [];
     const label = G.art.label; G.art.label = (c, t, ...r) => { texts.push(t); return label.call(G.art, c, t, ...r); };
     const px = (x, y) => Array.from(ctx.getImageData(x, y, 1, 1).data);
-    const shot = sel => { G.state = 'pause'; M.sel = sel; M.confirm = false; ctx.setTransform(1, 0, 0, 1, 0, 0); G.rooms.draw(ctx, 0); G.menus.pause(ctx); return [0, 1, 2].map(i => px(480 - 140, (544 - 490) / 2 + 78 + i * 30 - 8)); };
+    const shot = sel => {
+      G.state='pause';M.sel=sel;M.confirm=false;ctx.setTransform(1,0,0,1,0,0);
+      // Menu highlight is what this check measures. Do not paint file:// sprites behind it: doing so taints
+      // the offscreen canvas even though the production HTTP build is same-origin.
+      ctx.fillStyle='#0b1110';ctx.fillRect(0,0,cv.width,cv.height);
+      G.menus.pause(ctx);
+      return [0,1,2].map(i=>px(480-140,(544-490)/2+78+i*30-8));
+    };
     const a = shot(0), b = shot(1);
     const warm = c => c[0] - c[2];
     ok(warm(a[0]) > warm(a[1]) + 8 && warm(b[1]) > warm(b[0]) + 8, 'the selected row is not highlighted: ' + JSON.stringify([a, b]));
