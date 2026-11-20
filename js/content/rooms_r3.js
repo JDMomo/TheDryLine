@@ -136,6 +136,7 @@ const out = g => g.map(r => r.join(''));
 
 G.defineRoom({
   id: 'r3_arena', region: 'r3', kind: 'arena',
+  decor:[{type:'crate_decor',c:5,r:14},{type:'banner_decor',c:15,r:14},{type:'crate_decor',c:27,r:14}],
   map: [
     WALL,
     L, L, L, L, L, L, L, L,

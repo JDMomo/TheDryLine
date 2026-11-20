@@ -213,6 +213,7 @@ G.defineRoom({
 // in the middle that is reached from them. The whale's crates (2 tiles tall) are the other way over its body.
 G.defineRoom({
   id: 'r4_arena', region: 'r4', kind: 'arena',
+  decor:[{type:'banner_decor',c:5,r:14},{type:'lamp_decor',c:14,r:14},{type:'banner_decor',c:27,r:14}],
   map: [
     WALL,
     '####.........................#', '####.........................#', '####.........................#',

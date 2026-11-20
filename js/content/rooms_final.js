@@ -53,6 +53,7 @@ G.defineRoom({ id: 'final_tower', region: 'final', kind: 'main', h: 2,
 // 192 px up) are where a lobbed token falls onto the Bell Housing from above.
 G.defineRoom({
   id: 'final_arena', region: 'final', kind: 'arena',
+  decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:14,r:14},{type:'lamp_decor',c:26,r:14}],
   map: [
     '##############################',
     '####.........................#', '####.........................#', '####.........................#',

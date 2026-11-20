@@ -148,6 +148,7 @@ function exits(g, left, right) {
 // The Heron (B) stands at column 18.
 G.defineRoom({
   id: 'r2_arena', region: 'r2', kind: 'arena',
+  decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:14,r:14},{type:'lamp_decor',c:26,r:14}],
   map: [
     '##############################',
     '####.........................#', '####.........................#', '####.........................#',
