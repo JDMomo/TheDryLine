@@ -1,47 +1,66 @@
-/* CONTENT: The Junction. This is an authored place, not a menu with five doors.
-   Three screens wide: arrival platform -> turntable concourse -> Terminus annex. No enemies. */
+/* Authored Junction: a two-screen-tall station district, not a flat gate menu. */
 (() => {
 'use strict';
-const G=window.G;
-const W=90,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
-for(let c=0;c<W;c++){g[0][c]='#';g[15][c]='#';g[16][c]='#';}
-for(let r=0;r<H;r++){g[r][0]='#';g[r][W-1]='#';}
-const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)g[r][c]=ch;};
-const put=(r,c,t)=>{for(let i=0;i<t.length;i++)g[r][c+i]=t[i];};
+const G=window.G, W=120, H=34;
+const g=Array.from({length:H},()=>Array(W).fill('.'));
+const fill=(r0,r1,c0,c1,ch)=>{for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)if(r>=0&&r<H&&c>=0&&c<W)g[r][c]=ch;};
+const put=(r,c,ch)=>{g[r][c]=ch;};
 
-// WEST — arrival shelter. Low roof, warm standpipe, first story sign, view into the larger station.
-fill(2,8,2,20,'#');
-fill(9,9,5,17,'=');
-fill(12,14,21,23,'#');
-put(14,7,'P'); put(14,12,'?'); put(14,17,'H');
+// World shell. The lower concourse is always safe and continuously walkable.
+fill(0,1,0,W-1,'#'); fill(32,33,0,W-1,'#');
+fill(0,H-1,0,1,'#'); fill(0,H-1,W-2,W-1,'#');
 
-// CENTRAL — broad turntable floor with an upper catwalk. Gates are spaced as landmarks, not adjacent menu buttons.
-put(10,27,'==========');
-put(8,40,'============');
-put(10,55,'==========');
-fill(13,14,37,39,'#'); fill(12,14,47,49,'#');
-put(14,29,'G'); put(14,40,'G'); put(14,51,'G');
-put(14,34,'?'); put(14,46,'?');
+// LOWER DISTRICT — five gate platforms separated by architectural bays, not hazards.
+for(const c of [8,30,52,90,112]){
+  fill(29,31,c-4,c-3,'#'); fill(29,31,c+3,c+4,'#'); // arch feet
+  fill(27,28,c-4,c+4,'#');                           // lintel
+}
+put(31,8,'G'); put(31,30,'G'); put(31,52,'G'); put(31,90,'G'); put(31,112,'G');
 
-// EAST — old departures annex. Ticket Hall and Terminus stand apart under a taller clock canopy.
-fill(3,7,64,87,'#');
-put(8,66,'====================');
-fill(12,14,71,73,'#');
-put(14,67,'G'); put(14,82,'G'); put(14,76,'?');
+// ARRIVAL SHELTER / KEEPER bay.
+fill(26,26,57,72,'#'); fill(27,31,57,58,'#'); fill(27,31,71,72,'#');
+put(31,61,'P'); put(31,65,'N');
+put(31,55,'?'); put(31,75,'?');
+
+// Service objects are spaced into their own readable bays.
+put(31,40,'R');                        // ticket machine
+put(31,80,'S');                        // kiosk stock
+put(31,84,'K');                        // clipping booth
+
+// LOWER LANDMARKS — low luggage / machinery masses break the 4-screen run into recognizable chunks.
+fill(30,31,17,20,'#'); fill(29,31,21,22,'#');
+fill(30,31,37,39,'#');
+fill(30,31,98,101,'#'); fill(29,31,102,103,'#');
+
+// UPPER FOOTBRIDGE — optional traversal loop across most of the Junction.
+// It is intentionally one-way flooring so jumps pass through cleanly from below.
+fill(20,20,13,106,'=');
+fill(17,17,28,42,'=');   // old dispatch balcony
+fill(16,16,76,91,'=');   // maintenance overlook
+fill(13,13,52,67,'=');   // high clock balcony
+
+// Two broad stair-like climbs make the upper district base-movement accessible.
+fill(30,31,12,15,'#'); fill(28,31,16,19,'#'); fill(26,31,20,23,'#'); fill(24,31,24,27,'#'); fill(22,31,28,31,'#');
+fill(30,31,105,108,'#'); fill(28,31,101,104,'#'); fill(26,31,97,100,'#'); fill(24,31,93,96,'#'); fill(22,31,89,92,'#');
+
+// Intermediate shelves make climbing/down-climbing forgiving.
+fill(25,25,33,42,'='); fill(23,23,47,56,'='); fill(25,25,64,73,'='); fill(23,23,78,87,'=');
+
+// Upper station architecture: a clock plinth and two roof fragments create silhouettes without closing routes.
+fill(10,12,58,61,'#'); fill(8,9,55,64,'#');
+fill(11,11,18,32,'#'); fill(11,11,87,101,'#');
+
+// A quiet maintenance nook above the shelter. It has no reward dependency; it exists to make the hub feel inhabited.
+fill(15,15,44,49,'='); fill(14,14,46,47,'#');
+put(14,45,'?');
 
 G.defineRoom({
- id:'junction',region:'hub',kind:'hub',w:3,
- decor:[
-  {type:'lamp_decor',c:4,r:14},{type:'lamp_decor',c:18,r:14},
-  {type:'lamp_decor',c:26,r:14},{type:'lamp_decor',c:35,r:14},{type:'lamp_decor',c:45,r:14},{type:'lamp_decor',c:56,r:14},
-  {type:'lamp_decor',c:65,r:14},{type:'lamp_decor',c:76,r:14},{type:'lamp_decor',c:86,r:14}
- ],
- signs:[
-  'The Last Timetable names one service that was never cancelled. The five lit gates still obey it.',
-  'Each Warden holds one local order. Releasing them makes the Long Clock less dangerous.',
-  'Tokens turn up on plinths and in lost trunks; ticket machines and kiosks offer more. The lock chart shows three cuts per Warden.',
-  'The Terminus is open now. It is also strongest now.'
- ],
- map:g.map(row=>row.join(''))
+  id:'junction', region:'hub', kind:'hub', w:4, h:2,
+  map:g.map(row=>row.join('')),
+  signs:[
+    'The Junction board still lists five open lines.',
+    'The shelter kettle is cold. The Station Keeper is not.',
+    'MAINTENANCE: final authority remains at TERMINUS.'
+  ]
 });
 })();
