@@ -144,7 +144,8 @@ G.defineRoom({
     fill(6, 10, 14, 17, '.');                 // chimney
     fill(8, 10, 18, 19, 't');                 // optional tar pocket beside the chimney; fire opens it, main route ignores it
     fill(14, 14, 14, 17, '#');                // one-tile service curb under the low roof; plain jump stays readable
-    put(10, 14, '====');                      // 3 tiles above the step
+    put(13, 15, '#');                         // one-tile stair post under the open chimney (full headroom there): curb, post, then the ledge
+    put(10, 14, '====');                      // 3 tiles above the stair post
     put(9, 15, 'C');
     put(14, 4, '?');                           // same emergency-sign language as the arrival/service rooms
     put(14, 9, 'E');

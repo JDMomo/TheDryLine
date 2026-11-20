@@ -15,11 +15,10 @@ const BASE_PALETTE = {
 addEventListener('keydown', e => { if (e.code === 'F2' && !e.repeat) { e.preventDefault(); G.artTest = !G.artTest; } });
 const hash1 = (i, s) => Math.abs(Math.sin(i * 12.9898 + s) * 43758.5453) % 1;
 
+// Only plates that exist. wreck_quay.jpg and ticket_hall.jpg (hub, r1, r4) arrived truncated and were removed: re-export them and add them back
+// here (docs/art/ASSET_LIST.md, "Needed again"). Regions without a plate use the code-drawn scenery.
 const PAINTED_BG_SRC = {
-  hub: 'assets/backgrounds/ticket_hall.jpg',
-  r1: 'assets/backgrounds/wreck_quay.jpg',
-  r2: 'assets/backgrounds/signal_reef.jpg',
-  r4: 'assets/backgrounds/ticket_hall.jpg'
+  r2: 'assets/backgrounds/signal_reef.jpg'
 };
 const PAINTED_BG = {}, PAINTED_FILES = {};
 if (typeof Image !== 'undefined') for (const id in PAINTED_BG_SRC) {

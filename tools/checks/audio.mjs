@@ -156,7 +156,11 @@ export default async ({ page }) => {
     ok(e.insts.some(i => i.id === 'hub' && i.stopping) && e.cur.id === 'r1', 'the old track did not fade out as the new one began');
     const fades = e.insts.find(i => i.id === 'hub').out.gain.calls.filter(c => c[0] === 'lin' && c[1] < 0.01);
     ok(fades.length === 1, 'no fade-out ramp on the old track');
-    D.gotoRoom('branch:r1'); D.step(2); ctx.currentTime += 0.2; A.update(); ok(A.current() === 'quiet', 'a branch room did not start the quiet track: ' + A.current());
+    // music follows the area: walking room to room inside a region (main rooms, a side branch) keeps the same track instance playing
+    const r1inst = e.cur;
+    for (const id of ['main:r1', 'branch:r1', 'main:r1']) { D.gotoRoom(id); D.step(2); ctx.currentTime += 0.2; A.update(); ok(A.current() === 'r1' && e.cur === r1inst, id + ' changed the music inside Wreck Quay: ' + A.current()); }
+    D.gotoRoom('branch:r1'); D.step(2); ctx.currentTime += 0.2; A.update(); ok(e.layerOn('lead') === false && e.layerOn('perc') === false, 'a side branch did not quieten the region track');
+    D.gotoRoom('main:r1'); D.step(2); ctx.currentTime += 0.2; A.update();
     D.gotoRoom('main:r2'); D.step(2); ctx.currentTime += 0.2; A.update(); ok(A.current() === 'r2', 'Signal Reef: ' + A.current());
     G.state = 'pause'; ctx.currentTime += 0.2; A.update(); const f = e.pauseF.frequency.calls.filter(c => c[0] === 'target').pop(); ok(f && f[1] < 2000 && e.paused === 1, 'pausing did not close the music filter');
     G.state = 'play'; ctx.currentTime += 0.2; A.update(); ok(e.paused === 0 && e.pauseF.frequency.calls.filter(c => c[0] === 'target').pop()[1] > 10000, 'resuming did not open the filter');

@@ -58,12 +58,14 @@ G.tips = {
   },
   text(id) { return TIPS[id] ? TIPS[id]() : ''; },
   update(dt) {
-    if (G.tips.shown) { G.tips.shown.t -= dt; if (G.tips.shown.t <= 0) G.tips.shown = null; }
-    if (!G.tips.shown && tipQ.length) G.tips.shown = tipQ.shift();
+    // One message at a time: while a story banner is up, a tip waits (or a showing tip hides and keeps its time) until the banner is done.
+    const busy = !!(G.fx && G.fx.banner);
+    if (G.tips.shown && !busy) { G.tips.shown.t -= dt; if (G.tips.shown.t <= 0) G.tips.shown = null; }
+    if (!G.tips.shown && tipQ.length && !busy) G.tips.shown = tipQ.shift();
   },
   clear() { tipQ.length = 0; G.tips.shown = null; },
   draw(ctx) {
-    const tp = G.tips.shown; if (!tp) return;
+    const tp = G.tips.shown; if (!tp || (G.fx && G.fx.banner)) return;
     const lines = G.props.wrap(ctx, G.tips.text(tp.id), 13.5, C.W - 160, 500), h = lines.length * 18 + 14;
     let w = 0; for (const l of lines) w = Math.max(w, ctx.measureText(l).width);
     const x0 = (C.W - w) / 2 - 12, y0 = C.H - 74 - h;

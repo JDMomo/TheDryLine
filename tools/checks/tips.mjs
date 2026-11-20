@@ -78,7 +78,7 @@ export default async ({ page }) => {
     ok(/plinth/i.test(signs) && /trunk/i.test(signs) && /ticket/i.test(signs) && /kiosk/i.test(signs) && /three/i.test(signs) && /chart/i.test(signs), 'hub signs do not say where tokens come from: ' + signs);
 
     // 8. the tip is drawn on screen, wrapped, inside the canvas
-    fresh(); D.newRun(7); G.input.last = 'keyboard'; D.give('cobalt_awl'); D.step(130);
+    fresh(); D.newRun(7); G.input.last = 'keyboard'; D.give('cobalt_awl'); D.step(130); G.fx.banner = null; D.step(2);   // a story banner holds tips back, so clear it first
     const cv = document.createElement('canvas'); cv.width = 960; cv.height = 544; const ctx = cv.getContext('2d'), seen = [];
     const label = G.art.label; G.art.label = (c, t, x, y, ...r) => { seen.push([t, x, y]); return label.call(G.art, c, t, x, y, ...r); };
     G.rooms.draw(ctx, 0); G.hud.draw(ctx); G.art.label = label;

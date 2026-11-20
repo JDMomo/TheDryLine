@@ -275,3 +275,11 @@ The sky behind them is a three-colour vertical gradient the game draws from the 
 # Rough totals
 
 About 60 player frames, 90 enemy frames, 200 boss frames or 60 boss parts, 6 tile sets of about 25 pieces, 18 background layers, 50 effect frames, 40 interface pieces, and 20 props. The tokens and trinkets (20) exist already.
+
+## Needed again (arrived truncated, removed 2026-11-20)
+These four files came through the ChatGPT branch cut off mid-upload and could not be decoded. The game uses code-drawn fallbacks until they are replaced. Re-export each one and put it back at the same path, then re-enable the line noted in the code.
+- `assets/bosses/tollkeeper/states.webp` (3 frames: normal, stagger, rage; frame 144×84) → `js/art/sprites.js`
+- `assets/backgrounds/wreck_quay.jpg` (Wreck Quay painted plate) → `js/core/art.js` PAINTED_BG_SRC r1
+- `assets/backgrounds/ticket_hall.jpg` (Junction/hub and Ticket Hall plate) → `js/core/art.js` PAINTED_BG_SRC hub, r4
+- `assets/props/crate_barrel.webp` (crate and barrel decor) → `js/art/sprites.js`
+The `assets_valid` check fails if any image under assets/ does not decode.

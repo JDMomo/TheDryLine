@@ -1,5 +1,7 @@
 // Tollkeeper production art: concept-sheet state strip drives normal/stagger/rage while mechanics remain engine overlays.
+import fs from 'fs';
 export default async({page})=>{
+ if(!fs.existsSync(new URL('../../assets/bosses/tollkeeper/states.webp',import.meta.url)))return 'skipped: Tollkeeper strip not in assets (needs re-export); code-drawn body in use';
  const r=await page.evaluate(async()=>{
   const D=G.debug,bad=[],wait=()=>new Promise(r=>setTimeout(r,20));
   for(let i=0;i<120&&G.spritesPending>0;i++)await wait();

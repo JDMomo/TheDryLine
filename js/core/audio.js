@@ -412,16 +412,19 @@ const A = G.audio = {
     if (near) A._combatAt = G.time;
     const combat = near || (G.time - (A._combatAt || -99) < 4);
     if (fighting) return { track: room.region === 'final' ? 'boss_clock' : 'boss_warden', variant: room.region === 'final' ? '' : room.region, kind: 'boss', low, boss: b, fade: 0.5 };
-    if (room.kind === 'hub') return { track: 'hub', kind: 'calm', fade: 1.8 };
-    if (room.kind === 'branch' || room.kind === 'trial') return { track: 'quiet', kind: 'calm', fade: 1.8 };
-    return { track: M.regionTrack[room.region] || 'hub', kind: 'explore', low, combat, fade: b && b.state === 'dead' ? 2.5 : 1.6 };
+    // The music follows the area, not the room: every room of a region (side branches and trials too) keeps the region's track playing, and
+    // only its layers change. The home area has one track. A new track starts only on crossing into another area, or for a boss fight.
+    const area = M.regionTrack[room.region];
+    if (room.kind === 'hub' || !area) return { track: 'hub', kind: 'calm', fade: 2.5 };
+    const side = room.kind === 'branch' || room.kind === 'trial';
+    return { track: area, kind: 'explore', low, combat: combat && !side, quiet: side, fade: b && b.state === 'dead' ? 2.5 : 2.5 };
   },
   // Which layers should sound, by role. slot:<cut> follows the boss's fare slots; borrow:<region> follows the Long Clock's borrowed attacks.
   targets(T0, d) {
     const out = {}, b = d.boss, punched = b ? b.spots.filter(s => s.broken).length : 0, borrowed = d.kind === 'boss' && d.track === 'boss_clock' && G.game && G.game.borrows ? G.game.borrows().map(x => x.region) : [];
     for (const L of T0.layers) {
       const r = L.role; let on = L.on !== false;
-      if (d.kind === 'explore') { if (r === 'lead' || r === 'arp' || r === 'motif') on = !d.low; else if (r === 'perc') on = d.combat || d.low; else if (r === 'tense') on = !!d.low; }
+      if (d.kind === 'explore') { if (r === 'lead' || r === 'arp' || r === 'motif') on = !d.low && !(d.quiet && r === 'lead'); else if (r === 'perc') on = d.combat || d.low; else if (r === 'tense') on = !!d.low; }
       else if (d.kind === 'boss') {
         if (r.startsWith('slot:')) { const s = b.spots.find(x => x.cls === r.slice(5)); on = !!(s && s.open && !s.broken); }
         else if (r === 'rage') on = !!b.rage; else if (r === 'lift') on = punched >= 1; else if (r === 'lift2') on = punched >= 2;
