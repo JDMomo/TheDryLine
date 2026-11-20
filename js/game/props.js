@@ -56,6 +56,12 @@ function boardLayout(pr, ctx) {
   return out;
 }
 const teachKey = pr => pr.type === 'plinth' && pr.data.price ? 'kiosk' : pr.type;
+const PROP_SPRITE_SIZE = {
+  trunk: [52, 56],
+  ticket: [58, 82],
+  sign: [34, 72],
+  post: [38, 80]
+};
 
 /* Each type: draw(pr, ctx); optional update(pr, dt), interact(pr, player), prompt(pr, player) -> [title, line, hint] or null.
    A prop can only be used while it has a prompt; Use/enter follows the player's Up binding. */
@@ -425,7 +431,11 @@ G.props = {
       },
       interact(p) { if (t.interact) t.interact(this, p); },
       prompt(p) { return t.prompt ? t.prompt(this, p) : null; },
-      draw(ctx) { art.draw('prop_' + type, ctx, { x, y, prop: this }) || t.draw(this, ctx); }
+      draw(ctx) {
+        const sz=PROP_SPRITE_SIZE[type], opt={x,y,prop:this};
+        if(sz){opt.w=sz[0];opt.h=sz[1];}
+        art.draw('prop_' + type, ctx, opt) || t.draw(this, ctx);
+      }
     };
   },
   // Screen boxes a prop covers: [{ x0, y0, x1, y1, kind: 'body' | 'label', text? }] (props without their own boxes() get a generic body box).
