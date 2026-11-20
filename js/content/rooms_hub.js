@@ -15,8 +15,6 @@ for(const c of [8,30,52,90,112]){
   fill(29,31,c-4,c-3,'#'); fill(29,31,c+3,c+4,'#'); // arch feet
   fill(27,28,c-4,c+4,'#');                           // lintel
 }
-put(31,8,'G'); put(31,30,'G'); put(31,52,'G'); put(31,90,'G'); put(31,112,'G');
-
 // ARRIVAL SHELTER / KEEPER bay.
 fill(26,26,57,72,'#'); fill(27,31,57,58,'#'); fill(27,31,71,72,'#');
 put(31,61,'P'); put(31,65,'N');
@@ -53,6 +51,9 @@ fill(11,11,18,32,'#'); fill(11,11,87,101,'#');
 // A quiet maintenance nook above the shelter. It has no reward dependency; it exists to make the hub feel inhabited.
 fill(15,15,44,49,'='); fill(14,14,46,47,'#');
 put(14,45,'?');
+
+// Gates are stamped LAST so stair/roof architecture can never erase an exit marker.
+put(31,8,'G'); put(31,30,'G'); put(31,52,'G'); put(31,90,'G'); put(31,112,'G');
 
 G.defineRoom({
   id:'junction', region:'hub', kind:'hub', w:4, h:2,
