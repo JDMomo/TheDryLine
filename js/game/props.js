@@ -60,7 +60,8 @@ const PROP_SPRITE_SIZE = {
   trunk: [52, 56],
   ticket: [58, 82],
   sign: [34, 72],
-  post: [38, 80]
+  post: [38, 80],
+  lamp_decor: [40, 78]
 };
 
 /* Each type: draw(pr, ctx); optional update(pr, dt), interact(pr, player), prompt(pr, player) -> [title, line, hint] or null.
@@ -405,6 +406,19 @@ const TYPES = {
       ctx.fillStyle='#8f8263';ctx.fillRect(-20,-20,40,5);
       for(const wx of [-16,16]){ctx.fillStyle='#303735';ctx.beginPath();ctx.arc(wx,-4,7,0,6.283);ctx.fill();ctx.stroke();ctx.strokeStyle='#a58d60';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(wx-5,-4);ctx.lineTo(wx+5,-4);ctx.moveTo(wx,-9);ctx.lineTo(wx,1);ctx.stroke();}
       ctx.strokeStyle='#a58d60';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-8,-20);ctx.lineTo(0,-32);ctx.lineTo(8,-20);ctx.stroke();
+      ctx.restore();
+    }
+  },
+  lamp_decor: {
+    prompt(){ return null; },
+    boxes(){ return []; },
+    draw(pr,ctx){
+      const x=pr.x,y=pr.y;
+      ctx.save();ctx.globalAlpha=.9;
+      ctx.fillStyle='#5c5038';ctx.fillRect(x-3,y-52,6,52);
+      ctx.fillStyle='#d6c184';ctx.globalAlpha=.55+.1*Math.sin(G.time*2+pr.x*.01);
+      ctx.beginPath();ctx.ellipse(x,y-55,11,18,0,0,6.283);ctx.fill();
+      ctx.globalAlpha=1;ctx.strokeStyle='#191816';ctx.lineWidth=2;ctx.stroke();
       ctx.restore();
     }
   },

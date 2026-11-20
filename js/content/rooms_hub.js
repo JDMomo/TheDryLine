@@ -31,6 +31,11 @@ put(14,67,'G'); put(14,82,'G'); put(14,76,'?');
 
 G.defineRoom({
  id:'junction',region:'hub',kind:'hub',w:3,
+ decor:[
+  {type:'lamp_decor',c:4,r:14},{type:'lamp_decor',c:18,r:14},
+  {type:'lamp_decor',c:26,r:14},{type:'lamp_decor',c:35,r:14},{type:'lamp_decor',c:45,r:14},{type:'lamp_decor',c:56,r:14},
+  {type:'lamp_decor',c:65,r:14},{type:'lamp_decor',c:76,r:14},{type:'lamp_decor',c:86,r:14}
+ ],
  signs:[
   'The Last Timetable names one service that was never cancelled. The five lit gates still obey it.',
   'Each Warden holds one local order. Releasing them makes the Long Clock less dangerous.',

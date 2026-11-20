@@ -30,6 +30,7 @@ loadStatic('prop_trunk', 'chest.webp');
 loadStatic('prop_ticket', 'ticket_machine.webp');
 loadStatic('prop_sign', 'signpost.webp');
 loadStatic('prop_post', 'signpost.webp');
+loadStatic('prop_lamp_decor', 'lamp.webp');
 
 // Strips: one image holding n frames side by side (frame width = width / n). A missing file leaves G.strips empty: the code-drawn art shows.
 const loadStrip = (key, file, frames) => {

@@ -95,6 +95,11 @@ function instance(node) {
     else if (c.type === 'boss') { if (!G.run.beaten[node.region]) room.boss = new G.Boss(G.bossDefs[c.id], x, y, node.region, { x0: def.floorX[0], x1: def.floorX[1] }); }
     else if (c.type !== 'start') room.props.push(G.props.make(c.type, x, y, Object.assign({}, c.data)));
   });
+  // Authored visual-only decoration is deliberately outside marker/content rolls: it never changes seed balance or collision.
+  for (const d of (def.decor || [])) {
+    const x=(d.c+.5)*T, y=(d.r+1)*T, data=Object.assign({decor:true},d.data||{});
+    room.props.push(G.props.make(d.type,x,y,data));
+  }
   room.cleared = room.enemies.length === 0;
   return room;
 }
