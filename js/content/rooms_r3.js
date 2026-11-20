@@ -44,13 +44,33 @@ const out = g => g.map(r => r.join(''));
   G.defineRoom({ id: 'r3_terraces', region: 'r3', kind: 'main', map: out(g) });
 }
 
-// Rail trestle, two screens wide: one-way planks over a long spiked cut; a trunk on a high plank.
+// Rail trestle, two screens wide: three-route Salt Cutting showcase.
+// LOW / SAFE: raised salt-crust patches sit over the permanent floor; Wet can dissolve the crust without opening a death pit.
+// HIGH / FAST: old rail planks plus crumble transfers skip most of the slippery floor.
+// SECRET POCKET: a spring near the far cutting launches to a separate survey shelf with the lost trunk.
 {
   const g = mk(2);
-  fill(g, 15, 15, 7, 49, '^');
-  fill(g, 13, 13, 8, 11, '='); fill(g, 12, 12, 15, 18, '='); fill(g, 11, 11, 22, 25, '=');
-  fill(g, 8, 8, 27, 30, '='); fill(g, 12, 12, 29, 32, '='); fill(g, 13, 13, 36, 39, '='); fill(g, 12, 12, 43, 46, '=');
-  put(g, 7, 29, 'C'); put(g, 11, 16, 'E'); put(g, 11, 31, 'E'); put(g, 12, 37, 'E'); put(g, 14, 53, 'E'); put(g, 14, 56, 'D');
+
+  // Safe low route. Salt sits one tile above the permanent floor so dissolving it only drops the player onto ordinary ground.
+  fill(g, 14, 14, 5, 13, 's');
+  fill(g, 14, 14, 18, 27, 's');
+  fill(g, 14, 14, 33, 43, 's');
+
+  // High rail line: readable one-way runs broken by two committed crumble transfers.
+  fill(g, 11, 11, 8, 14, '=');
+  fill(g, 9, 9, 17, 22, '=');
+  fill(g, 10, 10, 24, 25, 'c');
+  fill(g, 8, 8, 28, 34, '=');
+  fill(g, 10, 10, 37, 38, 'c');
+  fill(g, 11, 11, 41, 47, '=');
+
+  // Independent survey pocket.
+  put(g, 15, 52, 'j');
+  fill(g, 9, 9, 50, 56, '=');
+  put(g, 8, 53, 'C');
+
+  // Encounters stay mostly on the low line.
+  put(g, 13, 11, 'E'); put(g, 13, 24, 'E'); put(g, 13, 39, 'E'); put(g, 14, 56, 'D');
   G.defineRoom({ id: 'r3_trestle', region: 'r3', kind: 'main', w: 2, map: out(g) });
 }
 
