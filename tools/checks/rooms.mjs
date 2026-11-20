@@ -2,9 +2,9 @@
    Lint runs in Node on the template text. The traversal runs inside the page: it drives player 1 only through G.debug
    (newRun, gotoRoom, setInput, step, place, probe) and searches over short input segments (beam search). Documented in docs/ARCHITECTURE.md. */
 
-const CHARS = '#.^=sm<>cjvtEFLICRSKMHDBG?PXYZ AQ'.replace(/ /g, '');
+const CHARS = '#.^=sm<>cjvtEFLICRSKMHDBG?PXYZ AQN'.replace(/ /g, '');
 const SOLID = '#sm<>cjvt'; 
-const GROUND = 'EICRSKMHDBGP?XYAZQ';         // markers that stand on the tile below them
+const GROUND = 'EICRSKMHDBGP?XYAZQN';         // markers that stand on the tile below them
 const TARGETS = 'ICRSKMH';              // things a bot must be able to walk up to in branch and trial rooms
 const EXIT_ROWS = [12, 13, 14];
 const CW = 30, CH = 17;
@@ -23,7 +23,7 @@ export function lintRoom(r, abilityIds) {
     for (let c = 0; c < cols; c++) {
       const ch = row[c];
       if (!CHARS.includes(ch)) { err.push('unknown character "' + ch + '" at column ' + c + ', row ' + y); out += '.'; }
-      else if ('EFLICRSKMHDBG?PXYAZQ'.includes(ch)) { marks.push({ ch, c, r: y }); out += '.'; } else out += ch;
+      else if ('EFLICRSKMHDBG?PXYAZQN'.includes(ch)) { marks.push({ ch, c, r: y }); out += '.'; } else out += ch;
     }
     grid.push(out);
   });
