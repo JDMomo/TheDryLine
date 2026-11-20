@@ -112,24 +112,39 @@ G.defineRoom({
   })
 });
 
-// 6. Two screens wide: two wrecks and a spiked trench, a pier of planks above for the fast.
+// 6. Dockyard split route, two screens wide.
+//    LOW / SAFE: stay on the floor through sucking mud and small wreck steps. Slow, readable and always base-move safe.
+//    HIGH / FAST: climb the first wreck and chain jumps across planks plus two crumbling ledges, bypassing most mud and ground enemies.
+//    SECRET POCKET: a separate spring at the far quay launches into a high maintenance alcove holding the lost trunk; it is never required.
 G.defineRoom({
   id: 'r1_dock', region: 'r1', kind: 'main', w: 2,
   map: paint(2, false, ({ put, fill }) => {
-    put(15, 4, 'mmmmmm');                     // sucking quay mud: safe, but slower than the dry deck
-    fill(12, 14, 12, 16, '#');                // first wreck, 3 high
-    put(15, 24, '^^^^^^^^^^');                // trench, cols 24 to 33
-    fill(12, 14, 21, 23, '#');                // lip before the trench
-    fill(12, 14, 34, 36, '#');                // lip after the trench
-    put(11, 25, '=========');                 // one long plank over the trench (cols 25 to 33): a plain jump from the lip lands on it
-    put(8, 28, '====');
-    put(7, 29, 'C');
-    put(14, 8, 'E');
-    put(11, 13, 'E');
-    put(15, 40, 'mmmmmmmm');                  // another muddy low lane; the plank route above stays fast
-    put(14, 44, 'E');
-    put(14, 52, 'D');
-    put(11, 41, '~');
+    // Safe low lane: no spikes, crumble or forced launch. Mud is the cost of taking the forgiving route.
+    put(15, 4, 'mmmmmmmm');
+    fill(13, 14, 14, 16, '#');                // low wreck step, only two tiles high
+    put(15, 19, 'mmmmmmmmmm');
+    fill(13, 14, 31, 33, '#');
+    put(15, 36, 'mmmmmmmmmm');
+    fill(13, 14, 48, 50, '#');
+
+    // Fast upper lane. Every ordinary gap is within a base running jump; c tiles demand commitment but never block the low route.
+    put(11, 12, '======');                    // climb from the first low wreck
+    put(9, 20, '=====');
+    put(10, 26, 'cc');                        // first collapsing transfer
+    put(8, 29, '======');
+    put(10, 36, 'cc');                        // second collapsing transfer
+    put(11, 39, '======');                    // drops back beside the far quay
+
+    // Independent secret/reward detour. Spring launch reaches the alcove; the player drops back to either route.
+    put(15, 52, 'j');
+    put(7, 49, '======');
+    put(6, 52, 'C');
+
+    // Encounters bias the slow lane; the high lane trades footing risk for fewer bodies and speed.
+    put(14, 9, 'E');
+    put(14, 24, 'E');
+    put(14, 42, 'E');
+    put(14, 56, 'D');
   })
 });
 

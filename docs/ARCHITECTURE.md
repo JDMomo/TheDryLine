@@ -93,8 +93,14 @@ X  cracked barrier (guarded branch rooms): a wall 3 tiles tall on the marker's t
 - **Guarded rooms** (a region's own branch room, the fixed token's plinth) declare `needs: ['<ability>']` in `G.defineRoom`: r2 `dash`, r3 `grip`, r4 `double`, r1 `heavy` (the unlock of the previous region in the ring). The validator proves both directions: the plinth is reachable with the ability and not reachable with base moves only (a room with `needs` must hold an I; one `needs` entry; heavy rooms need an X and vice versa). Rooms of other kinds must stay finishable with base moves. Keep a real barrier real: no spike pit (a down-slash bounce chain crosses any width) unless its far wall is too tall to leave, and give the bot a route it can find (the beam search has a scripted dash opening, section Room validator). Worldgen puts `needs` and a `Needs <move>` tag on the doorway into the room; `G.worldgen.needsText(defId)` words it for the map and the door prompt.
 - Plinth contents: in a region's own branch room the plinth holds the region's `fixedItem` (random until that token exists) and is guarded (locked until the room is clear); elsewhere a random pool token. Kiosk ware: a trinket for 40 scrip (x `mods.shopCost`); the kiosk sells no tokens. Ticket machine: three tickets (tokens first), keep one; one machine per run, usable twice (`data.choices`, then `data.next`): 30 scrip, then 45. It hides while its tickets stand and returns when one is taken. Clipping booth (and its `clip` prop): code kept in props.js, no longer placed in any run. Standpipe: full party heal, once.
 
+### Route-design contract
+- Rebuilt main rooms should expose three readable choices where space permits: a **safe low/base route**, a **harder high/fast route**, and an **optional reward/secret pocket**.
+- The safe route is the validator contract: reversible with base movement, no required damage, no required crumble timing, no mandatory spring/vent, and no unlock ability.
+- High routes may use tighter jumps, one-way shelves, conveyors, springs, steam or crumble, but must rejoin the main route and must not become the only Warden path.
+- Reward pockets may contain a lost trunk/other optional source but must always allow escape back to the main room. They must not be required for worldgen connectivity.
+
 ### Regional terrain direction
-- Wreck Quay: mud/low hazards and later rail carts; safer low paths trade speed for footing.
+- Wreck Quay: mud/low hazards and later rail carts; safer low paths trade speed for footing. `r1_dock` is the worked split-route example: slow mud floor, crumble high line, separate spring reward alcove.
 - Signal Reef: vertical shafts, one-way shelves, springs/steam later; Wall Grip creates faster optional lines.
 - Salt Cutting: slippery/dissolvable salt and exposed ledges; Double Jump opens faster/high reward lines without gating the Warden.
 - Ticket Hall: conveyors and mechanical gates; moving floors reshape enemy lanes.
