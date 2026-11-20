@@ -303,7 +303,11 @@ G.worldgen = {
       if (!mains.length || !arenas.length) { G.fail('region ' + region.id + ' has no main rooms or no arena'); return; }
       // A shared branch room with a standpipe (H) is never drawn as an ordinary side room: it is the last region's pre-arena stop.
       const hasH = d => d.marks.some(m => m.ch === 'H'), isLast = ri === Math.min(order.length, gateMarks.length) - 1;
-      const trials = region.ability ? defsOf('trial', region.pool).concat(defsOf('trial', 'shared')) : [], own = defsOf('branch', region.pool), shared = defsOf('branch', 'shared').filter(d => !hasH(d));
+      const campaign = Array.isArray(region.sequence) && region.sequence.length;
+      const trials = region.ability ? defsOf('trial', region.pool).concat(defsOf('trial', 'shared')) : [], own = defsOf('branch', region.pool);
+      // Shared service closets belong to generated/replay layouts only. In the authored campaign, the Junction owns ticket/kiosk
+      // services and regional doors are reserved for authored trials/holds/story spaces.
+      const shared = campaign ? [] : defsOf('branch', 'shared').filter(d => !hasH(d));
       const pipes = isLast ? defsOf('branch', 'shared').filter(hasH) : [], pipeDef = pipes.length ? rng.pick(pipes) : null;
       const want = [trials, own, shared].filter(p => p.length).length + (pipeDef ? 1 : 0);
       const chooseMains = () => {
@@ -342,7 +346,7 @@ G.worldgen = {
       const g = regions[region.id] = { first: chain[0].id, arena: arena.id, nodes: chain.map(c => c.id).concat(arena.id) };
       hub.content[gateMarks[ri]] = { type: 'gate', data: { region: region.id } };
 
-      // Doorways: the trial first, then the region's own branch room, then shared branch rooms (own rooms again if none).
+      // Doorways: campaign mode uses only authored trial/own/standpipe rooms; generated mode may fill spare doors from shared pools.
       let slots = rng.shuffle(chain.flatMap(node => G.roomDefs[node.def].marks.map((m, i) => m.ch === 'D' ? { node, i } : null).filter(Boolean)));
       const required = [];
       if (trials.length) required.push({ def: rng.pick(trials), kind:'trial', prefer: region.trialAt });
@@ -358,7 +362,7 @@ G.worldgen = {
       if (pipeDef) { const at = slots.findIndex(sl => sl.node === chain[chain.length - 1]); required.unshift({ def: pipeDef, pipe: true }); if (at > 0) slots.unshift(slots.splice(at, 1)[0]); }
       if (slots.length < required.length) warnings.push('region ' + region.id + ' has too few doorways for its trial and branch rooms');
       required.forEach(r => take(r.def));
-      const extras = shared.length ? pickShared(shared, Math.max(0, slots.length - required.length)) : draw(rng, own, Math.max(0, slots.length - required.length));
+      const extras = campaign ? [] : shared.length ? pickShared(shared, Math.max(0, slots.length - required.length)) : draw(rng, own, Math.max(0, slots.length - required.length));
       slots.forEach((slot, k) => {
         const def = k < required.length ? required[k].def : extras[k - required.length];
         if (!def) { slot.node.content[slot.i] = null; return; }

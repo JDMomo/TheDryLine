@@ -195,3 +195,8 @@ Run it on your own rooms before handing them over: `node tools/roomlint.mjs <sub
 The default run now uses fixed main-room sequences in every region. This follows the production lesson that memorable exploration comes from a coherent place with stable landmarks, while randomness is better spent on encounters, loot and replay modifiers. Procedural selection remains supported by omitting a region's `sequence`.
 
 The Junction is a three-screen authored hub: arrival shelter, central turntable, and old departures/Terminus annex. Its five region gates are deliberately spaced through the station instead of presented as adjacent menu buttons.
+
+
+## Campaign side-room policy
+
+Authored campaign regions do **not** populate spare doorway markers with shared random service closets. The Junction permanently hosts the ticket machine and kiosk; regional side doors are reserved for the movement trial, the region's guarded fixed-token room, or a deliberately authored story/reward space. The Terminus standpipe remains a shared template because it is a fixed pre-arena pacing stop. Generated/replay layouts can still use the shared branch pool.
