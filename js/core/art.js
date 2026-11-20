@@ -19,7 +19,11 @@ const PAINTED_BG_SRC = {
   hub: 'assets/backgrounds/ticket_hall.jpg',
   r1: 'assets/backgrounds/wreck_quay.jpg',
   r2: 'assets/backgrounds/signal_reef.jpg',
-  r4: 'assets/backgrounds/ticket_hall.jpg'
+  // Temporary campaign plates until dedicated Salt/Terminus paintings are authored.
+  // Reusing source watercolor keeps the medium coherent instead of falling back to vector scenery.
+  r3: 'assets/backgrounds/wreck_quay.jpg',
+  r4: 'assets/backgrounds/ticket_hall.jpg',
+  final: 'assets/backgrounds/ticket_hall.jpg'
 };
 const PAINTED_BG = {}, PAINTED_FILES = {};
 if (typeof Image !== 'undefined') for (const id in PAINTED_BG_SRC) {
@@ -43,8 +47,11 @@ function paintedBackdrop(ctx, region, camX) {
   const dw = C.W + 150, dh = C.H + 84;
   const maxShift = dw - C.W, sx = -maxShift * 0.5 - Math.sin(camX * 0.00075) * maxShift * 0.34;
   ctx.save();
-  ctx.globalAlpha = region === 'hub' ? 0.56 : 0.64;
+  ctx.globalAlpha = region === 'hub' ? 0.56 : region === 'r3' ? 0.50 : region === 'final' ? 0.54 : 0.64;
   ctx.drawImage(img, sx, -42, dw, dh);
+  // Reused temporary plates get a strong regional glaze so Salt and Terminus do not masquerade as their source region.
+  if(region==='r3'){ctx.globalAlpha=.22;ctx.fillStyle='rgba(190,210,220,.72)';ctx.fillRect(0,0,C.W,C.H);}
+  else if(region==='final'){ctx.globalAlpha=.34;ctx.fillStyle='rgba(24,27,67,.82)';ctx.fillRect(0,0,C.W,C.H);}
   const wash = ctx.createLinearGradient(0, 0, 0, C.H);
   wash.addColorStop(0, 'rgba(5,10,10,0.28)');
   wash.addColorStop(0.58, 'rgba(4,8,8,0.18)');
