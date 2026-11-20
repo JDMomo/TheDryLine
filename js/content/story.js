@@ -51,10 +51,10 @@ function ensure() {
   if (!r.story) r.story={seen:{},notes:[],hubBeat:-1};
   return r.story;
 }
-function add(id,title,text,show=true) {
+function add(id,title,text,show=true,portrait=null) {
   const s=ensure(); if(!s || s.seen[id]) return false;
   s.seen[id]=true; s.notes.push({id,title,text});
-  if (show && G.fx) G.fx.say(title,text,4.4);
+  if (show && G.fx) G.fx.say(title,text,4.4,portrait);
   return true;
 }
 const story=G.story={
@@ -72,7 +72,7 @@ const story=G.story={
       const n=['r1','r2','r3','r4'].filter(k=>G.run.beaten[k]).length;
       if (n!==s.hubBeat) {
         s.hubBeat=n;
-        if(n===0) add('hub:0','The Last Timetable','Five gates are open. Four Wardens keep the line; the fifth gate leads to the order they still obey.',true);
+        if(n===0) add('hub:0','The Last Timetable','Five gates are open. Start west through Wreck Quay if you want the gentlest line; the fifth gate leads to the order they all still obey.',true,'guide');
         else if(n===1) add('hub:1','The Junction wakes','One line has gone quiet. Somewhere under the platform, a relay clicks to the next page.',true);
         else if(n===2) add('hub:2','Half the line is silent','The board no longer looks like a challenge. It looks like a chain of messages that failed to arrive.',true);
         else if(n===3) add('hub:3','One Warden remains','Three old machines have released their orders. The Terminus gate sounds different now.',true);
@@ -91,7 +91,7 @@ const story=G.story={
     const n=['r1','r2','r3','r4'].filter(k=>G.run.beaten[k]).length;
     if(G.run.beaten.final) return 'The line is finally still.';
     if(n===4) return 'Reach the Terminus. Deliver the cancellation to the Long Clock.';
-    if(n===0) return 'Choose any line. Learn why its Warden is still collecting fare.';
+    if(n===0) return 'Wreck Quay is the gentlest first line. All five routes remain open.';
     return 'Clear the remaining Wardens, or risk the Terminus while it still borrows their attacks.';
   },
   latest() { const s=ensure(); return s&&s.notes.length?s.notes[s.notes.length-1]:null; },

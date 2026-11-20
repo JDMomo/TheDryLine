@@ -261,7 +261,9 @@ const TYPES = {
     prompt(pr, p) {
       const r = G.regionDefs[pr.data.region], b = G.bossDefs[r.boss];
       const chart = (G.run.graph.chart || {})[r.id], bor = r.id === 'final' ? G.game.borrows() : null;
-      return [r.name, (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.') + (chart ? ' Slots: ' + chart.map(c => G.CLASSES[c].name).join(', ') + '.' : '')
+      const fresh = !['r1','r2','r3','r4'].some(id=>G.run.beaten[id]);
+      const recommend = fresh && r.id==='r1' ? ' Recommended first route: broad footing, fewer aerial threats. ' : '';
+      return [r.name, recommend + (b ? b.name : 'Unknown') + (G.run.beaten[r.id] ? ' has fallen.' : ' waits down the line.') + (chart ? ' Slots: ' + chart.map(c => G.CLASSES[c].name).join(', ') + '.' : '')
         + (bor ? (bor.length ? ' It borrows from each Warden still alive: ' + bor.map(x => x.text + ' (' + x.warden + ')').join('; ') + '.' : ' Every Warden has fallen: it borrows nothing.') : ''), useName(p) + ' to enter'];
     },
     // the borrow lines above the Terminus gate label ("Borrows: a, b, c", wrapped), shown before the party commits to the fight
@@ -285,6 +287,11 @@ const TYPES = {
       ctx.save(); ctx.translate(x, y - 104); ctx.rotate(Math.PI / 4); ctx.fillStyle = done ? '#2a2f2d' : pal.accent; ctx.fillRect(-7, -7, 14, 14);
       ctx.fillStyle = done ? '#5c6a63' : pal.sky0; ctx.fillRect(-3, -3, 6, 6); ctx.restore();
       art.label(ctx, r.name, x, y - 126, 12.5, done ? '#9aa89f' : '#e9e2cf');
+      const fresh=!['r1','r2','r3','r4'].some(id=>G.run.beaten[id]);
+      if(fresh&&r.id==='r1'){
+        ctx.save();ctx.globalAlpha=.55+.25*Math.sin(G.time*3);ctx.strokeStyle=pal.accent;ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(x-17,y+6);ctx.lineTo(x,y+12);ctx.lineTo(x+17,y+6);ctx.stroke();ctx.restore();
+      }
       const ls = TYPES.gate.borrowLines(pr, ctx);
       ls.forEach((t, k) => art.label(ctx, t, x, y - 143 - (ls.length - 1 - k) * 13, 10.5, '#e9a23b'));
     }
