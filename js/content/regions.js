@@ -27,7 +27,7 @@ G.defineRegion({ id: 'r3', name: 'Salt Cutting', blurb: 'A white canyon cut for 
   enemies: ['ballast_crab', 'brine_spout', 'brine_toad', 'mirage'], ceiling: ['hanging_lamp'], pool: 'r3',
   palette: { sky0: '#151b22', sky1: '#1f2833', sky2: '#10141a', far: '#1c242e', near: '#182029', tile: '#0b0f13', side: '#2a3440', edge: '#9fb4c4', edgeHi: '#dfe9f0', accent: '#e6eef4' } });
 G.defineRegion({ id: 'r4', name: 'Ticket Hall', blurb: 'A buried station hall of booths and stopped clocks.', gate: 3, boss: 'gatewhale', ability: 'heavy', length: 4, landmark: 'r4_concourse',
-  sequence: ['r4_concourse','r4_switchyard','r4_booths','r4_gateline'], trialAt:'r4_switchyard', ownAt:'r4_gateline',
+  sequence: ['r4_concourse','r4_booths','r4_switchyard','r4_gateline'], trialAt:'r4_switchyard', ownAt:'r4_gateline',
   fixedItem: 'copper_drum',
   enemies: ['ballast_crab', 'turnstile', 'handcar', 'sapper', 'harvester'], flyers: ['lamp_wisp'], pool: 'r4',
   palette: { sky0: '#0e1a14', sky1: '#15261d', sky2: '#0a130e', far: '#13221a', near: '#101c15', side: '#22301f', edge: '#8a7a3c', edgeHi: '#c0aa5a', accent: '#d4bf6a' } });
