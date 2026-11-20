@@ -99,7 +99,7 @@ G.defineRoom({
 G.defineRoom({
   id: 'r1_wreck', region: 'r1', kind: 'main', w: 2,
   signs:['QUAY SERVICE — potable brine. Emergency passengers first.'],
-  decor:[{type:'banner_decor',c:16,r:10},{type:'crate_decor',c:31,r:11},{type:'crate_decor',c:45,r:11},{type:'lamp_decor',c:39,r:14}],
+  decor:[{type:'banner_decor',c:16,r:10},{type:'crate_decor',c:31,r:11},{type:'crate_decor',c:45,r:11},{type:'lamp_decor',c:35,r:14},{type:'furnace_decor',c:37,r:14}],
   map: paint(2, false, ({ put, fill }) => {
     // Stern ascent and broad deck: chunky ship silhouette, not a scatter of unrelated boxes.
     fill(13, 14, 7, 10, '#');
@@ -133,7 +133,8 @@ G.defineRoom({
 // 5. A low tunnel with brine spouts; a chimney in the roof holds a trunk.
 G.defineRoom({
   id: 'r1_tunnel', region: 'r1', kind: 'main',
-  decor:[{type:'crate_decor',c:6,r:14},{type:'crate_decor',c:25,r:14}],
+  signs:['BRINE PURGE — keep the service lane clear. Pressure equipment may vent without warning.'],
+  decor:[{type:'lamp_decor',c:5,r:14},{type:'crate_decor',c:25,r:14}],
   map: paint(1, false, ({ put, fill }) => {
     fill(1, 10, 1, 28, '#');                  // roof (rows 11 to 14 open)
     fill(1, 10, 1, 28, '#');
@@ -142,6 +143,7 @@ G.defineRoom({
     fill(13, 14, 14, 17, '#');                // low step under the chimney
     put(10, 14, '====');                      // 3 tiles above the step
     put(9, 15, 'C');
+    put(14, 4, '?');                           // same emergency-sign language as the arrival/service rooms
     put(14, 10, 'E');
     put(14, 19, 'E');
     put(14, 24, 'E');
