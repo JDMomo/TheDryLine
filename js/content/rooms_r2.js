@@ -54,7 +54,11 @@ function exits(g, left, right) {
   for (const [r, c0, c1] of [[29,8,12],[27,15,19],[24,8,12],[21,15,19],[18,8,12],[15,15,19],[12,7,12],[9,15,19],[6,8,12],[3,13,17]])
     put(g, r, c0, c1, '=');
 
-  // Optional reward pocket: a committed lateral jump off the safe stair, then back.
+  // Fast/risky route: three timed vents sit just off the safe stair. Catching their pulses skips multiple shelf changes.
+  // Missing one only drops the player back onto the ordinary stair, so the shortcut is never required.
+  mark(g, 29, 13, 'v'); mark(g, 21, 13, 'v'); mark(g, 12, 13, 'v');
+
+  // Optional reward pocket: a lateral jump off the safe stair, visually away from the central vent line.
   put(g, 18, 19, 23, '='); mark(g, 17, 21, 'C');
   mark(g, 11, 9, 'D');
   mark(g, 28, 10, 'E'); mark(g, 23, 17, 'F'); mark(g, 14, 11, 'F'); mark(g, 8, 17, 'F');
