@@ -1,6 +1,6 @@
 // Short contextual tips, each shown once at the moment it matters: first token (use and switch buttons), first hurt with a gauge that can
-// mend, first spike pit (the bounce), first boss with an open fare slot (match the shape). Wording follows the device used last. The hub
-// signs say where tokens come from.
+// mend, first spike pit (the bounce), first boss with an open fare slot (match the shape), first cracked-barrier mistake and first Warden grade.
+// Wording follows the device used last. The hub signs say where tokens come from.
 export default async ({ page }) => {
   await page.evaluate(() => { G.debug.fullCharts = true; });      // the fare tip needs the token's cut on the Tollkeeper's chart
   const res = await page.evaluate(() => {
@@ -50,10 +50,32 @@ export default async ({ page }) => {
     fresh(); D.newRun(7); D.god(true); D.give('ochre_ladle'); D.startBoss('r1'); run(2);
     ok(has('fare'), 'no fare tip when a slot opens'); ok(/shape/.test(text().join(' ')), 'fare wording: ' + text().join(' '));
 
+    // 5. first cracked barrier: a plain slash teaches Heavy Cut, once, and follows the attack binding
+    fresh(); D.newRun(5); D.god(true); const own = G.run.graph.regions.r1.own; D.gotoRoom(own);
+    const crack = G.rooms.current.props.find(p => p.type === 'crack');
+    ok(!!crack, 'no cracked barrier for the tip');
+    if (crack) {
+      const cp = G.players[0]; D.place(0, crack.x - 40, crack.y, 1); run(3);
+      D.setInput(0, { attack: true }); run(4); D.setInput(0, { attack: false }); run(4);
+      ok(has('crack'), 'no crack tip after a plain slash');
+      ok(/Heavy Cut/.test(text().join(' ')) && /Ticket Hall/.test(text().join(' ')), 'crack wording before unlock: ' + text().join(' '));
+      G.tips.clear(); crack.data.clink = 0; D.setInput(0, { attack: true }); run(4); D.setInput(0, { attack: false }); run(4);
+      ok(!has('crack'), 'the crack tip came twice');
+    }
+
+    // 6. first Warden grade explains Par, Clean and the refund, once
+    fresh(); D.newRun(7); D.god(true); D.startBoss('r1'); run(130);
+    let boss = G.rooms.current.boss; boss.damage(1e6); run(3);
+    ok(has('grade'), 'no grade tip after the first Warden');
+    ok(/Par/.test(text().join(' ')) && /Clean/.test(text().join(' ')) && /refund/.test(text().join(' ')), 'grade wording: ' + text().join(' '));
+    G.tips.clear(); D.newRun(8); D.god(true); D.startBoss('r1'); run(130); boss = G.rooms.current.boss; boss.damage(1e6); run(3);
+    ok(!has('grade'), 'the grade tip came twice');
+
+    // 7. hub signs include token sources and the chart
     fresh(); D.newRun(7); const signs = G.rooms.current.props.filter(p => p.type === 'sign').map(p => p.data.text).join(' ');
     ok(/plinth/i.test(signs) && /trunk/i.test(signs) && /ticket/i.test(signs) && /kiosk/i.test(signs) && /three/i.test(signs) && /chart/i.test(signs), 'hub signs do not say where tokens come from: ' + signs);
 
-    // 6. the tip is drawn on screen, wrapped, inside the canvas
+    // 8. the tip is drawn on screen, wrapped, inside the canvas
     fresh(); D.newRun(7); G.input.last = 'keyboard'; D.give('cobalt_awl'); D.step(130);
     const cv = document.createElement('canvas'); cv.width = 960; cv.height = 544; const ctx = cv.getContext('2d'), seen = [];
     const label = G.art.label; G.art.label = (c, t, x, y, ...r) => { seen.push([t, x, y]); return label.call(G.art, c, t, x, y, ...r); };
@@ -63,5 +85,5 @@ export default async ({ page }) => {
     return bad;
   });
   if (res.length) throw new Error(res.slice(0, 5).join(' | '));
-  return 'four tips, once each, device wording, hub signs';
+  return 'six tips, once each, device wording, hub signs';
 };

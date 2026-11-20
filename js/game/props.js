@@ -302,7 +302,7 @@ const TYPES = {
     },
     // a heavy cut lands on it (called by combat.melee); a plain slash only rings off it
     hit(pr, heavy) {
-      if (!heavy) { if (!(pr.data.clink > 0)) { pr.data.clink = 1.2; fx.spark(pr.x, pr.y - 48, 6, '#c9c1ae', 180, 0.25); fx.floatText(pr.x, pr.y - 110, 'Cracked: needs a heavy cut', '#c9c1ae'); } return; }
+      if (!heavy) { if (!(pr.data.clink > 0)) { pr.data.clink = 1.2; fx.spark(pr.x, pr.y - 48, 6, '#c9c1ae', 180, 0.25); fx.floatText(pr.x, pr.y - 110, 'Cracked: needs a heavy cut', '#c9c1ae'); G.tips.fire('crack'); } return; }
       const t = G.tiles, j = t.blockers.indexOf(pr.bl);
       if (j >= 0) t.blockers.splice(j, 1);
       pr.gone = true; pr.data.broken = true; G.run.stats.cracks = (G.run.stats.cracks || 0) + 1;

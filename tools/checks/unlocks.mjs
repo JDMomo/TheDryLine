@@ -69,8 +69,10 @@ export default async ({ page }) => {
       ok(p.x < bx - 16, 'a jump got past the barrier');
       // a plain slash (and, even with Heavy Cut, a quick tap) does nothing
       D.place(0, bx - 40, crack.y, 1); D.step(3);
+      G.meta.taught.tip_crack = false; G.tips.clear();
       D.setInput(0, { attack: true }); D.step(4); D.setInput(0, { attack: false }); D.step(40);
       ok(!crack.gone, 'a plain slash broke the barrier');
+      ok(G.meta.taught.tip_crack === true, 'a plain slash did not teach the cracked-barrier tip');
       G.run.abil.heavy = true;
       D.setInput(0, { attack: true }); D.step(4); D.setInput(0, { attack: false }); D.step(40);
       ok(!crack.gone, 'a tap with Heavy Cut broke the barrier');

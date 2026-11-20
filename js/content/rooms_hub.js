@@ -9,7 +9,7 @@ const WALL = '##############################', OPEN = '#........................
 G.defineRoom({
   id: 'junction', region: 'hub', kind: 'hub',
   signs: ['Tokens open a Warden\'s fare slots. Match the shape. The board shows each Warden\'s three.',
-    'The party carries three tokens. A punched token is void. Choose where each one goes.',
+    'The party carries three tokens. Find them on guarded plinths, in lost trunks and at the ticket machine. Kiosks sell trinkets.',
     'Every gate is open. The Long Clock borrows one attack from each Warden still alive; the Terminus gate says which.'],
   map: [
     WALL, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN, OPEN,

@@ -181,6 +181,7 @@ const game = G.game = {
     }
     run.grades[boss.region] = g;
     fx.stamp(game.gradeText(g).toUpperCase().split(' · '), g.refund ? G.itemDefs[g.refund].name + (g.where === 'party' ? ' comes back to the party' : ' is on the floor') : '');
+    G.tips.fire('grade');
     return g;
   },
   gradeText(g) { return g ? ['Beaten'].concat(g.par ? ['Par'] : [], g.clean ? ['Clean'] : []).join(' · ') : ''; },
