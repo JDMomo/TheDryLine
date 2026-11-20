@@ -10,9 +10,9 @@ A 2D action platformer for 1 to 4 local players. It plays like a metroidvania in
 The hook: every boss is reachable from the first minute. You collect tokens on the way. Each boss has fare slots that open only for the right cut of token. Punching a slot is a huge swing in the fight, but a punched token is void. The party carries four tokens at most, and the last boss wants them too. So the game is the argument about which token goes where.
 
 ## 2. Premise and tone
-The sea dried up long ago. Across its bed runs the Dry Line, a toll railway that carries no one any more but is still guarded by its toll-engines, the Wardens: great machines, some of them half creature. Each Warden has fare slots, and a slot accepts only a token of the matching cut. A token punched in a slot is void. At the end of the line, the Long Clock is still counting down to a departure that must not happen.
+The sea dried up long ago. During the nine-day withdrawal, the Dry Line was put under an emergency timetable to carry evacuees instead of freight. Everyone got out; the cancellation order did not reach the Terminus. Four Wardens still enforce that valid timetable, and the Long Clock still certifies it. They are not evil machines: they are public infrastructure that never received permission to stop. Fare slots and tokens are the old railway's authorization language, so punching the final cancellation is both the mechanical and narrative goal.
 
-You are a ticket-runner: a small hooded figure in an amber cloak with a teal scarf, carrying tokens down the line. Tone: quiet, dry, a little melancholy; salt, rust, lamps and brass. No insects, no gothic castles, no undead.
+You are the Wanderer: a small hooded figure with a teal scarf, following the Last Timetable from the Junction toward the machine still keeping it alive. Every cleared Warden releases one obsolete local order and removes one attack the Long Clock would otherwise borrow. Tone: quiet, dry, a little melancholy; salt, rust, lamps and brass. No insects, no gothic castles, no undead. See `docs/STORY_BIBLE.md` for the reveal order and delivery rules.
 
 Win: stop the Long Clock. Lose: the whole party is down.
 
@@ -48,7 +48,7 @@ Hub: **The Junction.** A turntable platform with five gates, each showing its bo
 
 Each region's guarded room needs the movement unlock of the previous region in the ring (r2: Dash, r3: Wall Grip, r4: Double Jump, r1: Heavy Cut). Rooms: Signal Reef's roost has two coral heads nine tiles apart over a spiked drop (a dash in mid-air crosses); Salt Cutting's plinth stands atop a three-tile chimney nine tiles tall (Wall Grip climbs it); Ticket Hall's stands on a five-tile block (Double Jump clears it); Wreck Quay's lies behind a cracked barrier in a low tunnel that only a heavy cut breaks.
 
-Each region: 3 main rooms picked from its pool, then the arena. Two doorways along the way lead to branch rooms (rolled from the shared pool), and one leads to the region's trial room, which holds the movement unlock. The final region: 2 main rooms, then the arena.
+Each Warden region: 4 main rooms picked from its pool, then the arena. One narrative landmark main room is guaranteed but shuffled into the chain; other rooms still vary by seed. Doorways along the way lead to branch rooms and the region's trial room, which holds the movement unlock. The final region: 3 main rooms, including its guaranteed Clockworks landmark, then the arena.
 
 ### Fare slots (weak points)
 Every boss is built with four possible fare slots, one per cut, but in a run only the three cuts on its lock chart exist. Three token hits punch a slot: the boss loses 10% of its max health (three punches: 30%), staggers for 2.6 s, loses or weakens one attack, and the punching token is void. Boss health (set in each boss file) is multiplied by 1 + 0.6 for each player beyond the first when the fight starts. The slot descriptions below list all four; a run uses three.
@@ -69,20 +69,23 @@ Beating a Warden gives the party: one more health pip, a choice of one trinket f
 ## 5. Enemies (none are insects)
 | id | Name | Behaviour | Regions |
 |---|---|---|---|
-| ballast_crab | Strider | small walker; patrols, turns at edges | all |
-| brine_spout | Boiler | stationary vent; lobs brine at the nearest player | r1, r3, final |
-| turnstile | Scrapper | walks slowly behind a front shield; hit it from behind, from above, or with a token | r1, r4 |
-| signal_gull | Rivet | flyer; hovers, then swoops in an arc | r2, final |
+| ballast_crab | Strider | light rusher; patrol -> claw tell -> committed lunge -> recovery | all |
+| brine_spout | Boiler | artillery/space denial; warned ranged brine lob or close pressure vent; lob leaves Wet | r1, r3, final |
+| turnstile | Scrapper | armored lane holder; shielded advance -> warned charge -> open recovery; flank/downslash counters | r1, r4 |
+| signal_gull | Rivet | aerial interceptor; hover -> tell -> damaging swoop -> harmless recovery | r2, final |
 | lamp_wisp | Lamp Wisp | slow flyer that drifts at the player and bursts when killed | r2, r4 |
 | brine_toad | Brine Toad | hops toward players; splashes on landing | r3 |
 | handcar | Gearling | a small lamp-eyed machine; winds up, then dashes along the floor | r4, final |
 | hanging_lamp | Hanging Lamp | hangs from ceilings; drops when a player passes under | r2, r3 |
+| sapper | Sapper | explosive zoning; interruptible plant tell, cuttable delayed charge, recovery | r1, r4, final |
+| harvester | Harvester | support; interruptible repair tell restores nearby damaged allies | r2, r4 |
+| mirage | Mirage | phasing ambusher; fade/relocate, visible reappearance tell, committed dash, recovery | r3, final |
 
 Ids stay as listed; the names changed when the watercolor art came in (Ballast Crab became Strider, Brine Spout Boiler, Turnstile Scrapper, Signal Gull Rivet, Handcar Gearling). The Scrapper's front guard blocks slashes and shows a "Blocked" float.
 
 Every enemy must be readable: a wind-up before anything that hurts, and a clear silhouette.
 
-## 6. Art direction (drawn in code for now, sprites later)
+## 6. Art direction (watercolor/ink source-of-truth; code art is fallback/placeholders)
 - Chunky rounded shapes. Bosses are built from 6 to 12 shapes.
 - Outlines: 3 px on gameplay things, thinner on mid-ground, none on backgrounds.
 - The player is the brightest thing on screen. Nothing else uses the player's teal (#3FB8AF) or amber cloak (#E2A03F).
@@ -169,7 +172,7 @@ Every token and trinket has one or two material tags and one card line naming th
 | Anchor | Lead Boot: being hurt neither pushes nor hops you |
 
 Co-op jobs: one player sparks while another lobs a Kettle; one rolls a Basalt Roller into the other's Skipstone; a Lead Boot carrier is the wall a roller stops against; the Ladle player makes puddles for the other's metal shots. Every rule also works solo with two or three of your own tokens (Lead Boot lets a roller stop against a wall instead). Trinkets belong to the whole party, like the old stat trinkets.
-Not built: wind and brine hazards from enemies (nothing in the game pushes the party sideways yet; Anchor covers knockback only, and enemy brine drops do not soak).
+Not built: a general wind-material rule. Boiler brine lobs now leave Wet puddles and can participate in the existing salt/Conduct/Douse material ecosystem; Anchor still covers knockback rather than wind.
 
 - The run starts with the four commons and the four fixed tokens in the pool (fixed tokens are placed on their plinths; the rest of the pool feeds the trunks and the ticket machine). Each rare is locked until the player has punched one slot of that cut in any run (meta save).
 - Picking up a token when the party is full swaps it with the selected slot; the old one stays on the plinth.
