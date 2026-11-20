@@ -1,4 +1,52 @@
-# Status (updated 2026-11-14)
+# Status (updated 2026-11-19)
+
+## 2026-11-19 vertical-slice expansion — ChatGPT Studio batch
+
+This branch is now substantially beyond the 2026-11-14 baseline documented below.
+
+### World and run structure
+- Each Warden line now selects **4 main rooms** before its arena; the Terminus selects **3**. One authored landmark room is guaranteed per region so critical story evidence cannot disappear from a seed.
+- Four-direction room routing is live. Signal Reef includes a true two-screen bottom-to-top shaft.
+- Main-room design contract: safe/base route, harder/faster route where space permits, optional reward/secret pocket. Worked examples exist in Wreck Quay Dock, Signal Reef Lamp Shaft, Salt Trestle, Ticket Hall Concourse and the Terminus remixes.
+- Terrain now includes mud, slippery/dissolvable salt, conveyors, crumble, springs, timed steam, **flammable tar**, one-way platforms and spikes. Heavy Cut still opens cracked barriers.
+- Wreck Quay has a short-span maintenance **rail cart** that carries grounded players/enemies but never gates the route.
+- Ticket Hall has optional **timed-lever / mechanical-gate / pressure-plate** shortcuts. Pressure plates can be held by a co-op partner; required low routes remain open.
+
+### Story and navigation
+- New story canon: **The Last Timetable**. The evacuation ended, but its cancellation never reached the Long Clock; the Wardens are infrastructure trapped in valid orders rather than villains.
+- New `docs/STORY_BIBLE.md`: reveal order, Warden motivations, regional emotional progression, ending and tone rules.
+- Story is delivered in play through first-entry lines, guaranteed landmark discoveries, Junction progression, Warden order/aftermath lines and the ending.
+- The map is now a **Route Board**: authored visited-room names, route arrows, region terrain identity, seen/total progress, Warden/ability/grade status, current objective and a Left/Right browsable discovery journal. Unseen rooms remain hidden.
+- Short location cards appear on room entry. First-use contextual teaching covers mud, salt, tar, conveyors, crumble, springs and steam.
+- Title screen now establishes the undelivered cancellation before showing controls.
+
+### Encounters
+- Added the planned concept-roster jobs as gameplay placeholders: **Sapper** (interruptible delayed explosive zoning), **Harvester** (interruptible ally repair support) and **Mirage** (phase/reappear tell/committed dash).
+- Strider is no longer a pure contact walker: patrol -> claw tell -> committed lunge -> punishable recovery.
+- Scrapper now has a shielded advance -> shove/charge tell -> committed charge -> open-shield recovery.
+- Boiler chooses ranged brine lob or warned close pressure vent; lobs leave Wet puddles.
+- Rivet only hurts during the committed swoop and now has explicit recovery.
+- Co-op enemies use short target locks plus pressure balancing so a room is less likely to dogpile one player.
+- Later rooms can roll at most one visibly brass-overstamped elite; first/onboarding rooms never do. Elites are seeded, tougher and worth extra scrip.
+
+### Art direction
+- The owner's watercolor Wanderer and existing Strider/Boiler/Rivet/Gearling/Scrapper strips remain the default when loaded.
+- Backgrounds now have region-specific low-contrast silhouette language and paper/wash grain: wreck ribs, signal coral/lamps, salt strata/crystals, station arches/clocks and Terminus clockwork.
+- Sapper/Harvester/Mirage remain code placeholders until owner-created strips exist. `docs/art/ASSET_LIST.md` now specifies move4/attack6/defeat4 files using the canonical watercolor concept silhouettes.
+- These code scenery/enemy drawings are **supporting placeholders**, not a replacement for the watercolor source-of-truth.
+
+### QA added in this batch
+New focused checks cover route redesigns, Terminus terrain remix, Sapper/Harvester/Mirage roles, front-line enemy patterns, Boiler/Rivet patterns, elites, co-op target distribution, story/journal state, mechanisms, tar, rail carts, longer world scale/landmarks and dynamic terrain.
+- Room traversal snapshots simulation time + live terrain state so crumble/steam searches replay deterministically.
+- Browser scripts and new checks were syntax-compiled during the batch.
+- `.github/workflows/qa.yml` now runs the fast Playwright/Chromium suite automatically on every push to `chatgpt-work`, so future large batches do not require Joseph to babysit terminal checks.
+
+### Still deliberately unfinished
+- Final production watercolor strips for Sapper, Harvester and Mirage.
+- Authored watercolor environment/terrain sheets to replace the low-contrast code scenery and tile placeholders.
+- Human difficulty/feel tuning after this much larger room/encounter set. Automated fairness remains a floor, not a substitute for play.
+- Boss weak-point/body art remains mostly code-driven and deserves a later dedicated presentation pass.
+
 
 ## Done
 - Engine, content and tools: see docs/ARCHITECTURE.md (matches the code).
