@@ -183,23 +183,40 @@ G.defineRoom({
   })
 });
 
-// The Tollkeeper's arena, the prototype's arena tile for tile: a hall (columns 0 to 2), the boss door (column 3,
-// solid down to row 11 and open at rows 12 to 14), 25 tiles of floor and two perches at row 10.
+// Toll House — two-screen authored boss approach.
+// The first twenty columns are a quiet inspection vestibule. Crossing the iron threshold wakes the Tollkeeper.
+// The fight floor keeps the proven corner escape shelves: one jump up, then a jump past the Warden.
 G.defineRoom({
-  id: 'r1_arena', region: 'r1', kind: 'arena',
-  decor:[{type:'banner_decor',c:8,r:14},{type:'banner_decor',c:22,r:14}],
-  map: [
-    WALL,
-    '####.........................#', '####.........................#', '####.........................#',
-    '####.........................#', '####.........................#', '####.........................#',
-    '####.........................#', '####.........................#', '####.........................#',
-    '####....###..........###.....#',                 // row 10: two high perches (5 up), shifted inward so the low perches below have headroom
-    '...#.........................#',
-    '....===...................===#',                  // row 12: escape perches (96 px up) against both walls: one jump from the corner
-    '.............................#',
-    '......................B......#',
-    WALL, WALL
-  ]
+  id:'r1_arena', region:'r1', kind:'arena', w:2,
+  signs:['TOLL HOUSE — EVACUATION LEDGER CLOSED. AWAIT CANCELLATION AUTHORITY.'],
+  decor:[
+    {type:'crate_decor',c:7,r:14},{type:'crate_decor',c:15,r:14},{type:'banner_decor',c:19,r:14},
+    {type:'banner_decor',c:27,r:14},{type:'crate_decor',c:38,r:14},{type:'banner_decor',c:55,r:14}
+  ],
+  map: paint(2, false, ({put,fill})=>{
+    // Arena rooms close on the right. The normal painter leaves a main-room exit there, so seal it explicitly.
+    fill(1,14,59,59,'#');
+
+    // Inspection office / vestibule: a roof mass and ledger shelves create a place before the battle.
+    fill(2,8,3,12,'#');
+    put(10,5,'========');
+    fill(2,10,14,19,'#');
+    put(14,6,'?');
+
+    // Iron boss threshold. The arena parser sees row 11 solid with rows 12-14 open and uses this as the closing gate.
+    put(11,20,'#');
+
+    // Escape shelves exactly three tiles above the floor and tight to both fight walls.
+    put(12,21,'====');
+    put(12,55,'====');
+
+    // Sparse upper ledgers give the room silhouette without obstructing charges or jumps.
+    put(8,28,'======');
+    put(8,45,'======');
+
+    // Boss wakes on the broad inspection floor. No interior solid blocks interrupt charge/leap trajectories.
+    put(14,43,'B');
+  })
 });
 
 // Trial: climb the planks to the Dash signal post (base moves). Past the post an 8 tile gap leads to a slab that only a dash
