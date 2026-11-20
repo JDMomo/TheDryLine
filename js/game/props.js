@@ -314,8 +314,8 @@ const TYPES = {
       const L = boardLayout(pr, ctx), x = pr.x;
       ctx.fillStyle = '#5a4630'; ctx.fillRect(x - 54, 32, 3, L.y0 - 32); ctx.fillRect(x + 51, 32, 3, L.y0 - 32);              // hanging cords
       ctx.fillStyle = '#8a6c46'; ctx.fillRect(L.x0, L.y0, L.x1 - L.x0, L.y1 - L.y0); ctx.fillStyle = '#1d1a14'; ctx.fillRect(L.x0 + 3, L.y0 + 3, L.x1 - L.x0 - 6, L.y1 - L.y0 - 6);
-      art.label(ctx, 'ROUTE BOARD', x, L.y0 + 10, 10.5, '#f4e6b8', 'center', C.FONT, 700);
-      art.label(ctx, 'LOCK CHART', x, L.y0 + 21, 8.5, '#9aa89f', 'center', C.FONT, 600);
+      art.label(ctx, 'Route Board', x, L.y0 + 9, 10.5, '#f4e6b8', 'center', C.FONT, 700);
+      art.label(ctx, 'Lock chart', x, L.y0 + 20, 8.5, '#9aa89f', 'center', C.FONT, 600);
       for (const r of L.rows) {
         const chart = (G.run.graph.chart || {})[r.region.id] || [], pal = art.palette(r.region.id), gone = G.run.beaten[r.region.id];
         art.label(ctx, r.region.name, r.name.x0, r.y, 10, gone ? '#6d6a5c' : pal.accent, 'left');
