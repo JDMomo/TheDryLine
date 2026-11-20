@@ -213,6 +213,8 @@ Each set is 32 x 32 pieces in the region's colours (see the region table). Fill 
 | Decoration | 4 to 6 per region | not solid. Wreck Quay: chains, hull ribs, portholes. Signal Reef: coral fans, hanging lamps, cable. Salt Cutting: crystals, rail sleepers, drips. Ticket Hall: booth fronts, clocks, benches. The Terminus: pipes, buffers, gauges. Junction: lamp posts, turntable rail |
 
 # 7. Backgrounds (three layers for each of the six places)
+> **Current temporary production plates.** The canonical watercolor concept sheet contains three painted background studies now cropped into the build as `assets/backgrounds/wreck_quay.jpg`, `signal_reef.jpg`, and `ticket_hall.jpg`. They establish the intended ink/wash value structure immediately. They are concept-study crops, not final environment deliverables. Junction currently shares the Ticket Hall plate; Salt Cutting and Terminus intentionally remain on fallback scenery until matching watercolor plates are authored.
+
 
 Each layer is 960 x 544 and must repeat seamlessly left to right. Draw them as flat silhouettes in the region's dark background tones, lighter in the distance, with no outlines.
 

@@ -15,6 +15,39 @@ const BASE_PALETTE = {
 addEventListener('keydown', e => { if (e.code === 'F2' && !e.repeat) { e.preventDefault(); G.artTest = !G.artTest; } });
 const hash1 = (i, s) => Math.abs(Math.sin(i * 12.9898 + s) * 43758.5453) % 1;
 
+const PAINTED_BG_SRC = {
+  hub: 'assets/backgrounds/ticket_hall.jpg',
+  r1: 'assets/backgrounds/wreck_quay.jpg',
+  r2: 'assets/backgrounds/signal_reef.jpg',
+  r4: 'assets/backgrounds/ticket_hall.jpg'
+};
+const PAINTED_BG = {};
+if (typeof Image !== 'undefined') for (const id in PAINTED_BG_SRC) {
+  const img = new Image(); img.decoding = 'async'; img.src = PAINTED_BG_SRC[id]; PAINTED_BG[id] = img;
+}
+const paintedReady = region => {
+  const img = PAINTED_BG[region];
+  return !!(img && img.complete && img.naturalWidth);
+};
+function paintedBackdrop(ctx, region, camX) {
+  const img = PAINTED_BG[region];
+  if (!img || !img.complete || !img.naturalWidth) return false;
+  // The source studies are watercolor concept plates from the project's canonical art sheet.
+  // Slight overdraw lets a long room pan gently across the painting without revealing an edge.
+  const dw = C.W + 150, dh = C.H + 84;
+  const maxShift = dw - C.W, sx = -maxShift * 0.5 - Math.sin(camX * 0.00075) * maxShift * 0.34;
+  ctx.save();
+  ctx.globalAlpha = region === 'hub' ? 0.56 : 0.64;
+  ctx.drawImage(img, sx, -42, dw, dh);
+  const wash = ctx.createLinearGradient(0, 0, 0, C.H);
+  wash.addColorStop(0, 'rgba(5,10,10,0.28)');
+  wash.addColorStop(0.58, 'rgba(4,8,8,0.18)');
+  wash.addColorStop(1, 'rgba(2,5,5,0.56)');
+  ctx.fillStyle = wash; ctx.fillRect(0, 0, C.W, C.H);
+  ctx.restore();
+  return true;
+}
+
 const bgLine = (ctx,x0,y0,x1,y1,col,w=3,a=0.5) => { ctx.globalAlpha=a; ctx.strokeStyle=col; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); ctx.globalAlpha=1; };
 function regionScenery(ctx, region, pal, camX, time) {
   const drift = -((camX * 0.16) % 260);
@@ -64,6 +97,7 @@ const art = G.art = {
     if (painters[id]) { painters[id](ctx, opts); return true; }
     return false;
   },
+  hasPaintedBackground(region) { return paintedReady(region); },
   // Multi-frame strips: G.strips[id] = { img, frames, fw, fh } (frames side by side, each facing right). The art pass fills it, see js/art/sprites.js.
   hasStrip(id) { return !!G.strips[id]; },
   // Draw frame n (wraps) of a strip with its bottom centre on opts.x, opts.y; opts.face < 0 flips it; opts.h scales it to that many pixels tall
@@ -117,24 +151,28 @@ const art = G.art = {
     const g = ctx.createLinearGradient(0, 0, 0, C.H);
     g.addColorStop(0, pal.sky0); g.addColorStop(0.6, pal.sky1); g.addColorStop(1, pal.sky2);
     ctx.fillStyle = g; ctx.fillRect(0, 0, C.W, C.H);
-    for (const [f, col, n, seed] of [[0.25, pal.far, 26, 3.1], [0.5, pal.near, 22, 7.7]]) {
-      ctx.fillStyle = col;
-      for (let i = 0; i < n; i++) {
-        const h1 = hash1(i, seed), h2 = hash1(i * 6.02, seed + 1.3);
-        const x = i * 190 * (0.6 + f) + h1 * 120 - camX * f, w = 40 + h2 * 70;
-        if (x > C.W + 100 || x < -160) continue;
-        if (i % 2) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + w, 0); ctx.lineTo(x + w * 0.5, 120 + h1 * 200); ctx.closePath(); ctx.fill(); }
-        else ctx.fillRect(x, 120 + h1 * 160, w, C.H);
+    const painted = paintedBackdrop(ctx, region, camX);
+    if (!painted) {
+      for (const [f, col, n, seed] of [[0.25, pal.far, 26, 3.1], [0.5, pal.near, 22, 7.7]]) {
+        ctx.fillStyle = col;
+        for (let i = 0; i < n; i++) {
+          const h1 = hash1(i, seed), h2 = hash1(i * 6.02, seed + 1.3);
+          const x = i * 190 * (0.6 + f) + h1 * 120 - camX * f, w = 40 + h2 * 70;
+          if (x > C.W + 100 || x < -160) continue;
+          if (i % 2) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + w, 0); ctx.lineTo(x + w * 0.5, 120 + h1 * 200); ctx.closePath(); ctx.fill(); }
+          else ctx.fillRect(x, 120 + h1 * 160, w, C.H);
+        }
       }
+      regionScenery(ctx, region, pal, camX, time);
     }
+    // Sparse motes stay on top of either background; keep them quieter over paintings.
     ctx.fillStyle = pal.accent;
-    for (let i = 0; i < 46; i++) {
+    for (let i = 0; i < (painted ? 18 : 46); i++) {
       const x = (((i * 211.7 + time * (6 + i % 5 * 3)) - camX * 0.8) % (C.W + 40) + C.W + 40) % (C.W + 40) - 20;
       const y = (i * 97.3 + Math.sin(time * 0.6 + i) * 18) % 440 + 30;
-      ctx.globalAlpha = 0.25 + 0.2 * Math.sin(time * 1.3 + i * 2.1); ctx.fillRect(x, y, 2, 2);
+      ctx.globalAlpha = (painted ? 0.12 : 0.25) + 0.12 * Math.sin(time * 1.3 + i * 2.1); ctx.fillRect(x, y, 2, 2);
     }
     ctx.globalAlpha = 1;
-    regionScenery(ctx, region, pal, camX, time);
     const vg=ctx.createLinearGradient(0,0,0,C.H); vg.addColorStop(0,'rgba(0,0,0,0.18)'); vg.addColorStop(0.18,'rgba(0,0,0,0)'); vg.addColorStop(0.82,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.28)'); ctx.fillStyle=vg; ctx.fillRect(0,0,C.W,C.H);
   },
   // World-space tiles of the current room.
