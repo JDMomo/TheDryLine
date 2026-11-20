@@ -232,6 +232,8 @@ G.defineRoom({
 })();
 
 
+Object.assign(G.roomDefs.r2_trial,{decor:[{type:'lamp_decor',c:6,r:14},{type:'lamp_decor',c:17,r:8},{type:'lamp_decor',c:25,r:14}]});
+Object.assign(G.roomDefs.r2_hold,{decor:[{type:'banner_decor',c:5,r:7},{type:'lamp_decor',c:9,r:7},{type:'lamp_decor',c:24,r:7}]});
 Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerPlan:['signal_gull'],
   decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:26,r:14},{type:'lamp_decor',c:43,r:14},{type:'lamp_decor',c:56,r:14}]});
 Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull'],

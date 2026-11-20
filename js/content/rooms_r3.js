@@ -206,6 +206,8 @@ G.defineRoom({
 })();
 
 
+Object.assign(G.roomDefs.r3_trial,{decor:[{type:'banner_decor',c:5,r:14},{type:'crate_decor',c:9,r:14},{type:'banner_decor',c:24,r:14}]});
+Object.assign(G.roomDefs.r3_hold,{decor:[{type:'crate_decor',c:5,r:14},{type:'banner_decor',c:20,r:5},{type:'crate_decor',c:25,r:5}]});
 Object.assign(G.roomDefs.r3_brines,{enemyPlan:['brine_toad','brine_spout','ballast_crab'],
   decor:[{type:'crate_decor',c:6,r:14},{type:'banner_decor',c:28,r:14},{type:'crate_decor',c:52,r:14}]});
 Object.assign(G.roomDefs.r3_trestle,{enemyPlan:['ballast_crab','mirage','brine_spout'],

@@ -251,6 +251,8 @@ G.defineRoom({
   })
 });
 
+Object.assign(G.roomDefs.r1_trial,{decor:[{type:'banner_decor',c:5,r:14},{type:'lamp_decor',c:13,r:14},{type:'banner_decor',c:26,r:7}]});
+Object.assign(G.roomDefs.r1_hold,{decor:[{type:'crate_decor',c:5,r:14},{type:'lamp_decor',c:14,r:14},{type:'crate_decor',c:25,r:14}]});
 Object.assign(G.roomDefs.r1_gangway,{enemyPlan:['ballast_crab','ballast_crab']});
 Object.assign(G.roomDefs.r1_dock,{enemyPlan:['ballast_crab','sapper','turnstile']});
 Object.assign(G.roomDefs.r1_tunnel,{enemyPlan:['brine_spout','sapper','ballast_crab']});

@@ -28,5 +28,6 @@ G.defineRoom({ id: 'side_kiosk_awning', region: 'shared', kind: 'branch', label:
   map: hall([[7, 1, 18, 3, '#'], [8, 10, 18, 10, '='], [24, 12, 27, 14, '#']], [[22, 14, 'D'], [9, 14, 'S'], [13, 14, 'S'], [17, 14, 'S']]) });
 // A quiet stop for the Terminus: the standpipe under a run of pipes.
 G.defineRoom({ id: 'side_standpipe', region: 'shared', kind: 'branch', label: 'Standpipe',
+  decor:[{type:'lamp_decor',c:6,r:14},{type:'crate_decor',c:13,r:14},{type:'lamp_decor',c:26,r:14}],
   map: hall([[1, 1, 28, 2, '#'], [14, 3, 15, 5, '#'], [9, 11, 13, 11, '=']], [[3, 14, 'D'], [24, 14, 'H']]) });
 })();
