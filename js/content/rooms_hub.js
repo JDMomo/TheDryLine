@@ -11,19 +11,18 @@ fill(0,1,0,W-1,'#'); fill(32,33,0,W-1,'#');
 fill(0,H-1,0,1,'#'); fill(0,H-1,W-2,W-1,'#');
 
 // LOWER DISTRICT — five gate platforms separated by architectural bays, not hazards.
-for(const c of [8,30,52,90,112]){
+for(const c of [8,36,52,84,112]){
   fill(29,31,c-4,c-3,'#'); fill(29,31,c+3,c+4,'#'); // arch feet
   fill(27,28,c-4,c+4,'#');                           // lintel
 }
 // ARRIVAL SHELTER / KEEPER bay.
 fill(26,26,57,72,'#'); fill(27,31,57,58,'#'); fill(27,31,71,72,'#');
 put(31,61,'P'); put(31,65,'N');
-put(31,55,'?'); put(31,75,'?');
+put(31,46,'?'); put(31,75,'?');
 
 // Service objects are spaced into their own readable bays.
-put(31,40,'R');                        // ticket machine
-put(31,80,'S');                        // kiosk stock
-put(31,84,'K');                        // clipping booth
+put(31,43,'R');                        // ticket machine: its own clear service bay
+put(31,77,'S');                        // kiosk stock: readable between shelter and Gate 4
 
 // LOWER LANDMARKS — low luggage / machinery masses break the 4-screen run into recognizable chunks.
 fill(30,31,17,20,'#'); fill(29,31,21,22,'#');

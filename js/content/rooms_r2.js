@@ -198,8 +198,8 @@ G.defineRoom({
       .forEach(([r,a,b])=>fill(r,a,b,'='));
     // Fast center line: timed vents skip several shelf changes, but are never required.
     put(30,14,'v');put(22,14,'v');put(14,14,'v');
-    // Reward sits at the far edge of a normal landing: visible, optional, and reachable from either travel direction.
-    put(20,20,'C');
+    // Reward sits on a broad early landing. The shaft is already the movement exam; this cache is discovery, not a precision tax.
+    put(26,18,'C');
     // The movement-trial doorway remains a lateral shelf off the safe stair.
     fill(22,4,8,'='); put(21,6,'D');
     put(29,9,'E'); put(20,18,'F'); put(11,10,'F'); put(5,18,'F');
