@@ -66,6 +66,9 @@ function fillContent(node, region, rng, used, ctx) {
     else if (m.ch === 'M') c = region.ability ? { type: 'post', data: { abil: region.ability } } : null;
     else if (m.ch === '?') c = { type: 'sign', data: { text: signs[signN++] || '' } };
     else if (m.ch === 'X') c = { type: 'crack', data: {} };
+    else if (m.ch === 'Y') c = { type: 'lever', data: { channel: 'main' } };
+    else if (m.ch === 'A') c = { type: 'plate', data: { channel: 'main' } };
+    else if (m.ch === 'Z') c = { type: 'mech_gate', data: { channel: 'main' } };
     else if (m.ch === 'C') c = { type: 'trunk', data: {} };                 // what they hold is drawn by balance() once the counts are trimmed
     else if (m.ch === 'I') {
       // Only the region's own branch room holds a plinth (its first one): the region's fixed token, guarded. Others are trimmed.

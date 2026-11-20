@@ -152,6 +152,20 @@ G.defineRoom({
     '############################################################'
   ]
 });
+// Switchyard: an always-open conveyor floor and an optional upper mechanical shortcut.
+// Throw Y to open Z for 4.5 seconds. A player who reaches A can hold the gate open for a co-op partner.
+(() => {
+  const W=60,H=17,g=Array.from({length:H},()=>Array(W).fill('.'));
+  g[0].fill('#');g[15].fill('#');g[16].fill('#');
+  for(let r=0;r<H;r++)if(r<12||r>14){g[r][0]='#';g[r][W-1]='#';}
+  const fill=(r,c0,c1,ch)=>{for(let c=c0;c<=c1;c++)g[r][c]=ch;};
+  fill(15,4,17,'>');fill(15,22,35,'<');fill(15,40,52,'>');
+  fill(11,7,18,'=');fill(11,22,28,'=');fill(11,30,39,'=');fill(11,42,51,'=');
+  g[10][14]='Y';g[10][29]='Z';g[10][35]='A';
+  g[14][10]='E';g[14][26]='E';g[14][45]='E';g[7][40]='F';g[14][55]='D';
+  G.defineRoom({id:'r4_switchyard',region:'r4',kind:'main',w:2,map:g.map(row=>row.join(''))});
+})();
+
 // Trial: climb the one-way ledges to the signal post; turnstiles wait on the platform beyond it.
 G.defineRoom({
   id: 'r4_trial', region: 'r4', kind: 'trial', label: 'Signal post',

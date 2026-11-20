@@ -38,7 +38,9 @@ const TEACH = {
   post: 'A signal post teaches a move. It lasts the whole run.',
   standpipe: 'A standpipe mends the whole party, once per run.',
   door: 'Doorways lead to side rooms. Every side room has a way back.',
-  gate: 'Every gate is open. Each line ends at a Warden.'
+  gate: 'Every gate is open. Each line ends at a Warden.',
+  lever: 'Levers open their paired mechanical gate for a few seconds.',
+  plate: 'A pressure plate holds its paired gate open while someone stands on it.'
 };
 // Layout of the lock chart board (pr.x centre, pr.y bottom edge): panel, and per region the name box and the three cut boxes. Used by draw and by boxes().
 const BOARD_W = 150, BOARD_ROW = 15;
@@ -321,6 +323,53 @@ const TYPES = {
       ctx.moveTo(x - 3, y - h); ctx.lineTo(x + 5, y - h + 24); ctx.lineTo(x - 6, y - h + 44); ctx.lineTo(x + 4, y - h + 66); ctx.lineTo(x - 2, y); ctx.stroke();
       ctx.strokeStyle = '#d9c9a0'; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.55 + 0.25 * Math.sin(G.time * 3); ctx.stroke(); ctx.globalAlpha = 1;
       ctx.strokeStyle = '#14120f'; ctx.lineWidth = 3; ctx.strokeRect(x - w / 2, y - h, w, h);
+    }
+  },
+  lever: {
+    interact(pr) {
+      const room=G.rooms.current, ch=pr.data.channel||'main', st=(room.mech||(room.mech={}))[ch]||((room.mech[ch]={timer:0}));
+      st.timer=4.5; pr.data.thrownAt=G.time; fx.jolt(0.035,3); fx.spark(pr.x,pr.y-24,6,'#f4e6b8',90,0.25); fx.floatText(pr.x,pr.y-58,'Gate open: 4.5 s','#f4e6b8');
+    },
+    prompt(pr,p) {
+      const st=G.rooms.current.mech&&G.rooms.current.mech[pr.data.channel||'main'], t=st&&st.timer||0;
+      return ['Timed lever', t>0?'The paired gate is open for '+t.toFixed(1)+' s.':'Throws power to the paired mechanical gate.', useName(p)+' to throw'];
+    },
+    draw(pr,ctx) {
+      const x=pr.x,y=pr.y, on=G.time-(pr.data.thrownAt||-9)<0.35;
+      ctx.fillStyle='#27332f';ctx.fillRect(x-13,y-10,26,10);ctx.strokeStyle='#14120f';ctx.lineWidth=3;ctx.strokeRect(x-13,y-10,26,10);
+      ctx.strokeStyle=on?'#f4e6b8':'#a58d60';ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x,y-9);ctx.lineTo(x+(on?10:-8),y-34);ctx.stroke();
+      ctx.fillStyle='#f4e6b8';ctx.beginPath();ctx.arc(x+(on?10:-8),y-34,4,0,6.283);ctx.fill();
+    }
+  },
+  plate: {
+    update(pr) {
+      pr.data.active=G.players.some(p=>!p.down&&p.onGround&&Math.abs(p.x-pr.x)<18&&Math.abs(p.y-pr.y)<12);
+    },
+    prompt(pr) { return ['Pressure plate', pr.data.active?'Held down — paired gate open.':'Weight holds the paired gate open.', 'Stand here while someone passes']; },
+    draw(pr,ctx) {
+      const x=pr.x,y=pr.y,a=!!pr.data.active;
+      ctx.fillStyle='#1c2523';ctx.fillRect(x-15,y-5,30,5);ctx.fillStyle=a?'#f4e6b8':'#817451';ctx.fillRect(x-13,y-(a?4:8),26,4);ctx.strokeStyle='#14120f';ctx.lineWidth=2;ctx.strokeRect(x-15,y-5,30,5);
+    }
+  },
+  mech_gate: {
+    update(pr) {
+      const room=G.rooms.current,ch=pr.data.channel||'main', st=room.mech&&room.mech[ch];
+      const plate=room.props.some(o=>o.type==='plate'&&!o.gone&&(o.data.channel||'main')===ch&&o.data.active);
+      const open=!!(plate||(st&&st.timer>0));
+      const r1=Math.round(pr.y/C.T)-1;
+      if(!pr.bl) pr.bl={c:Math.floor(pr.x/C.T),r0:r1-2,r1,on:!open,mech:true};
+      if(!G.tiles.blockers.includes(pr.bl))G.tiles.blockers.push(pr.bl);
+      pr.bl.on=!open;pr.data.open=open;pr.data.plate=plate;
+    },
+    prompt() { return null; },
+    draw(pr,ctx) {
+      const x=pr.x,y=pr.y,h=3*C.T,open=!!pr.data.open;
+      ctx.save();ctx.translate(x,y);
+      ctx.fillStyle='#28322f';ctx.strokeStyle='#14120f';ctx.lineWidth=3;
+      ctx.fillRect(-C.T/2,-h-8,C.T,10);ctx.strokeRect(-C.T/2,-h-8,C.T,10);
+      const lift=open?h-18:0;
+      for(let i=-10;i<=10;i+=10){ctx.fillStyle='#776f58';ctx.fillRect(i-2,-h+lift,4,h-lift);ctx.strokeRect(i-2,-h+lift,4,h-lift);}
+      ctx.fillStyle=open?'#f4e6b8':'#7e4c39';ctx.beginPath();ctx.arc(0,-h-3,4,0,6.283);ctx.fill();ctx.restore();
     }
   },
   sign: {       // data: { text }

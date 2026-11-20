@@ -4,7 +4,7 @@
 const G = window.G, C = G.C, T = C.T, U = G.util, fx = G.fx, tiles = G.tiles, art = G.art;
 G.roomDefs = {};
 
-const MARKS = 'EFLICRSKMHDBG?PX';
+const MARKS = 'EFLICRSKMHDBG?PXYZ A'.replace(/ /g, '');
 const KINDS = ['hub', 'main', 'branch', 'trial', 'arena'];
 const EXIT_ROWS = [12, 13, 14];       // left/right opening rows in the bottom screen cell
 const SIDES = ['left', 'right', 'top', 'bottom'];
@@ -22,6 +22,7 @@ const SIDES = ['left', 'right', 'top', 'bottom'];
      R  ticket machine (needs 2 free tiles each side)        S  kiosk ware (priced plinth)       K  clipping booth (needs 3 free tiles each side)
      M  signal post    H  standpipe      D  doorway           B  boss (arena)    G  region gate (hub)    ?  sign (text from signs[])    P  party start (hub)
      X  cracked barrier (branch rooms): a wall three tiles tall standing on the tile below the marker; only a heavy cut breaks it
+     Y  timed lever       A  pressure plate (held by a player)       Z  mechanical gate paired to Y/A in the same room
    A marker stands on the tile below it: put it in the empty tile directly above a floor.
    Main route ports: def.route = [entrySide, exitSide], using left/right/top/bottom; omitted means left -> right. Arenas still open on the left only.
    'branch' and 'trial' rooms have exactly one D (the way back) and closed edges.
@@ -168,6 +169,7 @@ const rooms = G.rooms = {
       return;
     }
     const room = rooms.current, live = G.players.filter(p => !p.down), lead = live[0];
+    if (room.mech) for (const s of Object.values(room.mech)) if (s.timer > 0) s.timer = Math.max(0, s.timer - dt);
     for (const p of G.players) p.update(dt);
     for (const pr of room.props) pr.update(dt);
     room.props = room.props.filter(pr => !pr.gone);
