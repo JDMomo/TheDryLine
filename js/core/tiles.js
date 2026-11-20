@@ -26,7 +26,7 @@ const tiles = G.tiles = {
   oneway(c, r) { return tiles.at(c, r) === '='; },
   crumbleKey(c, r) { return c + ',' + r; },
   crumbleState(c, r) { return tiles.terrain && tiles.terrain.crumble[tiles.crumbleKey(c, r)] || null; },
-  crumbleGone(c, r) { const st = tiles.crumbleState(c, r); return !!(st && st.phase === 'gone' && G.time < st.at); },
+  crumbleGone(c, r) { const st = tiles.crumbleState(c, r); return !!(st && st.phase === 'gone'); },
   surfaceUnder(o) {
     const c = Math.floor(o.x / T), r = Math.floor((o.y + 1) / T), ch = tiles.at(c, r);
     return ch === 'c' && tiles.crumbleGone(c, r) ? '.' : ch;
@@ -37,7 +37,7 @@ const tiles = G.tiles = {
     const phase = (time + ((c * 17 + r * 31) % 13) * 0.07) % 2.6;
     return phase >= 0.48 && phase < 1.12;
   },
-  updateTerrain(entities) {
+  updateTerrain(dt, entities) {
     const state = tiles.terrain && tiles.terrain.crumble;
     if (!state) return;
 
@@ -54,7 +54,7 @@ const tiles = G.tiles = {
 
     for (const o of entities) {
       if (!o || o.dead) continue;
-      if (o._ventCd > 0) o._ventCd = Math.max(0, o._ventCd - G.C.STEP);
+      if (o._ventCd > 0) o._ventCd = Math.max(0, o._ventCd - dt);
       const c = Math.floor(o.x / T), r = Math.floor((o.y + 1) / T), under = tiles.at(c, r);
 
       if (o.onGround && under === 'c' && !tiles.crumbleState(c, r))

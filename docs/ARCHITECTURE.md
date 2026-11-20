@@ -78,6 +78,8 @@ tools/smoke.mjs, tools/checks/*.mjs   headless test harness (not shipped)
 ```
 #  solid             .  empty             ^  spikes (hurt; a down slash bounces off)     =  one-way platform
 s  slippery salt crust (solid; Wet dissolves it)    m  mud (solid; slows movement)    >/<  conveyors (solid; push grounded bodies)
+c  crumbling ledge (0.45 s warning, then gone until its 2.6 s rebuild timer has elapsed and the tile volume is clear)
+j  launch spring (launches players/enemies upward)   v  timed steam vent (deterministic pulse, launches bodies in the column above)
 E  ground enemy      F  flying enemy      L  ceiling enemy      I  plinth (a token)                             C  lost trunk (becomes a plinth when the room is clear)
 R  ticket machine    S  kiosk ware        K  clipping booth (unused: worldgen leaves it empty, no template has one)                              M  signal post (region's ability)
 H  standpipe         D  doorway           B  boss (arena)       G  region gate (hub)      ?  sign (text from signs[])    P  party start (hub)

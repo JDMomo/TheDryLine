@@ -169,7 +169,7 @@ const rooms = G.rooms = {
     for (const pr of room.props) pr.update(dt);
     room.props = room.props.filter(pr => !pr.gone);
     for (const e of room.enemies) e.update(dt);
-    tiles.updateTerrain(G.players.concat(room.enemies));
+    tiles.updateTerrain(dt, G.players.concat(room.enemies));
     if (room.enemies.some(e => e.dead)) { G.run.stats.kills += room.enemies.filter(e => e.dead).length; room.enemies = room.enemies.filter(e => !e.dead); }
     if (!room.cleared && !room.enemies.length) { room.cleared = true; if (lead) fx.floatText(lead.x, lead.y - 70, 'Room clear', '#e9e2cf'); }
     if (room.boss) {
