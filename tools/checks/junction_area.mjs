@@ -6,7 +6,8 @@ export default async ({page})=>{
    if(def.cols<120||def.rows<34)bad.push('junction is not a 4x2-screen area: '+def.cols+'x'+def.rows);
    const marks=ch=>def.marks.filter(m=>m.ch===ch);
    if(marks('G').length!==5)bad.push('junction needs five region gates, got '+marks('G').length);
-   for(const ch of ['P','N','R','S','K'])if(!marks(ch).length)bad.push('junction missing marker '+ch);
+   for(const ch of ['P','N','R','S'])if(!marks(ch).length)bad.push('junction missing marker '+ch);
+   if(marks('K').length)bad.push('retired clipping-booth marker K returned to the authored Junction');
    const chars=def.grid.join('');
    if(chars.includes('^'))bad.push('junction contains damaging spikes');
    if(!chars.includes('='))bad.push('junction has no upper footbridge');

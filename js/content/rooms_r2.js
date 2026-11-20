@@ -198,8 +198,9 @@ G.defineRoom({
       .forEach(([r,a,b])=>fill(r,a,b,'='));
     // Fast center line: timed vents skip several shelf changes, but are never required.
     put(30,14,'v');put(22,14,'v');put(14,14,'v');
-    // Reward alcove and branch doorway are off the safe line rather than on it.
-    fill(19,20,26,'='); put(18,23,'C');
+    // Reward sits at the far edge of a normal landing: visible, optional, and reachable from either travel direction.
+    put(20,20,'C');
+    // The movement-trial doorway remains a lateral shelf off the safe stair.
     fill(22,4,8,'='); put(21,6,'D');
     put(29,9,'E'); put(20,18,'F'); put(11,10,'F'); put(5,18,'F');
     G.defineRoom({id:'r2_shaft',region:'r2',kind:'main',h:2,route:['bottom','top'],map:g.map(x=>x.join('')),
@@ -219,7 +220,7 @@ G.defineRoom({
 
   // 4. Beacon Tower — combines vertical route choice, steam timing and aerial pressure before Lamp-Heron.
   wide('r2_tower',({fill,put})=>{
-    fill(13,14,8,10,'#'); fill(11,14,20,22,'#'); fill(9,14,32,34,'#'); fill(12,14,46,48,'#');
+    fill(13,14,8,10,'#'); fill(12,14,20,22,'#'); fill(12,14,32,34,'#'); fill(12,14,46,48,'#');
     fill(10,10,11,18,'='); fill(8,8,23,30,'='); fill(7,7,35,42,'='); fill(9,9,48,54,'=');
     // Steam can boost from low route to high route; ordinary jumps/stairs still clear the room.
     put(15,16,'v'); put(15,39,'v');

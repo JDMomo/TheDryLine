@@ -112,7 +112,8 @@ G.defineRoom({
     put(15,27,'j'); put(15,46,'v');
     // Final optional cache uses tar as a material-memory check, never a key.
     fill(5,7,55,56,'t'); put(4,56,'C');
-    put(13,10,'E'); put(13,25,'E'); put(13,41,'E'); put(13,52,'E'); put(7,33,'F');
+    // Encounters live on actual floor lanes; none are hidden inside the clock housings.
+    put(14,10,'E'); put(14,25,'E'); put(14,41,'E'); put(14,50,'E'); put(7,33,'F');
     put(14,56,'D'); put(14,5,'?');
   },['The maintenance slate is explicit: a valid timetable can only be cancelled by final authority.']);
 })();
