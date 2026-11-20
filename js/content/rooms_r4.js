@@ -4,29 +4,39 @@
 'use strict';
 const G = window.G;
 const WALL = '##############################';
-// The long concourse: open floor for handcars to charge, ticket booths to hop onto, a lost trunk on the high canopy between them.
-G.defineRoom({
-  id: 'r4_concourse', region: 'r4', kind: 'main', w: 2,
-  map: [
-    '############################################################',
-    '#..........................................................#',
-    '#..........................................................#',
-    '#..........................................................#',
-    '#..........................................................#',
-    '#..........................................................#',
-    '#.........................................F................#',
-    '#..........................................................#',
-    '#............................C.............................#',
-    '#.........................========.........................#',
-    '#..........................................................#',
-    '#..........................................................#',
-    '....................#####..........#####....................',
-    '....................#####..........#####....................',
-    '............E.......#####....E.....#####......E........D....',
-    '####>>>>>>>>>>>>##############<<<<<<<<<<<<##################',
-    '############################################################'
-  ]
-});
+// The long concourse: three-route Ticket Hall showcase.
+// LOW / SAFE: opposing conveyor runs move the player and enemies but do not deal damage.
+// HIGH / FAST: booth canopies form a direct line above the belts.
+// SECRET POCKET: a spring beside the far gate reaches a separate maintenance shelf with the lost trunk.
+(() => {
+  const W = 60, H = 17, g = Array.from({ length: H }, () => Array(W).fill('.'));
+  g[0].fill('#'); g[15].fill('#'); g[16].fill('#');
+  for (let r = 0; r < H; r++) if (r < 12 || r > 14) { g[r][0] = '#'; g[r][W - 1] = '#'; }
+  const fill = (r0, r1, c0, c1, ch) => { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) g[r][c] = ch; };
+  const put = (r, c, ch) => { g[r][c] = ch; };
+
+  // Safe low lane: belts create positioning pressure without making forward progress dependent on timing.
+  fill(15, 15, 4, 15, '>');
+  fill(15, 15, 29, 40, '<');
+  fill(12, 14, 20, 24, '#');
+  fill(12, 14, 36, 40, '#');
+
+  // Fast canopy line over the moving floor and most ground enemies.
+  fill(10, 10, 8, 15, '=');
+  fill(9, 9, 18, 25, '=');
+  fill(10, 10, 28, 35, '=');
+  fill(9, 9, 38, 45, '=');
+  fill(10, 10, 48, 54, '=');
+
+  // Separate maintenance pocket.
+  put(15, 55, 'j');
+  fill(9, 9, 52, 57, '=');
+  put(8, 55, 'C');
+
+  put(14, 12, 'E'); put(14, 31, 'E'); put(14, 44, 'E'); put(6, 42, 'F'); put(14, 57, 'D');
+  G.defineRoom({ id: 'r4_concourse', region: 'r4', kind: 'main', w: 2, map: g.map(row => row.join('')) });
+})();
+
 // A row of ticket booths as stepping platforms, with canopies above; a trunk on the highest awning.
 G.defineRoom({
   id: 'r4_booths', region: 'r4', kind: 'main',
