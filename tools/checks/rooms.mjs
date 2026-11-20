@@ -3,7 +3,7 @@
    (newRun, gotoRoom, setInput, step, place, probe) and searches over short input segments (beam search). Documented in docs/ARCHITECTURE.md. */
 
 const CHARS = '#.^=sm<>cjvtEFLICRSKMHDBG?PXYZ AQ'.replace(/ /g, '');
-const SOLID = '#sm<>cjv'; 
+const SOLID = '#sm<>cjvt'; 
 const GROUND = 'EICRSKMHDBGP?XYAZQ';         // markers that stand on the tile below them
 const TARGETS = 'ICRSKMH';              // things a bot must be able to walk up to in branch and trial rooms
 const EXIT_ROWS = [12, 13, 14];
