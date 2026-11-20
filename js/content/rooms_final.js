@@ -117,4 +117,9 @@ G.defineRoom({
   },['The maintenance slate is explicit: a valid timetable can only be cancelled by final authority.']);
 })();
 
+
+Object.assign(G.roomDefs.final_buffers,{enemyPlan:['ballast_crab','brine_spout','mirage','sapper']});
+Object.assign(G.roomDefs.final_vents,{enemyPlan:['handcar','harvester'],flyerPlan:['signal_gull','lamp_wisp']});
+Object.assign(G.roomDefs.final_gearworks,{enemyPlan:['turnstile','sapper','mirage','harvester'],flyerPlan:['signal_gull']});
+
 })();

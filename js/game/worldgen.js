@@ -99,6 +99,23 @@ function fillContent(node, region, rng, used, ctx) {
       node.content[rng.pick(list.filter(i => count[node.content[i].id] === top))] = null;
     }
   }
+  // Authored rooms may pin encounter jobs to their E/F/L marker order.
+  // This preserves deliberate combat lessons while elite rolls and other seeded content remain variable.
+  const applyPlan = (markCh, plan) => {
+    if (!Array.isArray(plan) || !plan.length) return;
+    let n = 0;
+    def.marks.forEach((m, i) => {
+      if (m.ch !== markCh) return;
+      const want = plan[n++], c = node.content[i];
+      if (!want || !c || c.type !== 'enemy') return;
+      const choices = (Array.isArray(want) ? want : [want]).filter(id => G.enemyDefs[id]);
+      if (choices.length) c.id = choices.length === 1 ? choices[0] : rng.pick(choices);
+    });
+  };
+  applyPlan('E', def.enemyPlan);
+  applyPlan('F', def.flyerPlan);
+  applyPlan('L', def.ceilingPlan);
+
   // One visibly overstamped machine may appear in later main rooms. Never put an elite in the region's onboarding room.
   if (def.kind === 'main' && node.id !== ctx.first) {
     const chance = ({ r1:0.06, r2:0.10, r3:0.14, r4:0.18, final:0.24 })[region.id] || 0;

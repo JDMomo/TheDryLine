@@ -226,4 +226,10 @@ G.defineRoom({
     put(14, 26, 'I');
   })
 });
+
+Object.assign(G.roomDefs.r1_gangway,{enemyPlan:['ballast_crab','ballast_crab']});
+Object.assign(G.roomDefs.r1_dock,{enemyPlan:['ballast_crab','sapper','turnstile']});
+Object.assign(G.roomDefs.r1_tunnel,{enemyPlan:['brine_spout','sapper','ballast_crab']});
+Object.assign(G.roomDefs.r1_wreck,{enemyPlan:['ballast_crab','sapper','turnstile']});
+
 })();

@@ -229,4 +229,10 @@ G.defineRoom({
   },['BEACON 4 — cancellation relay never acknowledged.']);
 })();
 
+
+Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerPlan:['signal_gull']});
+Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull']});
+Object.assign(G.roomDefs.r2_roost,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','signal_gull','lamp_wisp','signal_gull']});
+Object.assign(G.roomDefs.r2_tower,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','lamp_wisp']});
+
 })();

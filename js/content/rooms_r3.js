@@ -204,4 +204,10 @@ G.defineRoom({
   },['SWITCH APPROACH — route conflict remains unresolved.']);
 })();
 
+
+Object.assign(G.roomDefs.r3_brines,{enemyPlan:['brine_toad','brine_spout','ballast_crab']});
+Object.assign(G.roomDefs.r3_trestle,{enemyPlan:['ballast_crab','mirage','brine_spout']});
+Object.assign(G.roomDefs.r3_terraces,{enemyPlan:['mirage','brine_toad','mirage','ballast_crab']});
+Object.assign(G.roomDefs.r3_spire,{enemyPlan:['mirage','brine_spout','brine_toad'],flyerPlan:['signal_gull']});
+
 })();

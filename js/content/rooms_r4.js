@@ -291,4 +291,10 @@ G.defineRoom({
   },['GATE LINE — TICKET INVALID until the final authority is punched.']);
 })();
 
+
+Object.assign(G.roomDefs.r4_concourse,{enemyPlan:['ballast_crab','turnstile','sapper']});
+Object.assign(G.roomDefs.r4_switchyard,{enemyPlan:['turnstile','handcar','sapper'],flyerPlan:['lamp_wisp']});
+Object.assign(G.roomDefs.r4_booths,{enemyPlan:['harvester','turnstile','sapper','harvester'],flyerPlan:['lamp_wisp','lamp_wisp']});
+Object.assign(G.roomDefs.r4_gateline,{enemyPlan:['turnstile','handcar','sapper'],flyerPlan:['lamp_wisp','lamp_wisp']});
+
 })();
