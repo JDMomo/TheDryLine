@@ -330,7 +330,7 @@ const rooms = G.rooms = {
     ctx.translate(-Math.round(G.cam.x) + (sh ? U.rnd(-sh, sh) * 0.6 : 0), -Math.round(G.cam.y) + (sh ? U.rnd(-sh, sh) * 0.6 : 0));
     for (const pr of room.props) pr.draw(ctx);
     art.tiles(ctx, pal);
-    drawInteriors(ctx, room, pal);
+    if (!(G.artTest !== false && G.world && G.world.tilesOn && G.world.tilesOn())) drawInteriors(ctx, room, pal);   // the watercolor chunks paint their own deep-rock variety
     for (const e of room.enemies) e.draw(ctx);
     if (room.boss) room.boss.draw(ctx);
     G.combat.draw(ctx);

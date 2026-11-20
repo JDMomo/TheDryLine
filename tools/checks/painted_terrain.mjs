@@ -10,7 +10,7 @@ export default async({page})=>{
   const alphas=[],fills=[];const fr=ctx.fillRect.bind(ctx),st=ctx.stroke.bind(ctx);
   ctx.fillRect=(...a)=>{alphas.push(ctx.globalAlpha);fills.push(String(ctx.fillStyle));return fr(...a);};
   ctx.stroke=(...a)=>{alphas.push(ctx.globalAlpha);return st(...a);};
-  try{G.art.tiles(ctx,G.art.palette('r2'));}catch(e){bad.push('painted terrain draw threw '+e.message);}
+  try{G.artTest=false;G.art.tiles(ctx,G.art.palette("r2"));G.artTest=true;}catch(e){bad.push('painted terrain draw threw '+e.message);}
   if(!alphas.some(a=>a>0.45&&a<0.7))bad.push('no translucent solid wash recorded');
   if(!alphas.some(a=>a>0.8))bad.push('no strong exposed ink contour recorded');
   return {bad,errors:G.errors.slice()};

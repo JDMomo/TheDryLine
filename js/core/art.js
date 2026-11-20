@@ -160,6 +160,10 @@ const art = G.art = {
     g.addColorStop(0, pal.sky0); g.addColorStop(0.6, pal.sky1); g.addColorStop(1, pal.sky2);
     ctx.fillStyle = g; ctx.fillRect(0, 0, C.W, C.H);
     const painted = paintedBackdrop(ctx, region, camX);
+    // The code-drawn watercolor world (js/art/world_bg.js) paints three cached parallax layers per place, with vertical parallax for tall rooms;
+    // a painted plate (http only) or F2 off keeps the older looks.
+    const rmw = G.rooms && G.rooms.current;
+    if (!painted && G.artTest !== false && G.world && G.world.backdrop && rmw) { G.world.backdrop(ctx, region, camX, G.cam ? G.cam.y : 0, time); return; }
     if (!painted) {
       for (const [f, col, n, seed] of [[0.25, pal.far, 26, 3.1], [0.5, pal.near, 22, 7.7]]) {
         ctx.fillStyle = col;
@@ -185,6 +189,8 @@ const art = G.art = {
   },
   // World-space tiles of the current room.
   tiles(ctx, pal) {
+    // Watercolor tiles: chunks painted once into offscreen canvases (js/art/world.js); the flat drawing below is the F2-off fallback.
+    if (G.artTest !== false && G.world && G.world.tiles && G.world.tiles(ctx, pal)) return;
     const tl = G.tiles, grid = tl.grid;
     const c0 = Math.max(0, Math.floor(G.cam.x / T)), c1 = Math.min(tl.cols - 1, Math.floor((G.cam.x + C.W) / T));
     const r0 = Math.max(0, Math.floor(G.cam.y / T)), r1 = Math.min(tl.rows - 1, Math.floor((G.cam.y + C.H) / T));

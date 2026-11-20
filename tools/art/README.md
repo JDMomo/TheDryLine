@@ -117,3 +117,11 @@ What each sheet does:
 Images are not read pixel by pixel (a file opened from disk would taint the canvas), which is why sheets are cut into equal cells.
 
 Check it with `node tools/smoke.mjs world_art`: every room of every place draws with the art on and off, platform tops and spikes keep 3:1 against the backdrop behind them, every text on every screen keeps 4.5:1, no interface colour is as vivid as a token cut colour, the image hooks take over, the frame time stays in budget, and `tools/shots/world_<place>.png` and `world_screens.png` are written for a person to look at.
+
+## World art (tiles, terrain, backdrops)
+
+The world is painted in code until the owner's painted sheets arrive: `js/art/world.js` (tile chunks cached to offscreen canvases, 16x8 tiles each, built lazily, one prefetch per two frames; terrain: salt, mud, tar, conveyors, crumble, springs, vents, one-way, spikes; deep rock gets stone/timber/coral/salt/iron/steel courses, wash blobs and darker pools so it never reads as black void) and `js/art/world_bg.js` (three cached parallax layers per place, vertical parallax from the camera for tall rooms and the Junction). F2 switches it off (the flat art returns). A tile that changes (tar burnt, salt dissolved) repaints its chunks one per frame.
+
+Replace a piece with a painted image through the one table `js/art/world_hooks.js` (sheet names from `docs/art/SPRITE_PROMPT_PACK.md` section 11, PNG in `assets/world/`), then run `node tools/art/world_manifest.mjs`. A missing file leaves the code art in place.
+
+Check: `node tools/smoke.mjs world_art` (draw every room on and off, 3:1 top-edge contrast, black-mass ratio, terrain, draw-cost budget, hooks) and writes `tools/shots/world_<place>.png` and `world_terrain.png`.

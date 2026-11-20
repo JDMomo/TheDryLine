@@ -139,16 +139,15 @@ G.hud = {
       ctx.globalAlpha = fade;
       const portrait = n.portrait && G.sprites['portrait_' + n.portrait];
       if (portrait) {
-        const bw=590,bh=92,bx=(W-bw)/2,by=92;
+        // the card grows to fit every line of its text (it once showed two lines and silently cut the rest)
+        const lines=n.b?G.props.wrap(ctx,n.b,13.5,590-132,430):[];
+        const bw=590,bh=Math.max(92,48+lines.length*17+12),bx=(W-bw)/2,by=92;
         ctx.fillStyle='rgba(6,11,11,0.90)';ctx.fillRect(bx,by,bw,bh);
         ctx.strokeStyle='rgba(217,197,160,0.42)';ctx.lineWidth=1.5;ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
         ctx.save();ctx.beginPath();ctx.arc(bx+52,by+46,38,0,6.283);ctx.clip();ctx.drawImage(portrait,bx+14,by+8,76,76);ctx.restore();
         ctx.strokeStyle='#a58d60';ctx.lineWidth=2;ctx.beginPath();ctx.arc(bx+52,by+46,39,0,6.283);ctx.stroke();
         art.label(ctx,n.a,bx+108,by+31,21,'#e9a23b','left',C.DISPLAY,600);
-        if(n.b) {
-          const lines=G.props.wrap(ctx,n.b,13.5,bw-132,430);
-          lines.slice(0,2).forEach((line,i)=>art.label(ctx,line,bx+108,by+54+i*17,13.5,'#e9e2cf','left'));
-        }
+        lines.forEach((line,i)=>art.label(ctx,line,bx+108,by+54+i*17,13.5,'#e9e2cf','left'));
       } else {
         // a soft dark plate under the card keeps it readable over bright art behind it (the Long Clock's halo, lamps)
         const pw = Math.max(380, Math.min(W - 40, (n.b ? n.b.length : 0) * 8 + 140)), pg = ctx.createLinearGradient((W - pw) / 2, 0, (W + pw) / 2, 0);
