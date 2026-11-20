@@ -136,8 +136,10 @@ const rooms = G.rooms = {
         else { p.vy = -C.MOVE.JUMP_V * 0.82; p.jumping = true; p.airJ = true; }
       }
     });
-    if (!node.seen) {
-      node.seen = true;
+    const firstVisit = !node.seen;
+    if (firstVisit) node.seen = true;
+    if (G.story) G.story.enter(room, firstVisit);
+    else if (firstVisit) {
       const reg = G.regionDefs[node.region], g = G.run.graph.regions[node.region];
       if (reg && g && g.first === nodeId) fx.say(reg.name, reg.blurb || '', 3);
     }

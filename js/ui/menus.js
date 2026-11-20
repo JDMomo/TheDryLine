@@ -9,7 +9,7 @@ function panel(ctx, w, h, y = 0) {
   ctx.fillStyle = 'rgba(6,11,11,0.9)'; ctx.fillRect((W - w) / 2, (H - h) / 2 + y, w, h);
   ctx.strokeStyle = '#3f6b5a'; ctx.lineWidth = 1.5; ctx.strokeRect((W - w) / 2, (H - h) / 2 + y, w, h);
 }
-const premise = 'The sea is gone, the toll railway is not: carry tokens down the Dry Line and punch the Wardens\' fare slots.';
+const premise = 'The sea is gone. The railway still obeys its last timetable. Carry the cancellation to the clock at the end of the line.';
 // The controls tables: what each action is on each kind of device, from the live bindings (so they follow a remap).
 const ROWS = [['Move', 'move'], ['Jump', 'jump'], ['Slash', 'attack'], ['Dash', 'dash'], ['Token', 'item'], ['Switch token', 'cycle'], ['Mend (hold)', 'heal'], ['Use, enter', 'interact'], ['Map', 'map'], ['Pause', 'pause']];
 function rowsFor(type) {
@@ -157,6 +157,7 @@ G.menus = {
     const line = (t, col = '#e9e2cf', size = 14.5) => { art.label(ctx, t, W / 2, y, size, col); y += 24; };
     line('Time ' + clock(run.time) + '   ·   Scrip ' + Math.floor(run.shards) + '   ·   Hits taken ' + run.stats.hits);
     line('Wardens beaten ' + fallen.length + ' of ' + order.length + (names.length ? ': ' + names.join(', ') : ''));
+    if (G.story) line(G.story.epilogue(won), won ? '#fff3c4' : '#9aa89f', 12.5);
     for (const r of fallen) {                                   // each boss's grade: Beaten, Par (under its par time), Clean (no hits taken)
       const g = (run.grades || {})[r.id], b = G.bossDefs[r.boss];
       if (!g) continue;

@@ -6,6 +6,10 @@
 'use strict';
 const G = window.G, C = G.C, art = G.art;
 const W = C.W, H = C.H, X0 = 270;
+const routeGlyph = d => {
+  const r=d.route||['left','right'], k=r.join('>');
+  return ({'left>right':'→','right>left':'←','bottom>top':'↑','top>bottom':'↓','left>top':'↗','top>right':'↘','right>top':'↖','top>left':'↙','left>bottom':'↘','bottom>right':'↗','right>bottom':'↙','bottom>left':'↖'})[k] || '·';
+};
 
 // A line of coloured text and cut shapes. parts: { text, color } | { cut, color? }. Stops with an ellipsis at maxX.
 function inline(ctx, parts, x, y, maxX, size = 10.5) {
@@ -56,7 +60,8 @@ G.map = {
   draw(ctx) {
     const run = G.run, graph = run.graph, here = G.rooms.current.id;
     ctx.fillStyle = 'rgba(6,11,11,0.98)'; ctx.fillRect(0, 0, W, H);
-    art.label(ctx, 'Map', W / 2, 20, 22, '#e9a23b', 'center', C.DISPLAY, 600);
+    art.label(ctx, 'Route Board', W / 2, 18, 22, '#e9a23b', 'center', C.DISPLAY, 600);
+    if (G.story) art.label(ctx, G.story.objective(), W / 2, 38, 11.5, '#e9e2cf');
 
     // tokens the party holds
     const held = G.game.heldTokens(), total = G.players.reduce((s, p) => s + p.slots, 0);
@@ -94,7 +99,10 @@ G.map = {
       chain.forEach((id, i) => {
         const node = graph.nodes[id], isArena = id === g.arena, x = X0 + i * 100;
         if (i) { ctx.fillStyle = '#2a3a35'; ctx.fillRect(x - 30, y + 24, 30, 2); }
-        box(ctx, x, y + 14, 70, 22, node, id === here, isArena ? '' : 'Room ' + (++mainN));
+        const d=G.roomDefs[node.def], nm=G.story ? G.story.roomName(node.def) : 'Room ' + (++mainN);
+        if (!isArena) mainN++;
+        box(ctx, x, y + 14, 70, 22, node, id === here, isArena ? '' : nm);
+        if (!isArena && node.seen) art.label(ctx, routeGlyph(d), x + 62, y + 25, 10, '#9aa89f');
         if (isArena) sigil(ctx, x + 35, y + 25, pal.accent, done);
         g.nodes.filter(b => graph.nodes[b].parent === id).forEach((b, k) => {
           if (!node.seen && !run.mods.revealMap) return;
@@ -123,7 +131,9 @@ G.map = {
       }
       inline(ctx, parts, X0, y + 68, W - 10, 10);
     });
-    art.label(ctx, 'Boxes: bright = entered, outlined = here, dark = unseen   ·   diamond = Warden (crossed once fallen)   ·   letters = side rooms   ·   Tab to close', W / 2, H - 14, 11, '#9aa89f');
+    const note=G.story&&G.story.latest();
+    if(note) art.label(ctx, 'Latest note — '+note.title+': '+note.text, W/2, H-29, 10.5, '#9aa89f');
+    art.label(ctx, 'Rooms show their route direction   ·   diamond = Warden   ·   letters = side rooms   ·   Tab to close', W / 2, H - 12, 10.5, '#9aa89f');
   }
 };
 })();
