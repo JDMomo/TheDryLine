@@ -423,4 +423,115 @@ G.defineEnemy({
     ctx.restore();
   }
 });
+
+/* ---------- 9. Sapper: bomb-like demolition unit; plants a clearly warned charge, then backs off ---------- */
+G.defineEnemy({
+  id: 'sapper', name: 'Sapper', hp: 30, w: 30, h: 28, touch: 1, shards: [3, 5],
+  init(e) { e.face = G.run.rng.chance(0.5) ? 1 : -1; e.cool = 1.1 + rr(); e.set('walk', 0); },
+  update(e, dt) {
+    e.cool -= dt; const p=e.target();
+    if(e.state==='walk'){
+      if(e.onGround && (e.hitWall || !safeAhead(e))) e.face=-e.face;
+      e.vx=e.face*34;
+      if(e.cool<=0 && p && near(e,p,300,90)){ faceTarget(e,p); e.set('wind',0.7); }
+    } else if(e.state==='wind'){
+      e.vx=0;
+      if(e.kbT>0.02){ e.cool=1.2; e.set('recover',0.35); }
+      else if(e.t<=0){
+        const mx=e.x+e.face*22, my=e.y-5;
+        G.combat.shoot({x:mx,y:my,r:5,life:1.35,hostile:true,cut:true,tile:'pass',
+          paint:(ctx,s)=>{ const hot=s.life<0.48; ctx.save(); ctx.globalAlpha=0.7+0.3*Math.sin(G.time*(hot?28:10)); ctx.fillStyle=hot?RUST:'#8b765a'; ctx.beginPath(); ctx.arc(s.x,s.y,s.r+2,0,TAU); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke(); ctx.restore(); },
+          onEnd:s=>{ fx.ring(s.x,s.y,8,220,RUST,0.28); fx.spark(s.x,s.y,18,RUST,340,0.42);
+            G.combat.shoot({x:s.x,y:s.y-10,r:58,life:0.14,hostile:true,tile:'pass',paint:(ctx,q)=>{ctx.save();ctx.globalAlpha=0.28+0.35*(q.life/0.14);ctx.fillStyle=RUST;ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,TAU);ctx.fill();ctx.strokeStyle=LAMP;ctx.lineWidth=3;ctx.stroke();ctx.restore();}});
+          }});
+        e.cool=2.6+rr(); e.set('recover',0.55);
+      }
+    } else { e.vx=-e.face*24; if(e.t<=0) e.set('walk',0); }
+  },
+  draw(e,ctx){
+    ctx.save();ctx.translate(e.x,e.y);ctx.scale(e.face,1);
+    if(e.state==='wind') warnRing(ctx,-16,18,e.prog());
+    const bob=e.state==='wind'?Math.sin(G.time*22)*2:0;
+    wash(ctx,hit(e,'#6f705d'),()=>ctx.arc(0,-13+bob,13,0,TAU),-27+bob,1+bob,0.2);
+    wash(ctx,hit(e,'#9b6d49'),()=>rrect(ctx,-10,-31+bob,20,8,4),-31+bob,-23+bob,0.16);
+    wline(ctx,-8,-5, -13,0,'#80715a',4); wline(ctx,8,-5,13,0,'#80715a',4);
+    ctx.strokeStyle=RUST;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(4,-29+bob);ctx.quadraticCurveTo(12,-40,17,-32);ctx.stroke();
+    eye(ctx,4,-15+bob,2.3,LAMP); eye(ctx,4.5,-15+bob,0.9,INK);ctx.restore();
+  }
+});
+
+/* ---------- 10. Harvester: support tripod; a long repair tell restores nearby damaged enemies if allowed to finish ---------- */
+G.defineEnemy({
+  id:'harvester', name:'Harvester', hp:52, w:38, h:42, touch:1, shards:[4,5], heavy:true,
+  init(e){ e.face=G.run.rng.chance(0.5)?1:-1; e.cool=2+rr(); e.set('walk',0); },
+  update(e,dt){
+    e.cool-=dt; const room=G.rooms.current;
+    const hurtAlly=()=>room.enemies.find(a=>a!==e&&!a.dead&&a.hp<a.def.hp&&Math.hypot(a.x-e.x,a.y-e.y)<250);
+    if(e.state==='walk'){
+      if(e.onGround&&(e.hitWall||!safeAhead(e))) e.face=-e.face;
+      e.vx=e.face*22;
+      const a=hurtAlly(); if(e.cool<=0&&a){ faceTarget(e,a); e.set('wind',0.85); }
+    } else if(e.state==='wind'){
+      e.vx=0;
+      if(e.kbT>0.02){ e.cool=1.4; e.set('recover',0.45); }
+      else if(e.t<=0){
+        let n=0; for(const a of room.enemies) if(a!==e&&!a.dead&&Math.hypot(a.x-e.x,a.y-e.y)<230&&a.hp<a.def.hp){ const before=a.hp; a.hp=Math.min(a.def.hp,a.hp+9); if(a.hp>before){n++;fx.floatText(a.x,a.y-a.h-8,'+repair',LAMP);} }
+        fx.ring(e.x,e.y-22,18,260,LAMP,0.45); fx.spark(e.x,e.y-25,8,LAMP,130,0.4);
+        if(n) fx.floatText(e.x,e.y-e.h-10,'Repair pulse',LAMP);
+        e.cool=3.8+rr(); e.set('recover',0.7);
+      }
+    } else { e.vx=0; if(e.t<=0)e.set('walk',0); }
+  },
+  draw(e,ctx){
+    ctx.save();ctx.translate(e.x,e.y);
+    if(e.state==='wind'){ const k=e.prog(); ctx.globalAlpha=.18+.35*k;ctx.fillStyle=LAMP;ctx.beginPath();ctx.arc(0,-22,28+12*k,0,TAU);ctx.fill();ctx.globalAlpha=1;warnRing(ctx,-22,24,k); }
+    for(const x of [-12,0,12]) wline(ctx,x,-11,x+(x?Math.sign(x)*4:0),0,'#716b57',4);
+    wash(ctx,hit(e,'#71807a'),()=>rrect(ctx,-16,-34,32,23,8),-34,-11,0.22);
+    wash(ctx,hit(e,'#9c8154'),()=>rrect(ctx,-11,-44,22,11,4),-44,-33,0.18);
+    ctx.fillStyle=LAMP;ctx.globalAlpha=e.state==='wind'?0.95:0.62;ctx.fillRect(-6,-40,12,4);ctx.globalAlpha=1;
+    for(const x of [-10,10]){ctx.strokeStyle='#8c7751';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,-30);ctx.bezierCurveTo(x*1.8,-26,x*1.5,-16,x*1.2,-9);ctx.stroke();}
+    eye(ctx,e.face*5,-27,2,LAMP);ctx.restore();
+  }
+});
+
+/* ---------- 11. Mirage: phasing ambusher; vanishes, relocates on safe footing, tells, then commits to a dash ---------- */
+G.defineEnemy({
+  id:'mirage', name:'Mirage', hp:28, w:28, h:40, touch:1, shards:[3,5],
+  init(e){ e.face=G.run.rng.chance(0.5)?1:-1; e.cool=1.5+rr(); e.set('watch',0); },
+  update(e,dt){
+    e.cool-=dt; const p=e.target();
+    if(e.state==='watch'){
+      e.harmless=false; if(e.onGround&&(e.hitWall||!safeAhead(e))) e.face=-e.face; e.vx=e.face*24;
+      if(e.cool<=0&&p&&near(e,p,380,130)){ faceTarget(e,p); e.harmless=true; e.set('fade',0.42); }
+    } else if(e.state==='fade'){
+      e.vx=0;e.harmless=true;
+      if(e.t<=0){
+        if(p){ const row=Math.floor((e.y+2)/T), want=p.x-(p.x>e.x?1:-1)*105, c=Math.floor(want/T);
+          if(c>1&&c<tiles.cols-2&&tiles.floorAt(c,row)&&!tiles.solid(c,row-1)&&!tiles.spike(c,row)) e.x=(c+.5)*T;
+          faceTarget(e,p);
+        }
+        e.harmless=false;e.set('tell',0.5);
+      }
+    } else if(e.state==='tell'){
+      e.vx=0;e.harmless=false;
+      if(e.kbT>0.02){e.cool=1.5;e.set('recover',0.65);}
+      else if(e.t<=0)e.set('dash',0.42);
+    } else if(e.state==='dash'){
+      e.harmless=false;e.vx=e.face*330;
+      if(e.hitWall||!safeAhead(e,8)||e.t<=0){e.cool=2.4+rr();e.set('recover',0.75);}
+    } else { e.harmless=false;e.vx=0;if(e.t<=0)e.set('watch',0); }
+  },
+  draw(e,ctx){
+    const fade=e.state==='fade'?Math.max(0.12,e.t/0.42):1;
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(e.x,e.y);ctx.scale(e.face,1);
+    if(e.state==='tell')warnRing(ctx,-22,20,e.prog());
+    const lean=e.state==='dash'?0.28:0;ctx.rotate(lean);
+    wash(ctx,hit(e,'#676276'),()=>{ctx.moveTo(-12,0);ctx.quadraticCurveTo(-13,-29,-4,-39);ctx.quadraticCurveTo(5,-47,13,-30);ctx.lineTo(15,0);ctx.closePath();},-43,0,0.28);
+    wash(ctx,hit(e,'#867b91'),()=>{ctx.moveTo(-9,-30);ctx.quadraticCurveTo(0,-44,10,-29);ctx.lineTo(7,-19);ctx.lineTo(-7,-19);ctx.closePath();},-44,-19,0.18);
+    eye(ctx,3,-28,2,LAMP);
+    ctx.strokeStyle='#81748e';ctx.lineWidth=3;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-8+i*7,-4);ctx.quadraticCurveTo(-20-i*4,6,-28-i*7,2+Math.sin(G.time*5+i)*4);ctx.stroke();}
+    ctx.restore();ctx.globalAlpha=1;
+  }
+});
+
 })();
