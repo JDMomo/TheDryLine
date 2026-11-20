@@ -87,8 +87,7 @@ G.defineRoom({
     put(11, 29, '======');                    // clean upper bypass
     fill(13, 14, 38, 40, '#');                // wreck rib step to/down from upper route
 
-    // Second encounter only after the player has crossed the terrain lesson.
-    put(14, 43, 'E');
+    // No second enemy here: the remainder of the opener is movement/terrain breathing room.
     put(10, 42, '========');                  // observation plank / readable upper line
     fill(13, 14, 52, 54, '#');                // broken buffer before the exit
   })
@@ -121,8 +120,8 @@ G.defineRoom({
     // Bow descent and final open fight lane.
     fill(12, 14, 42, 46, '#');
     fill(14, 14, 47, 49, '#');
-    put(14, 50, 'E');
-    put(14, 54, 'E');
+    put(14, 49, 'E');
+    put(14, 55, 'E');
   })
 });
 
@@ -139,7 +138,7 @@ G.defineRoom({
     put(10, 14, '====');                      // 3 tiles above the step
     put(9, 15, 'C');
     put(14, 10, 'E');
-    put(14, 21, 'E');
+    put(14, 19, 'E');
     put(14, 24, 'E');
     put(14, 27, 'D');
   })
@@ -253,9 +252,9 @@ G.defineRoom({
 
 Object.assign(G.roomDefs.r1_trial,{decor:[{type:'banner_decor',c:5,r:14},{type:'lamp_decor',c:13,r:14},{type:'banner_decor',c:26,r:7}]});
 Object.assign(G.roomDefs.r1_hold,{decor:[{type:'crate_decor',c:5,r:14},{type:'lamp_decor',c:14,r:14},{type:'crate_decor',c:25,r:14}]});
-Object.assign(G.roomDefs.r1_gangway,{enemyPlan:['ballast_crab','ballast_crab']});
+Object.assign(G.roomDefs.r1_gangway,{enemyPlan:['ballast_crab']});
 Object.assign(G.roomDefs.r1_dock,{enemyPlan:['ballast_crab','sapper','turnstile']});
 Object.assign(G.roomDefs.r1_tunnel,{enemyPlan:['brine_spout','sapper','ballast_crab']});
-Object.assign(G.roomDefs.r1_wreck,{enemyPlan:['ballast_crab','sapper','turnstile']});
+Object.assign(G.roomDefs.r1_wreck,{enemyPlan:['turnstile','ballast_crab','sapper']});
 
 })();
