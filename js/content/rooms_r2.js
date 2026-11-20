@@ -234,13 +234,13 @@ G.defineRoom({
 
 Object.assign(G.roomDefs.r2_trial,{decor:[{type:'lamp_decor',c:6,r:14},{type:'lamp_decor',c:17,r:8},{type:'lamp_decor',c:25,r:14}]});
 Object.assign(G.roomDefs.r2_hold,{decor:[{type:'banner_decor',c:5,r:7},{type:'lamp_decor',c:9,r:7},{type:'lamp_decor',c:24,r:7}]});
-Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerPlan:['signal_gull'],
+Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerPlan:['signal_gull'],wakePlan:[230,260],flyerWakePlan:[285],
   decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:26,r:14},{type:'lamp_decor',c:43,r:14},{type:'lamp_decor',c:56,r:14}]});
-Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull'],
+Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull'],wakePlan:[240],flyerWakePlan:[250,235,250],
   decor:[{type:'furnace_decor',c:9,r:31},{type:'lamp_decor',c:25,r:22},{type:'lamp_decor',c:5,r:14},{type:'lamp_decor',c:24,r:7}]});
-Object.assign(G.roomDefs.r2_roost,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','signal_gull','lamp_wisp','signal_gull'],
+Object.assign(G.roomDefs.r2_roost,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','signal_gull','lamp_wisp','signal_gull'],wakePlan:[255,245],flyerWakePlan:[240,250,235,250],
   decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:29,r:14},{type:'lamp_decor',c:53,r:14}]});
-Object.assign(G.roomDefs.r2_tower,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','lamp_wisp'],
+Object.assign(G.roomDefs.r2_tower,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','lamp_wisp'],wakePlan:[260,250],flyerWakePlan:[255,245],
   decor:[{type:'banner_decor',c:7,r:14},{type:'lamp_decor',c:18,r:14},{type:'furnace_decor',c:42,r:14},{type:'banner_decor',c:55,r:14}]});
 // Superseded procedural-era mains are deliberately not part of the authored campaign/fallback pool.
 delete G.roomDefs.r2_shelves; delete G.roomDefs.r2_ledges;
