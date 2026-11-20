@@ -180,7 +180,7 @@ G.defineRoom({
     fill(13,14,12,14,'#'); fill(12,14,28,30,'#'); fill(13,14,45,47,'#');
     fill(11,11,16,22,'='); fill(9,9,25,31,'='); fill(10,10,35,41,'='); fill(8,8,46,52,'=');
     // Signal-mast silhouettes are represented by narrow solid pylons that never block the low route.
-    fill(6,14,7,7,'#'); fill(4,14,54,54,'#');
+    fill(4,10,7,7,'#'); fill(3,10,54,54,'#');
     put(14,18,'E'); put(14,40,'E'); put(9,38,'F');
     put(14,56,'D'); put(14,5,'?');
   },['SIGNAL REEF — lamps repeat until acknowledged.']);
@@ -199,7 +199,7 @@ G.defineRoom({
     // Fast center line: timed vents skip several shelf changes, but are never required.
     put(30,14,'v');put(22,14,'v');put(14,14,'v');
     // Reward alcove and branch doorway are off the safe line rather than on it.
-    fill(19,22,25,'='); put(18,23,'C');
+    fill(19,20,26,'='); put(18,23,'C');
     fill(22,4,8,'='); put(21,6,'D');
     put(29,9,'E'); put(20,18,'F'); put(11,10,'F'); put(5,18,'F');
     G.defineRoom({id:'r2_shaft',region:'r2',kind:'main',h:2,route:['bottom','top'],map:g.map(x=>x.join('')),
@@ -223,7 +223,7 @@ G.defineRoom({
     fill(10,10,11,18,'='); fill(8,8,23,30,'='); fill(7,7,35,42,'='); fill(9,9,48,54,'=');
     // Steam can boost from low route to high route; ordinary jumps/stairs still clear the room.
     put(15,16,'v'); put(15,39,'v');
-    fill(5,14,56,56,'#'); // beacon mast silhouette
+    fill(3,10,56,56,'#'); // overhead beacon mast silhouette; floor route remains open
     put(14,14,'E'); put(14,37,'E'); put(9,27,'F'); put(6,39,'F');
     put(14,53,'D'); put(14,5,'?');
   },['BEACON 4 — cancellation relay never acknowledged.']);
@@ -234,5 +234,7 @@ Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerP
 Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull']});
 Object.assign(G.roomDefs.r2_roost,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','signal_gull','lamp_wisp','signal_gull']});
 Object.assign(G.roomDefs.r2_tower,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','lamp_wisp']});
+// Superseded procedural-era mains are deliberately not part of the authored campaign/fallback pool.
+delete G.roomDefs.r2_shelves; delete G.roomDefs.r2_ledges;
 
 })();

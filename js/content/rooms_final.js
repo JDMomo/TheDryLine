@@ -82,11 +82,11 @@ G.defineRoom({
 
   // 1. Last Buffers — recognition room. Familiar materials appear in calm, non-lethal combinations.
   wide('final_buffers',({fill,put})=>{
-    fill(14,14,5,11,'m'); fill(14,14,17,23,'s'); fill(15,15,30,38,'>'); fill(15,15,42,50,'<');
+    fill(14,14,5,11,'m'); fill(14,14,16,24,'s'); fill(15,15,30,38,'>'); fill(15,15,42,50,'<');
     fill(12,14,13,15,'#'); fill(12,14,25,27,'#'); fill(12,14,52,54,'#');
     fill(10,10,8,14,'='); fill(9,9,19,26,'='); fill(10,10,35,42,'='); fill(9,9,47,54,'=');
     // One familiar attacker from the old lines at a time; this room is about recognition, not attrition.
-    put(13,9,'E'); put(13,22,'E'); put(14,37,'E'); put(14,50,'E');
+    put(13,9,'E'); put(14,47,'E');
     put(14,56,'D'); put(13,5,'?');
   },['TERMINUS BUFFER ROAD — all local services feed the final clock.']);
 
@@ -118,8 +118,9 @@ G.defineRoom({
 })();
 
 
-Object.assign(G.roomDefs.final_buffers,{enemyPlan:['ballast_crab','brine_spout','mirage','sapper']});
+Object.assign(G.roomDefs.final_buffers,{enemyPlan:['ballast_crab','mirage']});
 Object.assign(G.roomDefs.final_vents,{enemyPlan:['handcar','harvester'],flyerPlan:['signal_gull','lamp_wisp']});
 Object.assign(G.roomDefs.final_gearworks,{enemyPlan:['turnstile','sapper','mirage','harvester'],flyerPlan:['signal_gull']});
+delete G.roomDefs.final_tower;
 
 })();

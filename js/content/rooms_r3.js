@@ -188,7 +188,7 @@ G.defineRoom({
     fill(10,10,8,14,'s'); fill(9,9,18,24,'s'); fill(8,8,28,34,'s'); fill(9,9,38,44,'s'); fill(10,10,48,54,'s');
     fill(11,11,13,16,'='); fill(10,10,23,26,'='); fill(9,9,33,36,'='); fill(10,10,43,46,'=');
     // Mirage territory: generous recovery floor around every ambush point.
-    put(13,11,'E'); put(12,19,'E'); put(10,35,'E'); put(13,48,'E');
+    put(13,11,'E'); put(12,19,'E'); put(8,35,'E'); put(14,48,'E');
     put(14,56,'D'); put(13,5,'?');
   },['Nine days from tide mark to dry rail. The survey crew numbered each new shelf.']);
 
@@ -199,7 +199,7 @@ G.defineRoom({
     put(15,28,'j'); // optional central launch straight to the high line
     // A dissolvable salt cache is off-route and never required.
     fill(7,9,52,53,'s'); fill(10,10,51,55,'='); put(9,55,'C');
-    put(13,10,'E'); put(11,24,'E'); put(13,43,'E'); put(8,34,'F');
+    put(13,10,'E'); put(11,24,'E'); put(14,43,'E'); put(8,34,'F');
     put(14,56,'D'); put(14,5,'?');
   },['SWITCH APPROACH — route conflict remains unresolved.']);
 })();
@@ -209,5 +209,6 @@ Object.assign(G.roomDefs.r3_brines,{enemyPlan:['brine_toad','brine_spout','balla
 Object.assign(G.roomDefs.r3_trestle,{enemyPlan:['ballast_crab','mirage','brine_spout']});
 Object.assign(G.roomDefs.r3_terraces,{enemyPlan:['mirage','brine_toad','mirage','ballast_crab']});
 Object.assign(G.roomDefs.r3_spire,{enemyPlan:['mirage','brine_spout','brine_toad'],flyerPlan:['signal_gull']});
+delete G.roomDefs.r3_cutting; delete G.roomDefs.r3_pond;
 
 })();

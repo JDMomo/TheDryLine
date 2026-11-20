@@ -267,7 +267,7 @@ G.defineRoom({
   // 3. Ticket Booths — a denser social/administrative space with multiple short lanes and support enemies.
   wide('r4_booths',({fill,put})=>{
     // Booth banks. Gaps between them are wide enough for combat and camera readability.
-    fill(11,14,8,12,'#'); fill(11,14,20,24,'#'); fill(11,14,32,36,'#'); fill(11,14,44,48,'#');
+    fill(12,14,8,12,'#'); fill(12,14,20,24,'#'); fill(12,14,32,36,'#'); fill(12,14,44,48,'#');
     fill(9,9,6,14,'='); fill(8,8,18,26,'='); fill(9,9,30,38,'='); fill(8,8,42,50,'=');
     fill(15,15,14,18,'>'); fill(15,15,26,30,'<'); fill(15,15,38,42,'>');
     // Counter windows / small upper passage.
@@ -281,7 +281,7 @@ G.defineRoom({
   wide('r4_gateline',({fill,put})=>{
     fill(15,15,5,16,'>'); fill(15,15,21,33,'<'); fill(15,15,39,51,'>');
     // Three gatehouse masses divide the room into deliberate encounter arenas.
-    fill(12,14,17,19,'#'); fill(11,14,34,37,'#'); fill(12,14,52,54,'#');
+    fill(12,14,17,19,'#'); fill(12,14,34,37,'#'); fill(12,14,52,54,'#');
     fill(9,9,7,16,'='); fill(8,8,21,31,'='); fill(7,7,38,48,'=');
     // Short crumble transfers make the high line faster but visibly risky.
     fill(9,9,18,19,'c'); fill(8,8,32,33,'c'); fill(7,7,49,50,'c');
@@ -296,5 +296,6 @@ Object.assign(G.roomDefs.r4_concourse,{enemyPlan:['ballast_crab','turnstile','sa
 Object.assign(G.roomDefs.r4_switchyard,{enemyPlan:['turnstile','handcar','sapper'],flyerPlan:['lamp_wisp']});
 Object.assign(G.roomDefs.r4_booths,{enemyPlan:['harvester','turnstile','sapper','harvester'],flyerPlan:['lamp_wisp','lamp_wisp']});
 Object.assign(G.roomDefs.r4_gateline,{enemyPlan:['turnstile','handcar','sapper'],flyerPlan:['lamp_wisp','lamp_wisp']});
+delete G.roomDefs.r4_balcony; delete G.roomDefs.r4_clocks; delete G.roomDefs.r4_baggage;
 
 })();

@@ -103,7 +103,8 @@ const art = G.art = {
     if (painters[id]) { painters[id](ctx, opts); return true; }
     return false;
   },
-  hasPaintedBackground(region) { return paintedReady(region); },
+  hasPaintedBackground(region) { return !!PAINTED_BG_SRC[region]; },
+  paintedBackgroundReady(region) { return paintedReady(region); },
   // Multi-frame strips: G.strips[id] = { img, frames, fw, fh } (frames side by side, each facing right). The art pass fills it, see js/art/sprites.js.
   hasStrip(id) { return !!G.strips[id]; },
   // Draw frame n (wraps) of a strip with its bottom centre on opts.x, opts.y; opts.face < 0 flips it; opts.h scales it to that many pixels tall

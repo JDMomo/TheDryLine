@@ -60,13 +60,15 @@ G.defineRoom({
   map:g.map(row=>row.join('')),
   decor:[
     {type:'crate_decor',c:18,r:31},{type:'crate_decor',c:38,r:31},{type:'crate_decor',c:99,r:31},
-    {type:'banner_decor',c:7,r:27},{type:'banner_decor',c:51,r:27},{type:'banner_decor',c:111,r:27},
-    {type:'banner_decor',c:59,r:13}
+    {type:'banner_decor',c:7,r:27},{type:'banner_decor',c:51,r:27},{type:'banner_decor',c:111,r:27},{type:'banner_decor',c:59,r:13},
+    {type:'lamp_decor',c:12,r:31},{type:'lamp_decor',c:24,r:31},{type:'lamp_decor',c:43,r:31},
+    {type:'lamp_decor',c:61,r:31},{type:'lamp_decor',c:79,r:31},{type:'lamp_decor',c:96,r:31},{type:'lamp_decor',c:115,r:31},
+    {type:'lamp_decor',c:34,r:20},{type:'lamp_decor',c:85,r:20}
   ],
   signs:[
-    'The Junction board still lists five open lines.',
-    'The shelter kettle is cold. The Station Keeper is not.',
-    'MAINTENANCE: final authority remains at TERMINUS.'
+    'Five region gates remain open under the emergency timetable.',
+    'Tokens carry four cuts. Match a cut to a Warden fare slot to punch its order.',
+    'A punched token is void. The final cancellation still waits at TERMINUS.'
   ]
 });
 })();
