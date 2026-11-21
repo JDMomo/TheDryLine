@@ -139,6 +139,9 @@ G.defineRoom({
     { type: 'sign', c: 71, r: 46, data: { text: 'ROUTES. Wreck Quay: east along the yard, the low arch. Ticket Hall: the grating at the east end (Down + Jump). The Terminus: east stairs, then the viaduct. Salt Cutting: up the clock tower, the high walk east. Signal Reef: west, up the Signal Mast to the roof hatch.' } }
   ],
   decor: [
+    // the Signal Mast's lamp chain: violet signal lamps on the ledges, pulsing upward in sequence, lead the eye to the roof hatch
+    ...[[46, 36], [43, 34], [37, 34], [31, 34], [25, 34], [19, 34], [13, 34], [7, 34], [40, 46], [34, 46], [28, 46], [22, 46], [16, 46], [10, 46], [4, 36], [4, 43]]
+      .map(([r, c]) => ({ type: 'signal_lamp', c, r: r - 1 })),
     { type: 'crate_decor', c: 46, r: 46 }, { type: 'crate_decor', c: 135, r: 46 }, { type: 'crate_decor', c: 116, r: 30 },
     { type: 'banner_decor', c: 72, r: 40 }, { type: 'banner_decor', c: 92, r: 40 }, { type: 'banner_decor', c: 70, r: 15 }, { type: 'banner_decor', c: 145, r: 30 },
     { type: 'lamp_decor', c: 6, r: 46 }, { type: 'lamp_decor', c: 49, r: 46 }, { type: 'lamp_decor', c: 75, r: 46 },
@@ -154,14 +157,14 @@ G.defineRoom({
 (() => {
   const s = Array.from({ length: 17 }, (_, r) => Array.from({ length: 30 }, (_, c) => (r === 0 || r >= 15 || c === 0 || c === 29) ? '#' : '.'));
   const f = (r0, r1, c0, c1, ch) => { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) s[r][c] = ch; };
-  f(15, 16, 3, 5, '.');                          // the hatch (bottom route port)
+  f(15, 16, 1, 3, '.');                          // the hatch (bottom route port), against the west wall: you climb out facing the room
   f(12, 14, 29, 29, '.');                        // east, to Signal Reef
   f(14, 14, 10, 13, '#'); f(13, 14, 14, 16, '#'); f(14, 14, 17, 19, '#');   // roof ridges: a step up and down
   f(10, 10, 9, 13, '='); f(7, 7, 14, 18, '=');   // the old lamp gantry overhead (a view, a stash)
   s[6][16] = '.';
   G.defineRoom({ id: 'junction_signal_stair', region: 'hub', kind: 'main', route: ['bottom', 'right'], map: s.map(r => r.join('')),
     fixtures: [{ type: 'cache', c: 16, r: 6, data: { scrip: 6, name: 'Lamp-trimmer\'s tin' } }],
-    decor: [{ type: 'lamp_decor', c: 22, r: 14 }, { type: 'banner_decor', c: 8, r: 14 }] });
+    decor: [{ type: 'lamp_decor', c: 22, r: 14 }, { type: 'banner_decor', c: 8, r: 14 }, { type: 'signal_lamp', c: 6, r: 14 }] });
 })();
 
 // ---- connector: the Hall Stair. The well under the grating drops straight to the buried booking hall's landing, then east into Ticket Hall

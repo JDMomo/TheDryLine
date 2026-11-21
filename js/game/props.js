@@ -306,8 +306,7 @@ const TYPES = {
     interact() { G.state='map'; if(G.map&&G.map.open)G.map.open(); },
     prompt(pr,p) {
       const n=['r1','r2','r3','r4'].filter(id=>G.run.beaten[id]).length;
-      return ['Route Board', n+'/4 local Warden orders released. The board records visited rooms, discoveries and the lock chart.',
-        useName(p)+' to inspect the full route'];
+      return ['Route Board', n+'/4 Warden orders released', useName(p)+' to inspect the route'];   // short: it stands above the board and must stay clear of the Timetable plate
     },
     boxes(pr, ctx) {
       const L = boardLayout(pr, ctx), out = [{ x0: L.x0, x1: L.x1, y0: L.y0, y1: L.y1, kind: 'body' }];
@@ -558,6 +557,21 @@ const TYPES = {
       art.label(ctx, (G.regionDefs[pr.data.region] || { name: '' }).name, x, y - 62, 10.5, open ? pal.accent : '#9aa89f');
     }
   },
+  // A Signal Reef lamp on a short post (decor, Junction's Signal Mast and Signal Stair). Lamps pulse in sequence from the bottom up, so a
+  // chain of them reads as a path climbing toward the roof hatch.
+  signal_lamp: {
+    prompt() { return null; },
+    boxes() { return []; },
+    draw(pr, ctx) {
+      const x = pr.x, y = pr.y, k = 0.5 + 0.5 * Math.sin(G.time * 3 + y / 60);
+      ctx.save();
+      ctx.fillStyle = '#2b2636'; ctx.fillRect(x - 1.5, y - 26, 3, 26);
+      ctx.globalAlpha = 0.18 + 0.22 * k; ctx.fillStyle = '#c8bce0'; ctx.beginPath(); ctx.arc(x, y - 30, 16 + 6 * k, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = 0.85; ctx.fillStyle = '#e4dcf6'; ctx.beginPath(); ctx.arc(x, y - 30, 4.5, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = '#14120f'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+    }
+  },
   // A small scrip stash (home-area secrets), data: { scrip, name }. Taken once per run.
   cache: {
     interact(pr) {
@@ -643,8 +657,11 @@ G.props = {
     w += PAD * 2;
     const M = 8, camX = G.cam.x, camY = G.cam.y, topMin = camY + 96;       // below the HUD rows at the top of the screen
     const x0 = U.clamp(pr.x - w / 2, camX + M, camX + C.W - M - w);
-    let y0 = pr.y - (pr.type === 'gate' ? 168 : 100) - h / 2;
-    y0 = U.clamp(y0, topMin, camY + C.H - M - h);
+    let y0 = pr.y - (pr.type === 'gate' ? 168 : 100) - h / 2, top = topMin;
+    if (pr.type === 'board') {                                              // above the board's own panel, never over its rows or its neighbours
+      const body = G.props.boxes(pr, ctx).find(b => b.kind === 'body'); if (body) { y0 = body.y0 - h - 6; top = camY + 56; }
+    }
+    y0 = U.clamp(y0, top, camY + C.H - M - h);
     if (y0 < camY + M) y0 = camY + M;
     let y = y0 + PAD;
     for (const r of rows) { r.y = y + r.size / 2; y += r.h; }

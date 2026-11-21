@@ -145,11 +145,11 @@ G.defineRoom({
     fill(8, 10, 18, 19, 't');                 // optional tar pocket beside the chimney; fire opens it, main route ignores it
     fill(14, 14, 14, 17, '#');                // one-tile service curb under the low roof; plain jump stays readable
     put(13, 15, '#');                         // one-tile stair post under the open chimney (full headroom there): curb, post, then the ledge
-    put(10, 14, '====');                      // 3 tiles above the stair post
+    put(10, 14, '===');                       // 3 tiles above the stair post; column 17 stays open so you can walk off it (no Down + Jump needed)
     put(9, 15, 'C');
     put(14, 4, '?');                           // same emergency-sign language as the arrival/service rooms
     put(14, 9, 'E');
-    put(14, 16, 'E');
+    put(13, 16, 'E');                         // on top of the curb (it used to be stamped INTO the curb at row 14, which cut a one-tile slot that boxed the enemy in: playtest round 2, issue 6)
     put(14, 21, 'E');
     put(14, 25, '?');                           // quiet final warning before the main exit / Toll House
     put(14, 27, 'D');

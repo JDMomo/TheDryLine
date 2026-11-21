@@ -26,7 +26,8 @@ export default async ({ page }) => {
     }
     // ---- a Warden's body
     D.newRun(5); D.god(false); D.startBoss('r1'); D.step(200);
-    { const b = D.state().room.boss, hp0 = P().hp; ok(!!b, 'no boss'); D.place(0, b.x, b.floor); D.step(30); ok(P().hp === hp0 - 1, 'touching the Warden cost ' + (hp0 - P().hp) + ' pips, not 1'); }
+    { const b = D.state().room.boss, hp0 = P().hp; ok(!!b, 'no boss'); D.place(0, b.x, b.floor); D.step(30); ok(P().hp === hp0, 'standing inside an idle Warden cost ' + (hp0 - P().hp) + ' pips (the body only hurts in a strike, issue 7)');
+      const bb = G.rooms.current.boss; bb.set('charge', 5); bb.attack = 'charge'; bb.held = { x: bb.x, y: bb.floor }; D.place(0, bb.x, bb.floor); D.step(30); bb.held = null; ok(P().hp === hp0 - 1, 'touching the charging Warden cost ' + (hp0 - P().hp) + ' pips, not 1'); }
     // ---- spikes. Use a tiny deterministic QA room: campaign rooms are free to omit spike pits entirely.
     D.newRun(5); D.god(false);
     {

@@ -329,7 +329,7 @@ function placeShortcuts(graph, hubDef, warnings) {
     for (let r = 3; r < d.rows - 1; r++) for (let c = 4; c < d.cols - 4; c++) {
       let ok = true;
       for (let x = c - 1; x <= c + 1 && ok; x++) ok = '#sm'.includes(g[r + 1][x]) && g[r][x] === '.' && g[r - 1][x] === '.' && g[r - 2][x] === '.';
-      if (ok && !d.marks.some(m => Math.abs(m.r - r) <= 2 && Math.abs(m.c - c) <= 2) && !ex.some(e => Math.abs(e.r - r) <= 2 && Math.abs(e.c - c) <= 2)) cand.push({ c, r });
+      if (ok && !d.marks.some(m => !'EFL'.includes(m.ch) && Math.abs(m.r - r) <= 2 && Math.abs(m.c - c) <= 2) && !ex.some(e => Math.abs(e.r - r) <= 2 && Math.abs(e.c - c) <= 2)) cand.push({ c, r });
     }
     if (!cand.length) { warnings.push('no room for the ' + s.region + ' loop-back hatch in ' + deep.def); continue; }
     const best = cand.sort((a, b) => (Math.abs(a.c - near) + Math.abs(a.r - nearRow) * 0.5) - (Math.abs(b.c - near) + Math.abs(b.r - nearRow) * 0.5))[0];

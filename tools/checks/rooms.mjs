@@ -87,6 +87,7 @@ export function lintRoom(r, abilityIds) {
       else if (below === '^') err.push(m.ch + ' at ' + loc(m) + ' stands on spikes');
       else if (!SOLID.includes(below) && below !== '=') err.push(m.ch + ' at ' + loc(m) + ' floats: no solid ground under it (tile below is empty)');
       if (solid(m.c, m.r - 1)) err.push(m.ch + ' at ' + loc(m) + ' is inside a wall: the tile above it is solid (no headroom)');
+      if (m.ch === 'E' && solid(m.c - 1, m.r) && solid(m.c + 1, m.r)) err.push('E at ' + loc(m) + ' is boxed into a one-tile slot (a marker stamped onto a block cuts a hole in it): the enemy can hardly be reached');
     } else if (m.ch === 'L') {
       let r = m.r - 1; while (r >= 0 && !solid(m.c, r)) r--;
       if (m.r < 2 || r < 0) err.push('L at ' + loc(m) + ' has no ceiling above it');

@@ -546,6 +546,21 @@ W.DECO = DECO;
 
 /* ---------- drawing the tiles of the current room (called by art.tiles) ---------- */
 let frameNo = 0;
+// Build the chunks of the view (and the ring around it) of the room just entered, at the camera it starts with. Called from rooms.enter, which runs under the
+// room fade, so the cost lands there and the first drawn frame finds them cached (the playtest's 128 to 302 ms frames). Returns the chunks built.
+W.prewarm = () => {
+  const room = G.rooms && G.rooms.current; if (!room || !G.tiles || !G.tiles.grid || (G.artTest === false)) return 0;
+  const E = cacheFor(room.region); if (!E) return 0;
+  const v = G.view, sc = v ? Math.max(v.scale || 1, v.sy || 1) : 1, s = Math.max(1, Math.min(2, Math.ceil(sc - 0.01)));
+  const px = CHC * T, py = CHR * T, cam = G.cam || { x: 0, y: 0 };
+  const cx0 = Math.max(0, Math.floor((cam.x - 8) / px) - 1), cx1 = Math.floor((cam.x + C.W + 8) / px) + 1, cy0 = Math.max(0, Math.floor((cam.y - 8) / py) - 1), cy1 = Math.floor((cam.y + C.H + 8) / py) + 1;
+  const maxCx = Math.floor((E.cols * T) / px), maxCy = Math.floor((E.rows * T) / py); let n = 0;
+  for (let cy = cy0; cy <= Math.min(cy1, maxCy); cy++) for (let cx = cx0; cx <= Math.min(cx1, maxCx); cx++) {
+    const key = cx + ',' + cy + ',' + s;
+    if (!E.chunks.has(key)) { E.chunks.set(key, hasSolid(E, cx, cy) ? buildChunk(E, cx, cy, s) : null); n++; }
+  }
+  return n;
+};
 W.tiles = (ctx, pal) => {
   const tl = G.tiles, room = G.rooms && G.rooms.current, region = room ? room.region : 'hub', E = cacheFor(region);
   if (!E) return false;

@@ -62,12 +62,29 @@ const optsText = run => {
 const hudDraw = G.hud.draw;
 // One message at a time (same rule as the tips): the card waits for the story banner and the room-name card, then stays INTRO_T seconds of free screen,
 // low in the middle of the view where no HUD label is.
-const intro = G.ledgerIntro = { run: null, left: 0, last: 0, shown: false };
+const intro = G.ledgerIntro = { run: null, left: 0, last: 0, shown: false, spot: 0, box: null };
+// Where the intro card goes: a spot that covers no player and no Station Keeper (screen boxes), the previous spot first so it does not jump. Bottom, top, then the sides.
+const introSpots = (w, h) => [{ cx: W / 2, y: G.C.H - 64 - h }, { cx: W / 2, y: 100 }, { cx: W - w / 2 - 14, y: 100 }, { cx: w / 2 + 14, y: 100 }, { cx: W - w / 2 - 14, y: G.C.H - 64 - h }, { cx: w / 2 + 14, y: G.C.H - 64 - h }];
+function partyBoxes(room) {
+  const cx = Math.round(G.cam.x), cy = Math.round(G.cam.y), out = [];
+  for (const p of G.players) { const y = p.cy !== undefined ? p.cy : p.y - 24; out.push({ x0: p.x - cx - 50, x1: p.x - cx + 50, y0: y - cy - 70, y1: y - cy + 60 }); }
+  for (const pr of room.props) if (pr.type === 'guide') out.push({ x0: pr.x - cx - 60, x1: pr.x - cx + 60, y0: pr.y - cy - 100, y1: pr.y - cy + 10 });
+  return out;
+}
+const hits = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+function introAt(room, w, h) {
+  const boxes = partyBoxes(room), spots = introSpots(w, h), clear = s => !boxes.some(b => hits({ x0: s.cx - w / 2, x1: s.cx + w / 2, y0: s.y, y1: s.y + h }, b));
+  const prev = spots[intro.spot];
+  const pick = prev && clear(prev) ? prev : spots.find(clear) || spots[0];
+  intro.spot = spots.indexOf(pick); intro.box = { x0: pick.cx - w / 2, x1: pick.cx + w / 2, y0: pick.y, y1: pick.y + h };
+  return pick;
+}
+
 G.hud.draw = function (ctx) {
   hudDraw.apply(this, arguments);
   const run = G.run, room = G.rooms && G.rooms.current;
   if (intro.run !== run) { intro.run = run; intro.left = INTRO_T; intro.last = G.time; intro.shown = false; }
-  intro.shown = false;
+  intro.shown = false; intro.box = null;
   if (G.state === 'play' && run && run.rule && !run.over && room && intro.left > 0) {
     const waiting = !!(G.fx && G.fx.banner) || (room.enterAt !== undefined && G.time - room.enterAt < 2.6) || G.tips.shown;
     const dt = Math.min(0.1, Math.max(0, G.time - intro.last));
@@ -75,8 +92,8 @@ G.hud.draw = function (ctx) {
       intro.left -= dt; intro.shown = true;
       ctx.save(); ctx.globalAlpha = Math.min(1, intro.left / 1.2, 0.2 + (INTRO_T - intro.left) / 0.4);
       const o = optsText(run), w = 440, text = o ? o : 'Run code ' + run.code;
-      const lines = wrap(ctx, run.rule.text, 13, w - 28), h = 52 + lines.length * 17 + 20;
-      card(ctx, W / 2, G.C.H - 64 - h, w, run.rule, text);
+      const lines = wrap(ctx, run.rule.text, 13, w - 28), h = 52 + lines.length * 17 + 20, at = introAt(room, w, h);
+      card(ctx, at.cx, at.y, w, run.rule, text);
       ctx.restore();
     }
   }

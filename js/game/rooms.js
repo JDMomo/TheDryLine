@@ -101,7 +101,9 @@ function bottomLanding(c0, room) {
   for (let r = room.rows - 2; r >= Math.max(1, room.rows - 14); r--) for (let dc = 0; dc <= 12; dc++) for (const c of dc ? [c0 - dc, c0 + dc] : [c0]) {
     if (c < 1 || c > room.cols - 2 || tiles.solid(c, r) || tiles.solid(c, r - 1) || tiles.spike(c, r)) continue;
     if (!tiles.stableFloorAt(c, r + 1) || tiles.spike(c, r + 1)) continue;
-    return { x: (c + .5) * T, y: (r + 1) * T, dir: c < c0 ? -1 : 1 };
+    const dir = c < c0 ? -1 : 1;
+    if (dc && !tiles.stableFloorAt(c - dir, r + 1)) continue;          // a full tile of floor between the landing and the hole
+    return { x: (c + .5) * T, y: (r + 1) * T, dir };
   }
   return null;
 }
@@ -236,6 +238,7 @@ const rooms = G.rooms = {
       if (reg && g && g.first === nodeId) fx.say(reg.name, reg.blurb || '', 3);
     }
     G.cam.follow(0, x, y, true);
+    if (G.world && G.world.prewarm) G.world.prewarm();      // the tile chunks of the first view are built now, under the room fade, not in the first drawn frame
   },
   // Close the boss door, pull stragglers inside and wake the boss.
   startFight(room) {
@@ -265,6 +268,18 @@ const rooms = G.rooms = {
     for (const pr of room.props) pr.update(dt);
     room.props = room.props.filter(pr => !pr.gone);
     for (const e of room.enemies) e.update(dt);
+    // Enemies the party cannot reach must not hold the room (the 'Room clear' objective): one wedged inside rock for a second is lifted to
+    // the first open tile above it; one that has left the room's bounds is dropped (no kill, no scrip).
+    for (const e of room.enemies) {
+      if (e.dead || !e.def) continue;
+      if (e.y > room.rows * T + 96 || e.y < -96 || e.x < -96 || e.x > room.cols * T + 96) { e.lost = true; continue; }
+      const ec = Math.floor(e.x / T), er = Math.floor((e.y - 1) / T);
+      if (!e.def.flying && tiles.solid(ec, er)) {
+        e._wedge = (e._wedge || 0) + dt;
+        if (e._wedge > 1) { let rr = er; while (rr > 0 && tiles.solid(ec, rr)) rr--; e.y = (rr + 1) * T; e.vy = 0; e._wedge = 0; }
+      } else e._wedge = 0;
+    }
+    if (room.enemies.some(e => e.lost)) room.enemies = room.enemies.filter(e => !e.lost);
     tiles.updateTerrain(dt, G.players.concat(room.enemies));
     if (room.enemies.some(e => e.dead)) { G.run.stats.kills += room.enemies.filter(e => e.dead).length; room.enemies = room.enemies.filter(e => !e.dead); }
     if (!room.cleared && !room.enemies.length) { room.cleared = true; if (lead) fx.floatText(lead.x, lead.y - 70, 'Room clear', '#e9e2cf'); }

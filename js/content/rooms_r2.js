@@ -194,16 +194,18 @@ G.defineRoom({
     for(let c=13;c<=16;c++){g[0][c]='.';g[H-1][c]='.';}
     const fill=(r,c0,c1,ch)=>{for(let c=c0;c<=c1;c++)g[r][c]=ch;};
     const put=(r,c,ch)=>g[r][c]=ch;
-    // Safe zig-zag shelves. Every rise is base-jump reachable and every miss lands lower in the shaft.
-    [[30,6,11],[27,15,20],[24,7,12],[21,16,21],[18,6,11],[15,15,20],[12,7,12],[9,16,21],[6,8,13],[3,13,18]]
+    // Safe stair (playtest round 2, issue 1): wide one-way shelves every three rows that overlap their neighbours, so each rise is a straight
+    // hop up through the shelf above, and every shelf is a rest ledge. Stacked shelves catch a miss a few rows down; the row-27 catch shelf
+    // spans the centre, so only a slip from the lowest shelves can fall back out through the bottom hole.
+    [[30,3,11],[30,18,26],[27,8,21],[24,3,12],[21,10,20],[18,17,26],[15,8,19],[12,3,12],[9,10,20],[6,17,26],[3,11,18]]
       .forEach(([r,a,b])=>fill(r,a,b,'='));
-    // Fast center line: timed vents skip several shelf changes, but are never required.
-    put(30,14,'v');put(22,14,'v');put(14,14,'v');
-    // Reward sits on a broad early landing. The shaft is already the movement exam; this cache is discovery, not a precision tax.
-    put(26,18,'C');
-    // The movement-trial doorway remains a lateral shelf off the safe stair.
-    fill(22,4,8,'='); put(21,6,'D');
-    put(29,9,'E'); put(20,18,'F'); put(11,10,'F'); put(5,18,'F');
+    // Fast line: three steam vents at the outer ends of side shelves, never under the climb and never over the hole.
+    put(30,25,'v');put(18,25,'v');put(6,25,'v');
+    // Lost trunk on a broad right-hand shelf; the trial doorway on the left one.
+    put(17,21,'C');
+    put(23,5,'D');
+    // One crab on the low left shelf; two flyers at the sides, away from the centre climb line.
+    put(29,6,'E'); put(13,26,'F'); put(4,4,'F');
     G.defineRoom({id:'r2_shaft',region:'r2',kind:'main',h:2,route:['bottom','top'],map:g.map(x=>x.join('')),
       signs:['The lamps above are repeating the same departure code.']});
   }
@@ -236,8 +238,8 @@ Object.assign(G.roomDefs.r2_trial,{decor:[{type:'lamp_decor',c:6,r:14},{type:'la
 Object.assign(G.roomDefs.r2_hold,{decor:[{type:'banner_decor',c:5,r:7},{type:'lamp_decor',c:9,r:7},{type:'lamp_decor',c:24,r:7}]});
 Object.assign(G.roomDefs.r2_spire,{enemyPlan:['ballast_crab','harvester'],flyerPlan:['signal_gull'],wakePlan:[230,260],flyerWakePlan:[285],
   decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:26,r:14},{type:'lamp_decor',c:43,r:14},{type:'lamp_decor',c:56,r:14}]});
-Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['signal_gull','lamp_wisp','signal_gull'],wakePlan:[240],flyerWakePlan:[250,235,250],
-  decor:[{type:'furnace_decor',c:9,r:31},{type:'lamp_decor',c:25,r:22},{type:'lamp_decor',c:5,r:14},{type:'lamp_decor',c:24,r:7}]});
+Object.assign(G.roomDefs.r2_shaft,{enemyPlan:['ballast_crab'],flyerPlan:['lamp_wisp','signal_gull'],wakePlan:[240],flyerWakePlan:[170,160],   // fewer flyers, woken late (issue 1)
+  decor:[{type:'furnace_decor',c:24,r:32},{type:'lamp_decor',c:20,r:29},{type:'lamp_decor',c:4,r:11},{type:'lamp_decor',c:23,r:5}]});
 Object.assign(G.roomDefs.r2_roost,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','signal_gull','lamp_wisp','signal_gull'],wakePlan:[255,245],flyerWakePlan:[240,250,235,250],
   decor:[{type:'lamp_decor',c:5,r:14},{type:'banner_decor',c:29,r:14},{type:'lamp_decor',c:53,r:14}]});
 Object.assign(G.roomDefs.r2_tower,{enemyPlan:['harvester','ballast_crab'],flyerPlan:['signal_gull','lamp_wisp'],wakePlan:[260,250],flyerWakePlan:[255,245],

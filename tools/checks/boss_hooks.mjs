@@ -81,8 +81,8 @@ export default async ({ page }) => {
       let died = 0;
       G.defineBoss({ id: 't_hooks', name: 'Test', hp: 100, w: 40, h: 40, spots: {},
         shapes: b => [{ x0: b.x - 20, x1: b.x + 20, y0: b.y - 40, y1: b.y }, { x0: b.x + 100, x1: b.x + 140, y0: b.y - 40, y1: b.y }],
-        contact: b => b.state === 'idle' && [{ x0: b.x - 5, x1: b.x + 5, y0: b.y - 40, y1: b.y }, { x0: b.x + 100, x1: b.x + 110, y0: b.y - 40, y1: b.y }],
-        filterDamage: (b, d) => d * 0.5, onDeath() { died++; }, update(b) { if (b.state === 'idle') b.t = 5; } });
+        contact: b => b.state === 'a' && [{ x0: b.x - 5, x1: b.x + 5, y0: b.y - 40, y1: b.y }, { x0: b.x + 100, x1: b.x + 110, y0: b.y - 40, y1: b.y }],
+        filterDamage: (b, d) => d * 0.5, onDeath() { died++; }, update(b) { if (b.state === 'idle' || b.state === 'a') b.t = 5; } });
       G.defineAttacks('t_hooks', { a: { tell: 'aTell', wind: 0.5, strike: ['a'], fair: 'A test attack that exists only for this check.' } });
       D.newRun(3); D.startBoss('r1');
       const room = G.rooms.current, t = new G.Boss(G.bossDefs.t_hooks, 400, room.boss.floor, 'r1', { x0: 100, x1: 900 });
@@ -91,11 +91,11 @@ export default async ({ page }) => {
       const r = t.rect(); if (!(Math.abs(r.x0 - 380) < 1e-6 && Math.abs(r.x1 - 540) < 1e-6)) bad('hooks: rect() is not the union of the shapes');
       if (!t.hitsCircle(520, t.y - 20, 5) || t.hitsCircle(470, t.y - 20, 5)) bad('hooks: hitsCircle must find the far box and miss the gap');
       if (!t.hitsRect({ x0: 500, x1: 510, y0: t.y - 30, y1: t.y - 10 }) || t.hitsRect({ x0: 440, x1: 460, y0: t.y - 30, y1: t.y - 10 })) bad('hooks: hitsRect');
-      if (t.contactBoxes().length !== 2) bad('hooks: contact function should give two boxes in idle'); t.set('stagger', 1); if (t.contactBoxes().length) bad('hooks: contact function gave boxes while staggered');
-      t.set('idle', 5); const hp0 = t.hp; t.damage(10); if (Math.abs(hp0 - t.hp - 5) > 1e-9) bad('hooks: filterDamage not applied');
+      t.attack = 'a'; t.set('aTell', 1); if (t.contactBoxes().length) bad('hooks: contact while winding up'); t.set('a', 5); if (t.contactBoxes().length !== 2) bad('hooks: contact function should give two boxes in the strike'); t.set('stagger', 1); if (t.contactBoxes().length) bad('hooks: contact function gave boxes while staggered');
+      t.set('a', 5); const hp0 = t.hp; t.damage(10); if (Math.abs(hp0 - t.hp - 5) > 1e-9) bad('hooks: filterDamage not applied');
       // a hit on the far box in the real combat path
-      D.god(false); G.players[0].place(t.x + 100 + 20, t.y, 1); const p = G.players[0]; p.hp = p.maxHp = 50; p.inv = 0; D.step(1);
-      if (p.hp >= 50) bad('hooks: standing in the far contact box did not hurt');
+      D.god(false); G.players[0].place(t.x + 100 + 20, t.y, 1); const p = G.players[0]; p.hp = p.maxHp = 50; p.inv = 0; t.set('a', 5); t.attack = 'a'; t.held = null; D.step(1);
+      if (p.hp >= 50) bad('hooks: standing in the far contact box did not hurt ' + JSON.stringify([t.state, t.attack, t.phase(), t.contactBoxes(), p.x, p.y, p.inv, p.down, G.state]));
       // ownership
       const owned = t.summon('ballast_crab', 300, t.y, { loot: false }), looted = t.summon('ballast_crab', 320, t.y);
       if (owned.owner !== t || !owned.summoned || !owned.noLoot || looted.noLoot || t.ownedAlive('ballast_crab').length !== 2) bad('hooks: summon bookkeeping');
@@ -111,7 +111,7 @@ export default async ({ page }) => {
       D.newRun(5); D.god(true); D.startBoss('r3'); let b = G.rooms.current.boss; b.set('idle', 9); b.held = { x: 700 };
       const stand = b.rect(); b.lie = 1; const lie = b.rect(); b.held = null;
       if (!(lie.x1 - lie.x0 > stand.x1 - stand.x0 + 40 && lie.y1 - lie.y0 < stand.y1 - stand.y0)) bad('r3: shapes() does not follow the lying body');
-      if (b.contactBoxes().length) bad('r3: a lying Idol must not hurt on touch'); b.lie = 0; if (b.contactBoxes().length !== 1) bad('r3: a standing Idol hurts on touch');
+      if (b.contactBoxes().length) bad('r3: a lying Idol must not hurt on touch'); b.lie = 0; b.attack = 'rings'; b.set('ring', 5); if (b.contactBoxes().length !== 1) bad('r3: a standing Idol hurts on touch in a strike');
       D.newRun(5); D.startBoss('r2'); b = G.rooms.current.boss; const body = b.rect(); b.set('peckStuck', 2); b.hx = 100; b.hy = -20; const head = b.rect();
       if (Math.abs(head.y1 - head.y0 - 76) > 1e-6 || Math.abs(body.y1 - body.y0 - 150) > 1e-6) bad('r2: shapes() body and stuck head');
       const sp = b.spots.find(s => s.cls === 'pierce'); if (sp) { const q1 = b.spotPos(sp); b.hx = 20; const q2 = b.spotPos(sp); if (Math.abs(q1.x - q2.x) < 20) bad('r2: the Lamp anchor does not move with the head'); }

@@ -18,7 +18,9 @@
                                     every time, so it can change with the state (a lying body, a head stuck in the floor, a ball and a tail).
                                     Default: the body box (w x h). b.hitsCircle(x, y, r), b.hitsRect(rect), b.shapes() use it; b.rect() is the bounding
                                     box of all shapes, for older code that takes one rect.
-     contact                        false = touching the boss never hurts; true or missing = the body box, inset 4 px at the sides and 6 px on top, hurts
+     contact                        false = touching the boss never hurts; true or missing = the body box, inset 4 px at the sides and 6 px on top, hurts.
+                                    Either way only while b.phase() is 'strike' (the strike states of the attack registry): standing inside a Warden that
+                                    is idle, winding up, recovering or staggered is safe (playtest round 2, issue 7)
                                     (never while staggered or dead); a function (b) => false | rect | rect[] decides per state and may return several boxes.
                                     A function must return false while b.held or the intro is on if the boss only hurts through its own attacks.
      onStart(b)                     the fight begins (before hp is scaled for co-op): reset per-fight state, borrow attacks, set b.scale = 1 if you set hp
@@ -127,6 +129,7 @@ class Boss {
   contactBoxes() {
     const c = this.def.contact;
     if (c === false) return [];
+    if (this.phase() !== 'strike') return [];         // fairness: the body only hurts during an attack's committed strike frames, never idle, tell or recovery
     if (typeof c === 'function') { const r = c(this); return r ? (Array.isArray(r) ? r : [r]) : []; }
     return [{ x0: this.x - this.w / 2 + 4, x1: this.x + this.w / 2 - 4, y0: this.y - this.h + 6, y1: this.y }];
   }
