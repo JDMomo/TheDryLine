@@ -114,7 +114,7 @@ const art = G.art = {
     const st = G.strips[id];
     if (!st) return false;
     const k = opts.h ? opts.h / st.fh : 1, f = ((Math.floor(n) % st.frames) + st.frames) % st.frames;
-    if (G.lineart && G.lineart.draw(id, st, f, ctx, opts)) return true;     // live procedural line art (js/art/lineart.js), when it can read the frame
+    if (G.lineart && G.lineart.draw(id, st, f, ctx, opts, n)) return true;     // live procedural line art (js/art/lineart.js), when it can read the frame
     ctx.save(); ctx.translate(opts.x || 0, opts.y || 0); if (opts.face < 0) ctx.scale(-1, 1);
     ctx.drawImage(st.img, f * st.fw, 0, st.fw, st.fh, -st.fw * k / 2, -st.fh * k + (opts.foot || 0) * k, st.fw * k, st.fh * k);
     ctx.restore(); return true;

@@ -24,7 +24,8 @@ const L = G.lineart = {
   stats: { built: 0, strokes: 0, buildMs: 0 },
   mode: 'ascii',                     // 'ascii' (dense characters) or 'lines' (fine strokes)
   asciiDensity: 0.6,
-  asciiFps: 10,
+  asciiFps: 24,
+  asciiCloth: 1.6,                   // source pixels of cloak and scarf ripple
   asciiBacking: 0.35,                // opacity of the dark painted backing under the characters (0 = none)                      // how many times a second the characters shift                   // characters per source pixel of a player frame (1 = one per pixel)
   clear() { cache.clear(); }
 };
@@ -166,14 +167,14 @@ function build(id, st, f) {
 }
 
 /* Draw frame f of strip id as live line art, placed exactly like G.art.drawFrame. Returns false if it can't (caller draws the image). */
-L.draw = function (id, st, f, ctx, opts) {
+L.draw = function (id, st, f, ctx, opts, rawN) {
   if (!L.on || L.blocked) return false;
   const key = id + ':' + f;
   let set = cache.get(key);
   if (set === undefined) { set = build(id, st, f); cache.set(key, set); }
   if (!set) return false;
   const k = opts.h ? opts.h / st.fh : 1;
-  if (L.mode === 'ascii') return drawAscii(id, st, f, set, ctx, opts, k);
+  if (L.mode === 'ascii') return drawAscii(id, st, f, set, ctx, opts, k, rawN);
   const t = (G.time || performance.now() / 1000), m = L.motion;
   const S = set.strokes, n = set.n;
   const shown = k * st.fh;
@@ -212,7 +213,7 @@ L.draw = function (id, st, f, ctx, opts) {
 };
 
 /* ASCII mode: the figure as a grid of coloured characters. Tone picks the density glyph; strong form direction picks a slash. */
-function drawAscii(id, st, f, set, ctx, opts, k) {
+function asciiCells(id, st, f) {
   const key = id + ':' + f + ':ascii:' + L.asciiDensity;
   let g = cache.get(key);
   if (!g) {
@@ -235,42 +236,64 @@ function drawAscii(id, st, f, set, ctx, opts, k) {
       const q = ch => Math.max(0, Math.min(255, (m + (ch - m) * sat) * v)) >> 4;      /* 16 levels per channel, for the glyph atlas */
       cells.push(x, y, gi, (q(px[i]) << 8) | (q(px[i + 1]) << 4) | q(px[i + 2]), (id2++ * 2.399) % TAU);
     }
-    g = { cells, cell, atlas: new Map() }; cache.set(key, g);
+    g = { cells, cell, w, h }; cache.set(key, g);
   }
+  return g;
+}
+
+const atlases = new Map();
+function drawAscii(id, st, f, set, ctx, opts, k, rawN) {
+  const g = asciiCells(id, st, f);
+  /* In-betweening: between painted frame f and the next, each character hands over at its own moment (frac of the way through). */
+  const loop = typeof rawN === 'number' && Math.abs(rawN - Math.round(rawN)) > 1e-6;
+  const frac = loop ? rawN - Math.floor(rawN) : 0, f2 = (f + 1) % st.frames;
+  const g2 = frac > 0.02 ? asciiCells(id, st, f2) : null;
   const t = G.time || performance.now() / 1000, m = L.motion, C = g.cells;
   const fs = Math.max(4, Math.ceil(g.cell * k * 1.75)), CH = GLYPHS + DIRS.join('');
   /* glyph atlas per colour, rendered at the on-screen font size so letters stay crisp */
   const atlasFor = col => {
-    const ak = col + ':' + fs; let A = g.atlas.get(ak);
+    const ak = col + ':' + fs; let A = atlases.get(ak);
     if (!A) {
       A = document.createElement('canvas'); A.width = fs * CH.length; A.height = fs;
       const q = A.getContext('2d'); q.font = 'bold ' + fs + 'px monospace'; q.textAlign = 'center'; q.textBaseline = 'middle';
       q.fillStyle = 'rgb(' + ((col >> 8) & 15) * 17 + ',' + ((col >> 4) & 15) * 17 + ',' + (col & 15) * 17 + ')';
       for (let j = 0; j < CH.length; j++) q.fillText(CH[j], j * fs + fs / 2, fs / 2);
-      g.atlas.set(ak, A);
+      atlases.set(ak, A);
     }
     return A;
   };
-  /* The characters step at L.asciiFps (a deliberate flicker); between steps the finished figure is reused from a cached canvas. */
-  const tick = m > 0 ? Math.floor(t * L.asciiFps) : 0, W = Math.ceil(st.fw * k + fs * 2), H = Math.ceil(st.fh * k + fs * 2);
-  let img = g.img;
-  if (!img || img.width !== W || img.height !== H || g.tick !== tick) {
-    if (!img || img.width !== W || img.height !== H) { img = g.img = document.createElement('canvas'); img.width = W; img.height = H; }
-    g.tick = tick;
-    const q = img.getContext('2d'); q.clearRect(0, 0, W, H);
-    /* a faint, darkened copy of the painted frame underneath gives the figure body against dark rooms */
-    q.globalAlpha = L.asciiBacking; q.filter = 'brightness(0.45) saturate(1.3)';
+  /* The characters step at L.asciiFps; between steps the finished figure is reused from a cached canvas (one per strip). */
+  const tick = m > 0 ? Math.floor(t * L.asciiFps) : 0, fq = Math.round(frac * 12), W = Math.ceil(st.fw * k + fs * 2), H = Math.ceil(st.fh * k + fs * 2);
+  const ik = id + ':img', stamp = f + ':' + fq + ':' + tick;
+  let rec = cache.get(ik);
+  if (!rec || rec.img.width !== W || rec.img.height !== H) { const img = document.createElement('canvas'); img.width = W; img.height = H; rec = { img, stamp: '' }; cache.set(ik, rec); }
+  if (rec.stamp !== stamp) {
+    rec.stamp = stamp;
+    const q = rec.img.getContext('2d'); q.clearRect(0, 0, W, H);
+    q.globalAlpha = L.asciiBacking * (1 - frac); q.filter = 'brightness(0.45) saturate(1.3)';
     q.drawImage(st.img, f * st.fw, 0, st.fw, st.fh, fs, fs, st.fw * k, st.fh * k);
+    if (g2) { q.globalAlpha = L.asciiBacking * frac; q.drawImage(st.img, f2 * st.fw, 0, st.fw, st.fh, fs, fs, st.fw * k, st.fh * k); }
     q.globalAlpha = 1; q.filter = 'none';
-    const tt = tick / L.asciiFps, amp = g.cell * k * 0.35 * m;
-    for (let i = 0; i < C.length; i += 5) {
-      const ph = C[i + 4];
-      let gi = C[i + 2];
-      if (m > 0 && gi < GLYPHS.length && gi > 1 && Math.sin(tt * 1.7 + ph * 3) > 0.94) gi--;
-      const x = fs + C[i] * k + Math.sin(tt * 3 + ph) * amp, y = fs + C[i + 1] * k + Math.cos(tt * 2.3 + ph) * amp;
-      q.drawImage(atlasFor(C[i + 3]), gi * fs, 0, fs, fs, x - fs / 2, y - fs / 2, fs, fs);
-    }
+    const tt = tick / L.asciiFps, amp = g.cell * k * 0.3 * m, hh = st.fh, ww = st.fw;
+    const breathe = Math.sin(tt * 2.2) * 0.012 * m;          /* idle breathing: the figure rises and settles a little */
+    const paint = (CC, keep) => {
+      for (let i = 0; i < CC.length; i += 5) {
+        const ph = CC[i + 4], th = (ph / TAU * 7.31) % 1;      /* this character's hand-over moment */
+        if (keep ? th < frac : th >= frac) continue;
+        let gi = CC[i + 2];
+        if (m > 0 && gi < GLYPHS.length && gi > 1 && Math.sin(tt * 1.7 + ph * 3) > 0.94) gi--;
+        const sx = CC[i], sy = CC[i + 1], up = (hh - sy) / hh;
+        /* cloth ripple: travels down the figure, stronger low and at the trailing (left) side where the cloak and scarf hang */
+        const cloth = Math.sin(tt * 4.2 - sy * 0.09) * L.asciiCloth * m * Math.pow(sy / hh, 1.5) * (1 - sx / ww) * 2.2;
+        const x = fs + (sx + cloth) * k + Math.sin(tt * 3 + ph) * amp;
+        const y = fs + (sy - up * hh * breathe) * k + Math.cos(tt * 2.3 + ph) * amp;
+        q.drawImage(atlasFor(CC[i + 3]), gi * fs, 0, fs, fs, x - fs / 2, y - fs / 2, fs, fs);
+      }
+    };
+    paint(C, true);
+    if (g2) paint(g2.cells, false);
   }
+  const img = rec.img;
   ctx.save(); ctx.translate(opts.x || 0, opts.y || 0); if (opts.face < 0) ctx.scale(-1, 1);
   ctx.drawImage(img, -st.fw * k / 2 - fs, -st.fh * k + (opts.foot || 0) * k - fs);
   ctx.restore(); return true;
