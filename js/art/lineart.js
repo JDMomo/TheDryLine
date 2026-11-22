@@ -23,8 +23,9 @@ const L = G.lineart = {
   density: 1,
   stats: { built: 0, strokes: 0, buildMs: 0 },
   mode: 'ascii',                     // 'ascii' (dense characters) or 'lines' (fine strokes)
-  asciiDensity: 1,
-  asciiFps: 10,                      // how many times a second the characters shift                   // characters per source pixel of a player frame (1 = one per pixel)
+  asciiDensity: 0.6,
+  asciiFps: 10,
+  asciiBacking: 0.35,                // opacity of the dark painted backing under the characters (0 = none)                      // how many times a second the characters shift                   // characters per source pixel of a player frame (1 = one per pixel)
   clear() { cache.clear(); }
 };
 const GLYPHS = ' .,:;-=+*%#@';      // light to dark
@@ -230,14 +231,14 @@ function drawAscii(id, st, f, set, ctx, opts, k) {
       let gi;
       if (edge > 0.22) { const a2 = (Math.atan2(gy, gx) + Math.PI / 2 + TAU) % Math.PI; gi = GLYPHS.length + (Math.round(a2 / (Math.PI / 4)) % 4); }
       else gi = Math.min(GLYPHS.length - 1, 1 + Math.floor((1 - l) * (GLYPHS.length - 1)));
-      const m = (px[i] + px[i + 1] + px[i + 2]) / 3, sat = 1.4, v = 1.15;
+      const m = (px[i] + px[i + 1] + px[i + 2]) / 3, sat = 1.6, v = 1.4;                 /* bright, saturated characters so they don't read faint */
       const q = ch => Math.max(0, Math.min(255, (m + (ch - m) * sat) * v)) >> 4;      /* 16 levels per channel, for the glyph atlas */
       cells.push(x, y, gi, (q(px[i]) << 8) | (q(px[i + 1]) << 4) | q(px[i + 2]), (id2++ * 2.399) % TAU);
     }
     g = { cells, cell, atlas: new Map() }; cache.set(key, g);
   }
   const t = G.time || performance.now() / 1000, m = L.motion, C = g.cells;
-  const fs = Math.max(4, Math.ceil(g.cell * k * 1.5)), CH = GLYPHS + DIRS.join('');
+  const fs = Math.max(4, Math.ceil(g.cell * k * 1.75)), CH = GLYPHS + DIRS.join('');
   /* glyph atlas per colour, rendered at the on-screen font size so letters stay crisp */
   const atlasFor = col => {
     const ak = col + ':' + fs; let A = g.atlas.get(ak);
@@ -257,6 +258,10 @@ function drawAscii(id, st, f, set, ctx, opts, k) {
     if (!img || img.width !== W || img.height !== H) { img = g.img = document.createElement('canvas'); img.width = W; img.height = H; }
     g.tick = tick;
     const q = img.getContext('2d'); q.clearRect(0, 0, W, H);
+    /* a faint, darkened copy of the painted frame underneath gives the figure body against dark rooms */
+    q.globalAlpha = L.asciiBacking; q.filter = 'brightness(0.45) saturate(1.3)';
+    q.drawImage(st.img, f * st.fw, 0, st.fw, st.fh, fs, fs, st.fw * k, st.fh * k);
+    q.globalAlpha = 1; q.filter = 'none';
     const tt = tick / L.asciiFps, amp = g.cell * k * 0.35 * m;
     for (let i = 0; i < C.length; i += 5) {
       const ph = C[i + 4];
