@@ -22,7 +22,7 @@ const L = G.lineart = {
   blocked: false,
   density: 1,
   stats: { built: 0, strokes: 0, buildMs: 0 },
-  mode: 'lines',                     // 'lines' or 'ascii'
+  mode: 'ascii',                     // 'ascii' (dense characters) or 'lines' (fine strokes)
   asciiDensity: 1,
   asciiFps: 10,                      // how many times a second the characters shift                   // characters per source pixel of a player frame (1 = one per pixel)
   clear() { cache.clear(); }

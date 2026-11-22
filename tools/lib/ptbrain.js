@@ -178,7 +178,7 @@ window.PT = (() => {
       let pastTake = e.dir > 0 ? p.x >= takeX - 3 : e.dir < 0 ? p.x <= takeX + 3 : Math.abs(dx) < 8;
       const K = PT.K; if (!K.app || Math.abs(K.app.x - p.x) > 2) K.app = { x: p.x, t: G.time }; else if (G.time - K.app.t > 0.5) pastTake = true;
       if (!pastTake || Math.abs(p.x - from.x) > 18) { face(dx); return 'approach'; }
-      PT.K.prog = { kind: 'jump', t0: G.time, hold: Math.abs(tx.x - p.x) >= 90 ? Math.max(e.hold * 1.4, 0.33) : e.hold, air: e.air, dir: e.dir, ek: e.ek, expect: tx, x0: p.x, vx0: p.vx, take: takeX }; hold('jump'); if (e.dir) hold(e.dir < 0 ? 'left' : 'right'); PT.log.jumps++; return 'jump';
+      PT.K.prog = { kind: 'jump', t0: G.time, hold: tx && Math.abs(tx.x - p.x) >= 90 ? Math.max(e.hold * 1.4, 0.33) : e.hold, air: e.air, dir: e.dir, ek: e.ek, expect: tx, x0: p.x, vx0: p.vx, take: takeX }; hold('jump'); if (e.dir) hold(e.dir < 0 ? 'left' : 'right'); PT.log.jumps++; return 'jump';
     }
     // fall: walk off the edge
     PT.K.prog = { kind: 'fall', t0: G.time, hold: 0, air: e.air, dir: e.dir, ek: e.ek, expect: tx }; face(e.dir); return 'fall';
