@@ -1,0 +1,137 @@
+{
+ "note": "Wanderer rig. Coordinates are the painted player frame's pixels (192 x 136, facing right). Each part's red-dot pivot sits at 'at' in the rest pose and the part is scaled by 'scale'. Parents move their children. Draw order is back to front.",
+ "frame": [
+  192,
+  136
+ ],
+ "parts": {
+  "torso": {
+   "scale": 0.185,
+   "at": [
+    101,
+    111
+   ],
+   "parent": null
+  },
+  "head": {
+   "scale": 0.155,
+   "at": [
+    105,
+    59
+   ],
+   "parent": "torso"
+  },
+  "hat": {
+   "scale": 0.205,
+   "at": [
+    107,
+    27
+   ],
+   "parent": "head"
+  },
+  "scarf": {
+   "scale": 0.15,
+   "at": [
+    104,
+    60
+   ],
+   "parent": "torso"
+  },
+  "cloak": {
+   "scale": 0.235,
+   "at": [
+    99,
+    62
+   ],
+   "parent": "torso"
+  },
+  "lute": {
+   "scale": 0.2,
+   "at": [
+    89,
+    72
+   ],
+   "parent": "torso"
+  },
+  "armB": {
+   "scale": 0.075,
+   "at": [
+    98,
+    66
+   ],
+   "parent": "torso"
+  },
+  "foreB": {
+   "scale": 0.085,
+   "at": [
+    97,
+    81
+   ],
+   "parent": "armB"
+  },
+  "armF": {
+   "scale": 0.075,
+   "at": [
+    107,
+    66
+   ],
+   "parent": "torso"
+  },
+  "foreF": {
+   "scale": 0.085,
+   "at": [
+    107,
+    81
+   ],
+   "parent": "armF"
+  },
+  "thighB": {
+   "scale": 0.075,
+   "at": [
+    96,
+    104
+   ],
+   "parent": "torso"
+  },
+  "shinB": {
+   "scale": 0.085,
+   "at": [
+    96,
+    118
+   ],
+   "parent": "thighB"
+  },
+  "thighF": {
+   "scale": 0.075,
+   "at": [
+    107,
+    104
+   ],
+   "parent": "torso"
+  },
+  "shinF": {
+   "scale": 0.085,
+   "at": [
+    108,
+    118
+   ],
+   "parent": "thighF"
+  }
+ },
+ "order": [
+  "cloak",
+  "armB",
+  "foreB",
+  "thighB",
+  "shinB",
+  "scarf",
+  "lute",
+  "thighF",
+  "shinF",
+  "torso",
+  "armF",
+  "foreF",
+  "head",
+  "hat"
+ ]
+}
