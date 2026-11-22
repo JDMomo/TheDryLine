@@ -174,6 +174,10 @@ L.draw = function (id, st, f, ctx, opts, rawN) {
   if (set === undefined) { set = build(id, st, f); cache.set(key, set); }
   if (!set) return false;
   const k = opts.h ? opts.h / st.fh : 1;
+  if (L.mode === 'ascii' && L.rig && (id === 'player_idle' || id === 'player_run') && typeof rawN === 'number') {
+    const kind = id === 'player_run' ? 'run' : 'idle', ph = rawN / st.frames * TAU;
+    if (drawRig('player', kind, ph, ctx, opts)) return true;
+  }
   if (L.mode === 'ascii') return drawAscii(id, st, f, set, ctx, opts, k, rawN);
   const t = (G.time || performance.now() / 1000), m = L.motion;
   const S = set.strokes, n = set.n;
@@ -298,6 +302,112 @@ function drawAscii(id, st, f, set, ctx, opts, k, rawN) {
   ctx.drawImage(img, -st.fw * k / 2 - fs, -st.fh * k + (opts.foot || 0) * k - fs);
   ctx.restore(); return true;
 }
+
+/* ---------- Skeletal rig: animate one painted pose in code (smooth run, idle, anything) ----------
+   The figure's ASCII cells are bound to bones by soft weights; each frame the bones are posed procedurally and every cell moves with
+   its bones. No extra artwork is needed beyond the one pose. Coordinates are source pixels of the frame (192 x 136 for the player). */
+const RIGS = {
+  player: {
+    base: ['player_idle', 0],
+    joints: { hips: [100, 102], neck: [102, 58], hipF: [108, 108], kneeF: [111, 120], hipB: [95, 108], kneeB: [93, 120], cloak: [92, 64], scarf: [95, 60] },
+    /* which bone a cell belongs to (soft edges are blended from these) */
+    region(x, y) {
+      const w = {};
+      const band = (v, a, b) => Math.min(1, Math.max(0, (v - a) / (b - a)));      /* 0 below a, 1 above b */
+      const legs = band(y, 103, 111) * band(x, 83, 89);                           /* only the leg columns, not the cloak hem */                                           /* below the cloak hem */
+      const head = 1 - band(y, 50, 58);
+      const scarf = (1 - band(x, 78, 88)) * band(y, 54, 60) * (1 - band(y, 88, 96));
+      const cloak = (1 - band(x, 84, 100)) * band(y, 80, 96);
+      const front = band(x, 99, 103), shin = band(y, 116, 122);
+      let rest = 1;
+      const put = (k, v) => { v = Math.max(0, Math.min(rest, v)); if (v > 0) { w[k] = (w[k] || 0) + v; rest -= v; } };
+      put('thighF', legs * front * (1 - shin)); put('shinF', legs * front * shin);
+      put('thighB', legs * (1 - front) * (1 - shin)); put('shinB', legs * (1 - front) * shin);
+      put('head', head); put('scarf', scarf); put('cloak', cloak);
+      put('body', rest);
+      return w;
+    }
+  }
+};
+const rot = (a, cx, cy) => { const c = Math.cos(a), s = Math.sin(a); return [c, s, -s, c, cx - c * cx + s * cy, cy - s * cx - c * cy]; };
+const mul = (A, B) => [A[0] * B[0] + A[2] * B[1], A[1] * B[0] + A[3] * B[1], A[0] * B[2] + A[2] * B[3], A[1] * B[2] + A[3] * B[3], A[0] * B[4] + A[2] * B[5] + A[4], A[1] * B[4] + A[3] * B[5] + A[5]];
+const tr = (dx, dy) => [1, 0, 0, 1, dx, dy];
+const ap = (M, x, y) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]];
+
+/* Pose the player's bones. kind: 'idle' or 'run'; ph: cycle phase in radians; t: time (for cloth). */
+function posePlayer(J, kind, ph, t) {
+  const run = kind === 'run', s = Math.sin(ph), c = Math.cos(ph);
+  const bob = run ? -Math.abs(Math.sin(ph)) * 4.5 + 2 : Math.sin(t * 2.2) * 0.6;
+  const lean = run ? 0.2 + Math.sin(ph * 2) * 0.04 : Math.sin(t * 1.1) * 0.015;
+  const root = tr(run ? 2 : 0, bob);
+  const body = mul(root, rot(lean, J.hips[0], J.hips[1]));
+  const neck = ap(body, J.neck[0], J.neck[1]);
+  const head = mul(rot(run ? -lean * 0.6 + Math.sin(ph * 2) * 0.04 : Math.sin(t * 1.3) * 0.04, neck[0], neck[1]), body);
+  const leg = (hip, knee, swing, bend) => {
+    const H = ap(root, hip[0], hip[1]), thigh = mul(rot(swing, H[0], H[1]), root);
+    const K = ap(thigh, knee[0], knee[1]), shin = mul(rot(bend, K[0], K[1]), thigh);
+    return [thigh, shin];
+  };
+  const sw = run ? 1.05 : 0, kn = run ? 1.25 : 0;
+  const [thighF, shinF] = leg(J.hipF, J.kneeF, -s * sw, Math.max(0, c) * kn);            /* front leg: swing and lift */
+  const [thighB, shinB] = leg(J.hipB, J.kneeB, s * sw, Math.max(0, -c) * kn);            /* back leg: opposite phase */
+  const cp = ap(body, J.cloak[0], J.cloak[1]);
+  const cloak = mul(rot((run ? 0.1 + Math.sin(ph * 2 + 1) * 0.04 : 0) + Math.sin(t * 1.6) * 0.04, cp[0], cp[1]), body);
+  const sp = ap(body, J.scarf[0], J.scarf[1]);
+  const scarf = mul(rot((run ? 0.18 : 0) + Math.sin(t * (run ? 7 : 2.2)) * (run ? 0.12 : 0.06), sp[0], sp[1]), body);
+  return { body, head, thighF, shinF, thighB, shinB, cloak, scarf };
+}
+
+/* Draw a rigged character in ASCII. Returns false if the rig can't be used (caller falls back). */
+function drawRig(name, kind, ph, ctx, opts) {
+  const R = RIGS[name], bst = G.strips[R.base[0]];
+  if (!bst) return false;
+  const g = asciiCells(R.base[0], bst, R.base[1]);
+  if (!g.bind) {                                                     /* bind cells to bones once */
+    g.bind = [];
+    for (let i = 0; i < g.cells.length; i += 5) g.bind.push(R.region(g.cells[i], g.cells[i + 1]));
+  }
+  const k = opts.h ? opts.h / bst.fh : 1, t = G.time || performance.now() / 1000, m = L.motion;
+  const fs = Math.max(4, Math.ceil(g.cell * k * 1.75)), CH = GLYPHS + DIRS.join('');
+  const tick = Math.floor(t * L.asciiFps);
+  const W = Math.ceil(bst.fw * k + fs * 4), H = Math.ceil(bst.fh * k + fs * 4);
+  const ik = 'rig:' + name + ':' + kind, stamp = tick + ':' + W;
+  let rec = cache.get(ik);
+  if (!rec || rec.img.width !== W) { const img = document.createElement('canvas'); img.width = W; img.height = H; rec = { img, stamp: '' }; cache.set(ik, rec); }
+  if (rec.stamp !== stamp) {
+    rec.stamp = stamp;
+    const q = rec.img.getContext('2d'); q.clearRect(0, 0, W, H);
+    const tt = tick / L.asciiFps, P = posePlayer(R.joints, kind, ph, tt), C = g.cells, amp = g.cell * k * 0.3 * m, off = fs * 2;
+    const atlas = col => {
+      const ak = col + ':' + fs; let A = atlases.get(ak);
+      if (!A) { A = document.createElement('canvas'); A.width = fs * CH.length; A.height = fs; const qq = A.getContext('2d'); qq.font = 'bold ' + fs + 'px monospace'; qq.textAlign = 'center'; qq.textBaseline = 'middle'; qq.fillStyle = 'rgb(' + ((col >> 8) & 15) * 17 + ',' + ((col >> 4) & 15) * 17 + ',' + (col & 15) * 17 + ')'; for (let j = 0; j < CH.length; j++) qq.fillText(CH[j], j * fs + fs / 2, fs / 2); atlases.set(ak, A); }
+      return A;
+    };
+    const pos = new Float32Array(C.length / 5 * 2);
+    for (let i = 0, j = 0; i < C.length; i += 5, j++) {
+      const wts = g.bind[j], x0 = C[i], y0 = C[i + 1]; let x = 0, y = 0;
+      for (const b in wts) { const M = P[b], w = wts[b]; x += (M[0] * x0 + M[2] * y0 + M[4]) * w; y += (M[1] * x0 + M[3] * y0 + M[5]) * w; }
+      if (wts.cloak || wts.scarf) { const fl = (wts.cloak || 0) + (wts.scarf || 0); x += Math.sin(tt * (kind === 'run' ? 9 : 3.5) - y0 * 0.12) * 0.7 * fl * m; }   /* cloth flutter */
+      pos[j * 2] = x; pos[j * 2 + 1] = y;
+    }
+    /* dark backing blocks give the figure body, then the characters on top */
+    q.globalAlpha = 0.5;
+    for (let j = 0; j < pos.length / 2; j++) { const col = C[j * 5 + 3]; q.fillStyle = 'rgb(' + ((col >> 8) & 15) * 6 + ',' + ((col >> 4) & 15) * 6 + ',' + (col & 15) * 6 + ')'; q.fillRect(off + pos[j * 2] * k - g.cell * k * 0.6, off + pos[j * 2 + 1] * k - g.cell * k * 0.6, g.cell * k * 1.2, g.cell * k * 1.2); }
+    q.globalAlpha = 1;
+    for (let i = 0, j = 0; i < C.length; i += 5, j++) {
+      const ph2 = C[i + 4]; let gi = C[i + 2];
+      if (m > 0 && gi < GLYPHS.length && gi > 1 && Math.sin(tt * 1.7 + ph2 * 3) > 0.94) gi--;
+      const x = off + pos[j * 2] * k + Math.sin(tt * 3 + ph2) * amp, y = off + pos[j * 2 + 1] * k + Math.cos(tt * 2.3 + ph2) * amp;
+      q.drawImage(atlas(C[i + 3]), gi * fs, 0, fs, fs, x - fs / 2, y - fs / 2, fs, fs);
+    }
+  }
+  ctx.save(); ctx.translate(opts.x || 0, opts.y || 0); if (opts.face < 0) ctx.scale(-1, 1);
+  ctx.drawImage(rec.img, -bst.fw * k / 2 - fs * 2, -bst.fh * k + (opts.foot || 0) * k - fs * 2);
+  ctx.restore(); return true;
+}
+L.rig = true;                       // animate the player's idle and run from the skeleton instead of the painted frames
+L.drawRig = drawRig;
+
 /* F3 toggles line art and painted art; F4 switches between fine lines and ASCII. */
 addEventListener('keydown', e => { if (e.code === 'F4') { L.mode = L.mode === 'ascii' ? 'lines' : 'ascii'; e.preventDefault(); } });
 addEventListener('keydown', e => { if (e.code === 'F3') { L.on = !L.on; e.preventDefault(); } });
