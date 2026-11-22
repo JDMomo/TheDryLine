@@ -23,6 +23,8 @@ const L = G.lineart = {
   density: 1,
   stats: { built: 0, strokes: 0, buildMs: 0 },
   mode: 'lines',                     // 'lines' or 'ascii'
+  asciiDensity: 1,
+  asciiFps: 10,                      // how many times a second the characters shift                   // characters per source pixel of a player frame (1 = one per pixel)
   clear() { cache.clear(); }
 };
 const GLYPHS = ' .,:;-=+*%#@';      // light to dark
@@ -210,47 +212,64 @@ L.draw = function (id, st, f, ctx, opts) {
 
 /* ASCII mode: the figure as a grid of coloured characters. Tone picks the density glyph; strong form direction picks a slash. */
 function drawAscii(id, st, f, set, ctx, opts, k) {
-  const key = id + ':' + f + ':ascii';
+  const key = id + ':' + f + ':ascii:' + L.asciiDensity;
   let g = cache.get(key);
   if (!g) {
     const w = Math.round(st.fw), h = Math.round(st.fh);
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const c = cv.getContext('2d', { willReadFrequently: true }); c.drawImage(st.img, f * st.fw, 0, st.fw, st.fh, 0, 0, w, h);
-    const px = c.getImageData(0, 0, w, h).data, cell = Math.max(3, Math.round(h / 34)), cells = [];
-    for (let y = 0; y < h; y += cell) for (let x = 0; x < w; x += cell) {
-      let r = 0, gg = 0, b = 0, a = 0, n = 0, gx = 0, gy = 0;
-      for (let yy = y; yy < Math.min(h, y + cell); yy++) for (let xx = x; xx < Math.min(w, x + cell); xx++) {
-        const i = (yy * w + xx) * 4; if (px[i + 3] < 128) continue;
-        r += px[i]; gg += px[i + 1]; b += px[i + 2]; n++;
-        const l = px[i] + px[i + 1] + px[i + 2], lr = xx + 1 < w ? px[i + 4] + px[i + 5] + px[i + 6] : l, ld = yy + 1 < h ? px[i + w * 4] + px[i + w * 4 + 1] + px[i + w * 4 + 2] : l;
-        gx += lr - l; gy += ld - l;
-      }
-      if (n < cell * cell * 0.35) continue;
-      r /= n; gg /= n; b /= n;
-      const lum = (0.2126 * r + 0.7152 * gg + 0.0722 * b) / 255, edge = Math.hypot(gx, gy) / n;
-      let ch;
-      if (edge > 40) { const a2 = (Math.atan2(gy, gx) + Math.PI / 2 + TAU) % Math.PI; ch = DIRS[Math.round(a2 / (Math.PI / 4)) % 4]; }
-      else ch = GLYPHS[Math.min(GLYPHS.length - 1, 1 + Math.floor((1 - lum) * (GLYPHS.length - 1)))];
-      const m = (r + gg + b) / 3, sat = 1.35;
-      cells.push(x + cell / 2, y + cell / 2, ch, 'rgb(' + Math.min(255, m + (r - m) * sat) * 0.9 + ',' + Math.min(255, m + (gg - m) * sat) * 0.9 + ',' + Math.min(255, m + (b - m) * sat) * 0.9 + ')', Math.random() * TAU);
+    const px = c.getImageData(0, 0, w, h).data;
+    const cell = Math.max(1, h / (136 * L.asciiDensity));      /* 1 = one character per source pixel of a player frame */
+    const cells = [], at = (x, y) => (Math.min(h - 1, Math.max(0, y | 0)) * w + Math.min(w - 1, Math.max(0, x | 0))) * 4;
+    const lumAt = i => (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) / 255;
+    let id2 = 0;
+    for (let y = cell / 2; y < h; y += cell) for (let x = cell / 2; x < w; x += cell) {
+      const i = at(x, y); if (px[i + 3] < 128) continue;
+      const l = lumAt(i), gx = lumAt(at(x + cell, y)) - lumAt(at(x - cell, y)), gy = lumAt(at(x, y + cell)) - lumAt(at(x, y - cell));
+      const edge = Math.hypot(gx, gy);
+      let gi;
+      if (edge > 0.22) { const a2 = (Math.atan2(gy, gx) + Math.PI / 2 + TAU) % Math.PI; gi = GLYPHS.length + (Math.round(a2 / (Math.PI / 4)) % 4); }
+      else gi = Math.min(GLYPHS.length - 1, 1 + Math.floor((1 - l) * (GLYPHS.length - 1)));
+      const m = (px[i] + px[i + 1] + px[i + 2]) / 3, sat = 1.4, v = 1.15;
+      const q = ch => Math.max(0, Math.min(255, (m + (ch - m) * sat) * v)) >> 4;      /* 16 levels per channel, for the glyph atlas */
+      cells.push(x, y, gi, (q(px[i]) << 8) | (q(px[i + 1]) << 4) | q(px[i + 2]), (id2++ * 2.399) % TAU);
     }
-    g = { cells, cell }; cache.set(key, g);
+    g = { cells, cell, atlas: new Map() }; cache.set(key, g);
   }
-  const t = G.time || performance.now() / 1000, m = L.motion;
+  const t = G.time || performance.now() / 1000, m = L.motion, C = g.cells;
+  const fs = Math.max(4, Math.ceil(g.cell * k * 1.5)), CH = GLYPHS + DIRS.join('');
+  /* glyph atlas per colour, rendered at the on-screen font size so letters stay crisp */
+  const atlasFor = col => {
+    const ak = col + ':' + fs; let A = g.atlas.get(ak);
+    if (!A) {
+      A = document.createElement('canvas'); A.width = fs * CH.length; A.height = fs;
+      const q = A.getContext('2d'); q.font = 'bold ' + fs + 'px monospace'; q.textAlign = 'center'; q.textBaseline = 'middle';
+      q.fillStyle = 'rgb(' + ((col >> 8) & 15) * 17 + ',' + ((col >> 4) & 15) * 17 + ',' + (col & 15) * 17 + ')';
+      for (let j = 0; j < CH.length; j++) q.fillText(CH[j], j * fs + fs / 2, fs / 2);
+      g.atlas.set(ak, A);
+    }
+    return A;
+  };
+  /* The characters step at L.asciiFps (a deliberate flicker); between steps the finished figure is reused from a cached canvas. */
+  const tick = m > 0 ? Math.floor(t * L.asciiFps) : 0, W = Math.ceil(st.fw * k + fs * 2), H = Math.ceil(st.fh * k + fs * 2);
+  let img = g.img;
+  if (!img || img.width !== W || img.height !== H || g.tick !== tick) {
+    if (!img || img.width !== W || img.height !== H) { img = g.img = document.createElement('canvas'); img.width = W; img.height = H; }
+    g.tick = tick;
+    const q = img.getContext('2d'); q.clearRect(0, 0, W, H);
+    const tt = tick / L.asciiFps, amp = g.cell * k * 0.35 * m;
+    for (let i = 0; i < C.length; i += 5) {
+      const ph = C[i + 4];
+      let gi = C[i + 2];
+      if (m > 0 && gi < GLYPHS.length && gi > 1 && Math.sin(tt * 1.7 + ph * 3) > 0.94) gi--;
+      const x = fs + C[i] * k + Math.sin(tt * 3 + ph) * amp, y = fs + C[i + 1] * k + Math.cos(tt * 2.3 + ph) * amp;
+      q.drawImage(atlasFor(C[i + 3]), gi * fs, 0, fs, fs, x - fs / 2, y - fs / 2, fs, fs);
+    }
+  }
   ctx.save(); ctx.translate(opts.x || 0, opts.y || 0); if (opts.face < 0) ctx.scale(-1, 1);
-  ctx.translate(-st.fw * k / 2, -st.fh * k + (opts.foot || 0) * k); ctx.scale(k, k);
-  ctx.font = 'bold ' + (g.cell * 1.25) + 'px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const C = g.cells;
-  for (let i = 0; i < C.length; i += 5) {
-    const ph = C[i + 4], jx = Math.sin(t * 3 + ph) * 0.25 * g.cell * m, jy = Math.cos(t * 2.3 + ph) * 0.2 * g.cell * m;
-    let ch = C[i + 2];
-    if (m > 0 && Math.sin(t * 1.7 + ph * 3) > 0.96) { const gi = GLYPHS.indexOf(ch); if (gi > 1) ch = GLYPHS[gi - 1]; }   /* characters flicker to a neighbour now and then */
-    if (opts.face < 0) { ctx.save(); ctx.translate(C[i] + jx, C[i + 1] + jy); ctx.scale(-1, 1); ctx.fillStyle = C[i + 3]; ctx.fillText(ch, 0, 0); ctx.restore(); }
-    else { ctx.fillStyle = C[i + 3]; ctx.fillText(ch, C[i] + jx, C[i + 1] + jy); }
-  }
+  ctx.drawImage(img, -st.fw * k / 2 - fs, -st.fh * k + (opts.foot || 0) * k - fs);
   ctx.restore(); return true;
 }
-
 /* F3 toggles line art and painted art; F4 switches between fine lines and ASCII. */
 addEventListener('keydown', e => { if (e.code === 'F4') { L.mode = L.mode === 'ascii' ? 'lines' : 'ascii'; e.preventDefault(); } });
 addEventListener('keydown', e => { if (e.code === 'F3') { L.on = !L.on; e.preventDefault(); } });
