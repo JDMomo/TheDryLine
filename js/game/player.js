@@ -243,31 +243,32 @@ const stripsOn = p => !!(G.artTest && G.art.hasStrip('player_idle') && G.art.has
 // Which watercolor strip and frame shows the player's current state. Order matters: the first match wins.
 function pickStrip(p) {
   const t = G.time, since = at => (at === undefined ? 9 : t - at), step = (e, dur, n) => Math.min(n - 1, Math.floor(e / dur * n));
-  if (p.down) return ['ko', step(since(p.downAt), 0.5, 4)];
+  if (p.down) return ['ko', step(since(p.downAt), 0.8, 8)];
   const rev = since(p.reviveAt); if (rev < 0.5) return ['revive', step(rev, 0.5, 4)];            // just got back up
   const hurtFor = p.inv > 0 ? (M.INV || 1) - p.inv : 9;
   if (hurtFor >= 0 && hurtFor < 0.3 && p.stun > 0) return ['hurt', step(hurtFor, 0.3, 4)];
   if (p.slash) {
     const k = p.slash.t / p.slash.dur;
-    if (p.slash.heavy) return ['heavy', 2 + step(k, 1, 4)];
+    if (p.slash.heavy) return ['swing', 3 + step(k, 1, 8)];                 // wind-up top to follow-through
     if (p.slash.dir === 'down') return ['slash_down', 1 + step(k, 1, 3)];
-    return ['slash_side', 1 + step(k, 1, 5)];
+    return ['swing', 4 + step(k, 1, 6)];                                     // swing, impact (frame 7), follow-through
   }
   const cast = since(p.castAt);
   if (cast < 0.32 && p.castCls) { const n = p.castCls === 'ground' ? 4 : 6; return [p.castCls, 1 + step(cast, 0.32, n - 1)]; }
   const use = since(p.interactAt); if (use < 0.4 && p.onGround && Math.abs(p.vx) < 40) return ['interact', step(use, 0.4, 4)];     // used a prop
   if (p.dashT > 0) return ['dash', 1 + step(1 - p.dashT / (M.DASH_T || 0.155), 1, 2)];
-  if (p.charge > 0.2) return ['heavy', Math.floor(t * 6) % 2];
+  if (p.charge > 0.2) return ['swing', 2 + Math.floor(t * 6) % 2];            // lute raised, held
   if (p.healT > 0) return ['mend', t * 5];
   if (p.sliding) return ['wallslide', 1];
   if (!p.onGround) {
     const dj = since(p.djAt);
     if (dj < 0.32) return ['doublejump', step(dj, 0.32, 4)];
-    return ['jump', p.vy < -140 ? 1 : p.vy < 160 ? 2 : 3];
+    const v = p.vy;                                                              // rising, apex, falling by speed
+    return ['jump', v < -380 ? 3 : v < -200 ? 4 : v < -60 ? 5 : v < 0 ? 6 : v < 80 ? 7 : v < 220 ? 8 : v < 400 ? 9 : 10];
   }
-  if (Math.abs(p.vx) > 40) return ['run', t * 13];
-  if (p.squash > 0.2) return ['land', 1];
-  return ['idle', t * 5];
+  if (Math.abs(p.vx) > 40) return ['run', t * 18];
+  if (p.squash > 0.2) return ['jump', p.squash > 0.45 ? 10 : 11];             // landing squash, recover
+  return ['idle', t * 8];
 }
 
 G.pickStrip = pickStrip;                           // (for the art_test check)

@@ -101,7 +101,7 @@ G.menus = {
     // Large watercolor Wanderer uses the same production strip as gameplay when available.
     if(G.art.hasStrip('player_idle')){
       ctx.save();ctx.globalAlpha=.96;
-      G.art.drawFrame('player_idle',ctx,G.time*2,{x:205,y:492,face:1,h:270,foot:4});
+      G.art.drawFrame('player_idle',ctx,G.time*7,{x:205,y:492,face:1,h:270,foot:4});
       ctx.restore();
     } else {
       ctx.save();ctx.globalAlpha=.35;ctx.fillStyle='#d9c5a0';ctx.beginPath();ctx.arc(205,315,88,0,6.283);ctx.fill();ctx.restore();
